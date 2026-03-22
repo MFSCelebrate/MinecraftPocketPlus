@@ -2,8 +2,8 @@
 #define _MINECRAFT_WORLD_LEVELCONSTANTS_H_
 
 
-const int LEVEL_HEIGHT = 128;
-const int CHUNK_CACHE_WIDTH = 64; // in chunks
+const int LEVEL_HEIGHT = 256;
+const int CHUNK_CACHE_WIDTH = 16; // in chunks
 const int CHUNK_WIDTH = 16; // in blocks
 const int CHUNK_DEPTH = 16;
 const int LEVEL_WIDTH = CHUNK_CACHE_WIDTH * CHUNK_WIDTH;
