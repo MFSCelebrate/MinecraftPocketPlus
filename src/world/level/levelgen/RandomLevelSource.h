@@ -55,6 +55,9 @@ public:
 	bool shouldSave();
     std::string gatherStats();
 
+	// 新增：设置地形偏移量
+	void setOffset(int x, int z) { offsetX = x; offsetZ = z; }
+
 	//bool save(bool force, ProgressListener progressListener) {
 private:
 	float* getHeights(float* buffer, int x, int y, int z, int xSize, int ySize, int zSize);
@@ -91,6 +94,9 @@ private:
 	float* dr;
 	float* fi;
 	float* fis;
+
+	// 新增：地形偏移量
+	int offsetX, offsetZ;
     ///*private*/ float[] temperatures;
 };
 
