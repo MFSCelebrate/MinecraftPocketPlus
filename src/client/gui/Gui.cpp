@@ -29,6 +29,9 @@
 #include <algorithm>
 #include <sstream>
 
+// 新增：用于获取地形偏移量
+#include "../../world/level/levelgen/RandomLevelSource.h"
+
 float Gui::InvGuiScale = 1.0f / 3.0f;
 float Gui::GuiScale = 1.0f / Gui::InvGuiScale;
 const float Gui::DropTicks = 40.0f;
@@ -713,88 +716,106 @@ void Gui::onLevelGenerated() {
 }
 
 void Gui::renderDebugInfo() {
-	// FPS counter (updates once per second)
-	static float fps = 0.0f;
-	static float fpsLastTime = 0.0f;
-	static int   fpsFrames = 0;
-	float now = getTimeS();
-	fpsFrames++;
-	if (now - fpsLastTime >= 1.0f) {
-		fps = fpsFrames / (now - fpsLastTime);
-		fpsFrames = 0;
-		fpsLastTime = now;
-	}
+    // FPS counter (updates once per second)
+    static float fps = 0.0f;
+    static float fpsLastTime = 0.0f;
+    static int   fpsFrames = 0;
+    float now = getTimeS();
+    fpsFrames++;
+    if (now - fpsLastTime >= 1.0f) {
+        fps = fpsFrames / (now - fpsLastTime);
+        fpsFrames = 0;
+        fpsLastTime = now;
+    }
 
-	LocalPlayer* p   = minecraft->player;
-	Level*       lvl = minecraft->level;
+    LocalPlayer* p   = minecraft->player;
+    Level*       lvl = minecraft->level;
 
-	// Position
-	float px = p->x, py = p->y - p->heightOffset, pz = p->z;
-	posTranslator.to(px, py, pz);
-	int bx = (int)floorf(px), by = (int)floorf(py), bz = (int)floorf(pz);
-	int cx = bx >> 4, cz = bz >> 4;
+    // 获取地形偏移量（区块为单位）
+    int terrainOffsetX = 0, terrainOffsetZ = 0;
+    if (lvl && lvl->getChunkSource()) {
+        RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(lvl->getChunkSource());
+        if (rls) {
+            terrainOffsetX = rls->offsetX;
+            terrainOffsetZ = rls->offsetZ;
+        }
+    }
 
-	// Facing direction
-	float yMod = fmodf(p->yRot, 360.0f);
-	if (yMod < 0) yMod += 360.0f;
-	const char* facing;
-	const char* axis;
-	if      (yMod < 45  || yMod >= 315) { facing = "South"; axis = "+Z"; }
-	else if (yMod < 135)                 { facing = "West";  axis = "-X"; }
-	else if (yMod < 225)                 { facing = "North"; axis = "-Z"; }
-	else                                 { facing = "East";  axis = "+X"; }
+    // 原始玩家坐标（已经经过世界偏移修正）
+    float px = p->x, py = p->y - p->heightOffset, pz = p->z;
+    posTranslator.to(px, py, pz);
+    int bx = (int)floorf(px), by = (int)floorf(py), bz = (int)floorf(pz);
+    int cx = bx >> 4, cz = bz >> 4;
 
-	// Biome
-	const char* biomeName = "unknown";
-	if (lvl) {
-		Biome* biome = lvl->getBiome(bx, bz);
-		if (biome) biomeName = biome->name.c_str();
-	}
+    // 偏移后的坐标（原始坐标 + 偏移量 * 16）
+    float offsetX = (float)(terrainOffsetX * 16);
+    float offsetZ = (float)(terrainOffsetZ * 16);
+    float pxo = px + offsetX;
+    float pzo = pz + offsetZ;
 
-	// Time
-	long worldTime = lvl ? lvl->getTime() : 0;
-	long dayTime   = worldTime % Level::TICKS_PER_DAY;
-	long day       = worldTime / Level::TICKS_PER_DAY;
-	long seed      = lvl ? lvl->getSeed() : 0;
+    // Facing direction
+    float yMod = fmodf(p->yRot, 360.0f);
+    if (yMod < 0) yMod += 360.0f;
+    const char* facing;
+    const char* axis;
+    if      (yMod < 45  || yMod >= 315) { facing = "South"; axis = "+Z"; }
+    else if (yMod < 135)                 { facing = "West";  axis = "-X"; }
+    else if (yMod < 225)                 { facing = "North"; axis = "-Z"; }
+    else                                 { facing = "East";  axis = "+X"; }
 
-	// Build lines (NULL entry = blank gap)
-	static char ln[8][96];
-	sprintf(ln[0], "Minecraft PE 0.6.1 alpha (mcpe64)");
-	sprintf(ln[1], "%.1f fps", fps);
-	ln[2][0] = '\0'; // blank separator
-	sprintf(ln[3], "XYZ: %.3f / %.3f / %.3f", px, py, pz);
-	sprintf(ln[4], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-	sprintf(ln[5], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
-	sprintf(ln[6], "Biome: %s", biomeName);
-	sprintf(ln[7], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    // Biome
+    const char* biomeName = "unknown";
+    if (lvl) {
+        Biome* biome = lvl->getBiome(bx, bz);
+        if (biome) biomeName = biome->name.c_str();
+    }
 
-	const int N   = 8;
-	const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
-	const float MGN = 2.0f;  // left/top margin in font-pixels
-	const float PAD = 2.0f;  // horizontal padding for background
-	Font* font = minecraft->font;
+    // Time
+    long worldTime = lvl ? lvl->getTime() : 0;
+    long dayTime   = worldTime % Level::TICKS_PER_DAY;
+    long day       = worldTime / Level::TICKS_PER_DAY;
+    long seed      = lvl ? lvl->getSeed() : 0;
 
-	// 1) Draw semi-transparent background boxes behind each line
-	for (int i = 0; i < N; i++) {
-		if (ln[i][0] == '\0') continue;
-		float w  = (float)font->width(ln[i]);
-		float x0 = MGN - PAD;
-		float y0 = MGN + i * LH - 1.0f;
-		float x1 = MGN + w + PAD;
-		float y1 = MGN + (i + 1) * LH - 1.0f;
-		fill(x0, y0, x1, y1, 0x90000000);
-	}
+    // 构建显示行（共 9 行，原 8 行 + 新增偏移坐标行）
+    static char ln[9][96];
+    sprintf(ln[0], "Minecraft PE 0.6.1 alpha (mcpe64)");
+    sprintf(ln[1], "%.1f fps", fps);
+    ln[2][0] = '\0'; // 空行分隔
+    sprintf(ln[3], "XYZ: %.6f / %.6f / %.6f", px, py, pz);
+    sprintf(ln[4], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[5], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
+    sprintf(ln[6], "Biome: %s", biomeName);
+    sprintf(ln[7], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    sprintf(ln[8], "Terrain Offset (chunks): %d / %d ==> %.6f / %.6f / %.6f",
+            terrainOffsetX, terrainOffsetZ, pxo, py, pzo);
 
-	// 2) Draw text (no extra scale — font coords are in GUI units, same as fill)
-	Tesselator& t = Tesselator::instance;
-	t.beginOverride();
-	for (int i = 0; i < N; i++) {
-		if (ln[i][0] == '\0') continue;
-		float y = MGN + i * LH;
-		int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // title yellow, rest white
-		font->draw(ln[i], MGN, y, col);
-	}
-	t.endOverrideAndDraw();
+    const int N   = 9;   // 行数
+    const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
+    const float MGN = 2.0f;  // left/top margin in font-pixels
+    const float PAD = 2.0f;  // horizontal padding for background
+    Font* font = minecraft->font;
+
+    // 1) Draw semi-transparent background boxes behind each line
+    for (int i = 0; i < N; i++) {
+        if (ln[i][0] == '\0') continue;
+        float w  = (float)font->width(ln[i]);
+        float x0 = MGN - PAD;
+        float y0 = MGN + i * LH - 1.0f;
+        float x1 = MGN + w + PAD;
+        float y1 = MGN + (i + 1) * LH - 1.0f;
+        fill(x0, y0, x1, y1, 0x90000000);
+    }
+
+    // 2) Draw text (no extra scale — font coords are in GUI units, same as fill)
+    Tesselator& t = Tesselator::instance;
+    t.beginOverride();
+    for (int i = 0; i < N; i++) {
+        if (ln[i][0] == '\0') continue;
+        float y = MGN + i * LH;
+        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // title yellow, rest white
+        font->draw(ln[i], MGN, y, col);
+    }
+    t.endOverrideAndDraw();
 }
 
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
