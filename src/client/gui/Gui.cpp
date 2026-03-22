@@ -736,8 +736,8 @@ void Gui::renderDebugInfo() {
     if (lvl && lvl->getChunkSource()) {
         RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(lvl->getChunkSource());
         if (rls) {
-            terrainOffsetX = rls->offsetX;
-            terrainOffsetZ = rls->offsetZ;
+            terrainOffsetX = rls->getOffsetX();   // 使用 getter
+            terrainOffsetZ = rls->getOffsetZ();   // 使用 getter
         }
     }
 
@@ -776,7 +776,7 @@ void Gui::renderDebugInfo() {
     long day       = worldTime / Level::TICKS_PER_DAY;
     long seed      = lvl ? lvl->getSeed() : 0;
 
-    // 构建显示行（共 9 行，原 8 行 + 新增偏移坐标行）
+    // 构建显示行（共 9 行）
     static char ln[9][96];
     sprintf(ln[0], "Minecraft PE 0.6.1 alpha (mcpe64)");
     sprintf(ln[1], "%.1f fps", fps);
@@ -786,7 +786,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[5], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
     sprintf(ln[6], "Biome: %s", biomeName);
     sprintf(ln[7], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
-    sprintf(ln[8], "Terrain Offset (chunks): %d / %d ==> %.6f / %.6f / %.6f",
+    sprintf(ln[8], "Terrain Offset (chunks): %d / %d  XYZ(Offset): %.6f / %.6f / %.6f",
             terrainOffsetX, terrainOffsetZ, pxo, py, pzo);
 
     const int N   = 9;   // 行数
@@ -926,8 +926,6 @@ void Gui::renderOnSelectItemNameText( const int screenWidth, Font* font, int ySl
 		}
 	}
 }
-
-
 
 // helper structure used by drawColoredString
 struct ColorSegment {
