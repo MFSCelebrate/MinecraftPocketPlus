@@ -29,7 +29,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 	forestNoise(&random, 8),
 	spawnMobs(spawnMobs),
 	pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-	offsetX(3137705), offsetZ(3137705)   // 新增
+	offsetX(0), offsetZ(230)   // 新增
 {
 	for (int i=0; i<32; ++i)
 	for (int j=0; j<32; ++j)
