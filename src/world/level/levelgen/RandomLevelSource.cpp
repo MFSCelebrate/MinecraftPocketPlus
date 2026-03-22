@@ -28,8 +28,8 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 	depthNoise(&random, 16),
 	forestNoise(&random, 8),
 	spawnMobs(spawnMobs),
-	pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL)
-	//biomes(NULL)
+	pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
+	offsetX(12550800), offsetZ(12550800)   // 新增
 {
 	for (int i=0; i<32; ++i)
 	for (int j=0; j<32; ++j)
@@ -221,8 +221,12 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 	level->isGeneratingTerrain = true;
 
     HeavyTile::instaFall = true;
-    int xo = xt * 16;
-    int zo = zt * 16;
+    
+    // 应用偏移量，获得实际地形坐标
+    int realXt = xt + offsetX;
+    int realZt = zt + offsetZ;
+    int xo = realXt * 16;
+    int zo = realZt * 16;
 
     Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
     //    Biome* biome = Biome::forest;
@@ -230,7 +234,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
-    random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
+    random.setSeed(((realXt * xScale) + (realZt * zScale)) ^ level->getSeed());
 
 	// //@todo: hide those chunks if they are aren't visible
 //    if (random.nextInt(4) == 0) {
@@ -491,26 +495,31 @@ LevelChunk* RandomLevelSource::create(int x, int z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
-	//static int chunkx = 0;
-	int hashedPos = ChunkPos::hashCode(xOffs, zOffs);
+	// 应用偏移，获得实际地形坐标
+	int realX = xOffs + offsetX;
+	int realZ = zOffs + offsetZ;
 
+	// 哈希基于实际坐标，确保缓存正确
+	int hashedPos = ChunkPos::hashCode(realX, realZ);
 	ChunkMap::iterator it = chunkMap.find(hashedPos);
 	if (it != chunkMap.end())
 		return it->second;
 
-    random.setSeed((long)(xOffs * 341872712l + zOffs * 132899541l)); //@fix
+	// 随机种子基于实际坐标
+    random.setSeed((long)(realX * 341872712l + realZ * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
+    // 区块对象存储玩家视角坐标
     LevelChunk* levelChunk = new LevelChunk(level, blocks, xOffs, zOffs);
 	chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-	Biome** biomes = level->getBiomeSource()->getBiomeBlock(/*biomes, */xOffs * 16, zOffs * 16, 16, 16);
+	Biome** biomes = level->getBiomeSource()->getBiomeBlock(realX * 16, realZ * 16, 16, 16);
     float* temperatures = level->getBiomeSource()->temperatures;
-    prepareHeights(xOffs, zOffs, blocks, 0, temperatures);//biomes, temperatures);
-    buildSurfaces(xOffs, zOffs, blocks, biomes);
+    prepareHeights(realX, realZ, blocks, 0, temperatures);
+    buildSurfaces(realX, realZ, blocks, biomes);
 
 	// Carve caves into the chunk
-	caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount);
+	caveFeature.apply(this, level, realX, realZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
