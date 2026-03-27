@@ -96,6 +96,10 @@ void RegionFile::close()
 
 bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
 {
+    // 映射坐标到 0~31 范围内（SECTOR_COLS=32）
+    int idx = (x & 31) + ((z & 31) * SECTOR_COLS);
+    int offset = offsets[idx];
+    // ... 其余代码不变
 	int offset = offsets[x + z * SECTOR_COLS];
 
 	if (offset == 0)
@@ -127,7 +131,12 @@ bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
 
 bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
 {
-	int size = chunkData.GetNumberOfBytesUsed() + sizeof(int);
+    int idx = (x & 31) + ((z & 31) * SECTOR_COLS);
+    int offset = offsets[idx];
+    int sectorNum = offset >> 8;
+    int sectorCount = offset & 0xff;
+    // ... 其余代码不变
+    int size = chunkData.GetNumberOfBytesUsed() + sizeof(int);
 
 	int offset = offsets[x + z * SECTOR_COLS];
 	int sectorNum = offset >> 8;
@@ -199,9 +208,13 @@ bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
 		fseek(file, (x + z * SECTOR_COLS) * sizeof(int), SEEK_SET);
 		fwrite(&offsets[x + z * SECTOR_COLS], sizeof(int), 1, file);
 	}
-
-
 	return true;
+    // 在函数末尾更新 offsets 时也要使用 idx：
+    offsets[idx] = (slot << 8) | sectorsNeeded;
+    // 写入文件时也要用 idx 位置：
+    fseek(file, idx * sizeof(int), SEEK_SET);
+    fwrite(&offsets[idx], sizeof(int), 1, file);
+	
 }
 
 bool RegionFile::write(int sector, RakNet::BitStream& chunkData)
