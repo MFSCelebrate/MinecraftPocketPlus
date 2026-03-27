@@ -229,8 +229,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
-    int realXt = xt + offsetX;
-    int realZt = zt + offsetZ;
     int xo = realXt * 16;
     int zo = realZt * 16;
 
