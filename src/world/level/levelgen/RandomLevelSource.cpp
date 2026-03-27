@@ -217,6 +217,15 @@ void RandomLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* block
 
 /*public*/
 void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
+    // 确保当前区块及周围区块都存在，避免访问未生成区块
+    int realXt = xt + offsetX;
+    int realZt = zt + offsetZ;
+    // 检查周围区块是否存在（范围根据实际需求）
+    if (!level->hasChunk(realXt-1, realZt-1) || !level->hasChunk(realXt, realZt-1) ||
+        !level->hasChunk(realXt-1, realZt) || !level->hasChunk(realXt, realZt)) {
+        return; // 如果有区块未生成，延迟处理
+    }
+    // ... 原有代码 ...
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
