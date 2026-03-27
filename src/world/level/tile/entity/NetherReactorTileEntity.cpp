@@ -130,9 +130,7 @@ Vec3 NetherReactorTileEntity::getSpawnPosition( float minDistance, float varible
 void NetherReactorTileEntity::spawnEnemy() {
 	Mob* mob = MobFactory::CreateMob(MobTypes::PigZombie, level);
 	Vec3 enemyPosition = getSpawnPosition(3, 4, -1);
-	while(enemyPosition.x < 0 || enemyPosition.z < 0 || enemyPosition.x >= LEVEL_WIDTH || enemyPosition.z >= LEVEL_DEPTH) {
-		enemyPosition = getSpawnPosition(3, 4, -1);
-	}
+	
 	MobSpawner::addMob(level, mob, enemyPosition.x, enemyPosition.y, enemyPosition.z, 0, 0, true);
 }
 
@@ -140,9 +138,7 @@ void NetherReactorTileEntity::spawnEnemy() {
 
 void NetherReactorTileEntity::spawnItem() {
 	Vec3 itemPosition= getSpawnPosition(3, 4, -1);
-	while(itemPosition.x < 0 || itemPosition.z < 0 || itemPosition.x >= LEVEL_WIDTH || itemPosition.z >= LEVEL_DEPTH) {
-		itemPosition = getSpawnPosition(3, 4, -1);
-	}
+	
 	ItemEntity* item = new ItemEntity(level, itemPosition.x, itemPosition.y, itemPosition.z, getSpawnItem());
 
 	item->throwTime = 10;
