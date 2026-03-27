@@ -98,14 +98,14 @@ public:
         }
 
         // 后处理相邻区块
-       // if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
-        //    postProcess(this, x, z);
-     //   if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
-        //    postProcess(this, x - 1, z);
-    //    if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
-       //     postProcess(this, x, z - 1);
-    //    if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
-          //  postProcess(this, x - 1, z - 1);
+       if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
+            postProcess(this, x, z);
+       if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
+            postProcess(this, x - 1, z);
+       if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
+            postProcess(this, x, z - 1);
+       if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
+            postProcess(this, x - 1, z - 1);
 
         xLast = x;
         zLast = z;
@@ -118,20 +118,16 @@ public:
     }
 
     void postProcess(ChunkSource* parent, int x, int z) {
-        static int depth = 0;
-        if (depth > 20) return;
-        depth++;
-        if (!fits(x, z)) return;
-        LevelChunk* chunk = getChunk(x, z);
-        if (!chunk->terrainPopulated) {
-            chunk->terrainPopulated = true;
-            if (source != NULL) {
-                source->postProcess(parent, x, z);
-                chunk->clearUpdateMap();
-            }
-        }
-        depth--;
+    if (!fits(x, z)) return;
+    LevelChunk* chunk = getChunk(x, z);
+    if (!chunk->terrainPopulated) {
+        chunk->terrainPopulated = true;
+        // 避免递归调用，仅标记
+        // if (source != NULL) source->postProcess(parent, x, z);
+        chunk->clearUpdateMap();
     }
+    }
+    
 
     bool tick() {
         if (storage != NULL) storage->tick();
