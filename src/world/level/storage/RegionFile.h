@@ -3,6 +3,8 @@
 
 #include <map>
 #include <string>
+#include <unordered_map>  // ← 添加这个头文件
+#include <cstdint>        // ← 添加这个头文件
 #include "../../../raknet/BitStream.h"
 
 typedef std::map<int, bool> FreeSectorMap;
@@ -25,7 +27,10 @@ private:
 	int* offsets;
 	int* emptyChunk;
 	FreeSectorMap sectorFree;
+	
+	// 临时添加，让编译通过 ↓↓↓
+	bool useOldFormat;  // 标记是否为旧格式
+	std::unordered_map<int64_t, int> chunkToSector;  // 区块坐标 -> 扇区映射
 };
-
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL_STORAGE__RegionFile_H__*/
