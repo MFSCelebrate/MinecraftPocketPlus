@@ -428,17 +428,12 @@ bool Level::findPath(Path* path, Entity* from, int xBest, int yBest, int zBest, 
 /*protected*/
 void Level::setInitialSpawn() {
     isFindingSpawn = true;
-    int xSpawn = CHUNK_CACHE_WIDTH * CHUNK_WIDTH / 2; // (Level.MAX_LEVEL_SIZE - 100) * 0;
+    int xSpawn = CHUNK_CACHE_WIDTH * CHUNK_WIDTH / 2;
     int ySpawn = 64;
-    int zSpawn = CHUNK_CACHE_WIDTH * CHUNK_DEPTH / 2; // (Level.MAX_LEVEL_SIZE - 100) * 0;
+    int zSpawn = CHUNK_CACHE_WIDTH * CHUNK_DEPTH / 2;
     while (!dimension->isValidSpawn(xSpawn, zSpawn)) {
         xSpawn += random.nextInt(32) - random.nextInt(32);
         zSpawn += random.nextInt(32) - random.nextInt(32);
-
-		if (xSpawn < 4) xSpawn += 32;
-		if (xSpawn >= LEVEL_WIDTH-4) xSpawn -= 32;
-		if (zSpawn < 4) zSpawn += 32;
-		if (zSpawn >= LEVEL_DEPTH-4) zSpawn -= 32;
     }
     levelData.setSpawn(xSpawn, ySpawn, zSpawn);
     isFindingSpawn = false;
@@ -454,11 +449,6 @@ void Level::validateSpawn() {
     while (getTopTile(xSpawn, zSpawn) == 0 || getTopTile(xSpawn, zSpawn) == Tile::invisible_bedrock->id) {
         xSpawn += random.nextInt(8) - random.nextInt(8);
         zSpawn += random.nextInt(8) - random.nextInt(8);
-
-		if (xSpawn < 4) xSpawn += 8;
-		if (xSpawn >= LEVEL_WIDTH-4) xSpawn -= 8;
-		if (zSpawn < 4) zSpawn += 8;
-		if (zSpawn >= LEVEL_DEPTH-4) zSpawn -= 8;
     }
     levelData.setXSpawn(xSpawn);
     levelData.setZSpawn(zSpawn);
@@ -2222,9 +2212,7 @@ void Level::setNightMode( bool isNightMode ) {
 }
 
 bool Level::inRange( int x, int y, int z ) {
-	return x >= 0 && x < LEVEL_WIDTH
-		&& y >= 0 && y < LEVEL_HEIGHT
-		&& z >= 0 && z < LEVEL_DEPTH;
+    return y >= 0 && y < LEVEL_HEIGHT;   // 只检查 Y 轴
 }
 
 //
