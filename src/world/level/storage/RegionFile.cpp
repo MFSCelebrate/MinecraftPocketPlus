@@ -96,7 +96,12 @@ void RegionFile::close()
 
 bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
 {
-	int offset = offsets[x + z * SECTOR_COLS];
+	// 将区块坐标映射到 0~31 范围内，防止数组越界
+	int cx = x & (SECTOR_COLS - 1);
+	int cz = z & (SECTOR_COLS - 1);
+	int idx = cx + cz * SECTOR_COLS;
+
+	int offset = offsets[idx];
 
 	if (offset == 0)
 	{
@@ -127,9 +132,14 @@ bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
 
 bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
 {
+	// 将区块坐标映射到 0~31 范围内，防止数组越界
+	int cx = x & (SECTOR_COLS - 1);
+	int cz = z & (SECTOR_COLS - 1);
+	int idx = cx + cz * SECTOR_COLS;
+
 	int size = chunkData.GetNumberOfBytesUsed() + sizeof(int);
 
-	int offset = offsets[x + z * SECTOR_COLS];
+	int offset = offsets[idx];
 	int sectorNum = offset >> 8;
 	int sectorCount = offset & 0xff;
 	int sectorsNeeded = (size / SECTOR_BYTES) + 1;
@@ -185,7 +195,7 @@ bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
 				sectorFree[slot + i] = true;
 			}
 		}
-		offsets[x + z * SECTOR_COLS] = (slot << 8) | sectorsNeeded;
+		offsets[idx] = (slot << 8) | sectorsNeeded;
 		// mark slots as taken
 		for (int i = 0; i < sectorsNeeded; i++)
 		{
@@ -196,8 +206,8 @@ bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
 		write(slot, chunkData);
 
 		// write sector data
-		fseek(file, (x + z * SECTOR_COLS) * sizeof(int), SEEK_SET);
-		fwrite(&offsets[x + z * SECTOR_COLS], sizeof(int), 1, file);
+		fseek(file, idx * sizeof(int), SEEK_SET);
+		fwrite(&offsets[idx], sizeof(int), 1, file);
 	}
 
 
