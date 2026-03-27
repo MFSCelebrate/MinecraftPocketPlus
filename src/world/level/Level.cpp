@@ -2212,9 +2212,7 @@ void Level::setNightMode( bool isNightMode ) {
 }
 
 bool Level::inRange( int x, int y, int z ) {
-	FILE* f = fopen("/sdcard/debug.txt", "a");
-    fprintf(f, "inRange x=%d y=%d z=%d\n", x, y, z);
-    fclose(f);
+	
     return y >= 0 && y < LEVEL_HEIGHT;   // 只检查 Y 轴
 }
 
