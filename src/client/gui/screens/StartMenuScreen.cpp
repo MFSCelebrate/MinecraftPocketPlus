@@ -187,7 +187,7 @@ void StartMenuScreen::render( int xm, int ym, float a )
 	if (Textures::isTextureIdValid(minecraft->textures->loadAndBindTexture("gui/logo/github.png")))
 		blit(2, height - 10, 0, 0, 8, 8, 256, 256);
 	{
-			std::string txt = "Kolyah35/minecraft-pe-0.6.1";
+			std::string txt = "Github or BiliBiliMobile/MFSCelebrate_";
 			float wtxt = font->width(txt);
 			Gui::drawColoredString(font, txt, 12, height - 10, 255);
 			// underline link
