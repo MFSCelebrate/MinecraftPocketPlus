@@ -182,26 +182,43 @@ std::string CommandServer::parse(ConnectedClient& client, const std::string& s) 
 	//
 	// Block related get, set and query
 	//
-	if (cmd == "world.setBlock") {
-		int x, y, z, id, data;
-		bool hasData = true;
+	if (cmd == "world.setBlocks") {
+    int x0, y0, z0, x1, y1, z1, id, data;
+    bool hasData = true;
 
-		int c = sscanf(rest.c_str(), "%d,%d,%d,%d,%d", &x, &y, &z, &id, &data);
-		if (!inRange(c, 4, 5)) return Fail;
-		if (c == 4) hasData = false;
+    int c = sscanf(rest.c_str(), "%d,%d,%d,%d,%d,%d,%d,%d", &x0, &y0, &z0, &x1, &y1, &z1, &id, &data);
+    if (!inRange(c, 7, 8)) return Fail;
+    if (c == 7) hasData = false;
 
-		id &= 255;
-		if (id > 0 && !Tile::tiles[id])
-			return Fail;
+    id &= 255;
 
-		apiPosTranslate.from(x, y, z);
+    if (id > 0 && !Tile::tiles[id])
+        return Fail;
 
-		if (hasData)
-			mc->level->setTileAndData(x, y, z, id, data & 15);
-		else
-			mc->level->setTile(x, y, z, id);
+    if (x0 > x1) std::swap(x0, x1);
+    if (y0 > y1) std::swap(y0, y1);
+    if (z0 > z1) std::swap(z0, z1);
 
-		return NullString;
+    apiPosTranslate.from(x0, y0, z0);
+    apiPosTranslate.from(x1, y1, z1);
+
+    // 删除以下 X/Z 边界限制，保留 Y 轴限制
+    // if (x0 < 0) x0 = 0;
+    // if (z0 < 0) z0 = 0;
+    // if (x1 >= LEVEL_WIDTH ) x1 = LEVEL_WIDTH  - 1;
+    // if (z1 >= LEVEL_DEPTH ) z1 = LEVEL_DEPTH  - 1;
+    if (y0 < 0) y0 = 0;
+    if (y1 >= LEVEL_HEIGHT) y1 = LEVEL_HEIGHT - 1;  // 保留 Y 轴限制
+
+    for (int y = y0; y <= y1; ++y)
+    for (int z = z0; z <= z1; ++z)
+    for (int x = x0; x <= x1; ++x) {
+        if (hasData)
+            mc->level->setTileAndData(x, y, z, id, data & 15);
+        else
+            mc->level->setTile(x, y, z, id);
+    }
+    return NullString;
 	}
 
 	if (cmd == "world.getBlock") {
