@@ -497,10 +497,7 @@ LevelChunk* RandomLevelSource::create(int x, int z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
-	FILE* f = fopen("/sdcard/debug.txt", "a");
-    fprintf(f, "RandomLevelSource::getChunk xOffs=%d zOffs=%d realX=%d realZ=%d\n", xOffs, zOffs, xOffs + offsetX, zOffs + offsetZ);
-    fclose(f);
-    // 应用偏移，获得实际地形坐标
+	    // 应用偏移，获得实际地形坐标
     int realX = xOffs + offsetX;
     int realZ = zOffs + offsetZ;
 
