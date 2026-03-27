@@ -29,6 +29,7 @@ class RandomLevelSource: public ChunkSource
 {
     static const float SNOW_CUTOFF;
     static const float SNOW_SCALE;
+    int offsetX, OffsetZ;
 
 public:
     static const int CHUNK_HEIGHT = 8;
