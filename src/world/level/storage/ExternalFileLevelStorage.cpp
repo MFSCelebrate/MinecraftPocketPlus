@@ -254,37 +254,37 @@ bool ExternalFileLevelStorage::writeLevelData(const std::string& datFileName, Le
 
 bool ExternalFileLevelStorage::readPlayerData(const std::string& filename, LevelData& dest)
 {
-	FILE* fp = fopen(filename.c_str(), "rb");
-	if (!fp)
-		return false;
+    FILE* fp = fopen(filename.c_str(), "rb");
+    if (!fp)
+        return false;
 
-	do {
-		int version;
-		if (fread(&version, 4, 1, fp) != 1)
-			break;
+    do {
+        int version;
+        if (fread(&version, 4, 1, fp) != 1)
+            break;
 
-		int size;
-		if (fread(&size, 4, 1, fp) != 1)
-			break;
+        int size;
+        if (fread(&size, 4, 1, fp) != 1)
+            break;
 
-		if (version == 1) {
-			if (fread(&dest.playerData, 1, sizeof(dest.playerData), fp) != size)
-				break;
+        if (version == 1) {
+            if (fread(&dest.playerData, 1, sizeof(dest.playerData), fp) != size)
+                break;
 
-			// Fix coordinates
-			Vec3& pos = dest.playerData.pos;
-			if (pos.x < 0.5f) pos.x = 0.5f;
-			if (pos.z < 0.5f) pos.z = 0.5f;
-			if (pos.x > (LEVEL_WIDTH - 0.5f)) pos.x = LEVEL_WIDTH - 0.5f;
-			if (pos.z > (LEVEL_DEPTH - 0.5f)) pos.z = LEVEL_DEPTH - 0.5f;
-			if (pos.y < 0) pos.y = 64;
+            // 删除以下坐标调整代码：
+            // Vec3& pos = dest.playerData.pos;
+            // if (pos.x < 0.5f) pos.x = 0.5f;
+            // if (pos.z < 0.5f) pos.z = 0.5f;
+            // if (pos.x > (LEVEL_WIDTH - 0.5f)) pos.x = LEVEL_WIDTH - 0.5f;
+            // if (pos.z > (LEVEL_DEPTH - 0.5f)) pos.z = LEVEL_DEPTH - 0.5f;
+            // if (pos.y < 0) pos.y = 64;
 
-			dest.playerDataVersion = version;
-		}
-	} while (false);
+            dest.playerDataVersion = version;
+        }
+    } while (false);
 
-	fclose(fp);
-	return true;
+    fclose(fp);
+    return true;
 }
 
 void ExternalFileLevelStorage::tick()
