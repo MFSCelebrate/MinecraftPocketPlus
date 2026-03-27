@@ -118,9 +118,8 @@ public:
     }
 
     void postProcess(ChunkSource* parent, int x, int z) {
-    // 递归深度限制，防止无限递归
     static int depth = 0;
-    if (depth > 8) return; // 限制深度为8，一般足够
+    if (depth > 20) return; // 限制递归深度
     depth++;
 
     if (!fits(x, z)) {
@@ -130,7 +129,6 @@ public:
     LevelChunk* chunk = getChunk(x, z);
     if (!chunk->terrainPopulated) {
         chunk->terrainPopulated = true;
-        // 恢复调用 source->postProcess，但仅当 source 存在时
         if (source != NULL) {
             source->postProcess(parent, x, z);
         }
