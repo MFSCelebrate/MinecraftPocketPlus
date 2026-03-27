@@ -217,6 +217,9 @@ void RandomLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* block
 
 /*public*/
 void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
+	FILE* f = fopen("/sdcard/debug.txt", "a");
+    fprintf(f, "postProcess xt=%d zt=%d realXt=%d realZt=%d\n", xt, zt, xt + offsetX, zt + offsetZ);
+    fclose(f);
     // 确保当前区块及周围区块都存在，避免访问未生成区块
     int realXt = xt + offsetX;
     int realZt = zt + offsetZ;
