@@ -5,20 +5,8 @@ class Biome;
 class Level;
 class LevelChunk;
 
-#if 1 || USE_MAP
-	#include <map>
-	typedef std::map<int, LevelChunk*> ChunkMap;
-#else
-	#if defined(__APPLE__)
-		#include <ext/hash_map>
-		namespace std {
-			using namespace __gnu_cxx;
-		}
-	#else
-		#include <hash_map>
-	#endif
-	typedef std::hash_map<int, LevelChunk*> ChunkMap;
-#endif
+#include <map>
+typedef std::map<int64_t, LevelChunk*> ChunkMap;
 
 #include "../chunk/ChunkSource.h"
 #include "LargeCaveFeature.h"
@@ -29,7 +17,6 @@ class RandomLevelSource: public ChunkSource
 {
     static const float SNOW_CUTOFF;
     static const float SNOW_SCALE;
-    int offsetX, OffsetZ;
 
 public:
     static const int CHUNK_HEIGHT = 8;
@@ -62,7 +49,6 @@ private:
     void calcWaterDepths(ChunkSource* parent, int xt, int zt);
 
 public:
-    //Biome** biomes;
     LargeCaveFeature caveFeature;
     int waterDepths[16+16][16+16];
 private:
@@ -94,8 +80,7 @@ private:
     float* fis;
 
     // 地形偏移量（区块为单位）
-    int offsetX, offsetZ;
-    ///*private*/ float[] temperatures;
+    int offsetX, offsetZ;   // 注意：此处为唯一声明，原有 offsetX, OffsetZ 已被替换
 };
 
 class PerformanceTestChunkSource : public ChunkSource
@@ -105,24 +90,15 @@ public:
     PerformanceTestChunkSource(Level* level)
     :   ChunkSource(),
         level(level)
-    {
-
-    }
+    {}
 
     virtual bool hasChunk(int x, int y) { return true; };
     virtual LevelChunk* getChunk(int x, int z) { return create(x, z); };
-
     virtual LevelChunk* create(int x, int z);
     virtual void postProcess(ChunkSource* parent, int x, int z) {};
-
     virtual bool tick() { return false; };
-
     virtual bool shouldSave() { return false; };
-
-    /**
-     * Returns some stats that are rendered when the user holds F3.
-     */
     virtual std::string gatherStats() { return "PerformanceTestChunkSource"; };
 };
 
-#endif /*NET_MINECRAFT_WORLD_LEVEL_LEVELGEN__RandomLevelSource_H__*/
+#endif
