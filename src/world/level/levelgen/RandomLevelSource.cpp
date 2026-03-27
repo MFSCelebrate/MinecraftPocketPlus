@@ -17,21 +17,21 @@ const float RandomLevelSource::SNOW_SCALE = 0.3f;
 static const int MAX_BUFFER_SIZE = 1024;
 
 RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool spawnMobs)
-:	random(seed),
-	level(level),
-	lperlinNoise1(&random, 16),
-	lperlinNoise2(&random, 16),
-	perlinNoise1(&random, 8),
-	perlinNoise2(&random, 4),
-	perlinNoise3(&random, 4),
-	scaleNoise(&random, 10),
-	depthNoise(&random, 16),
-	forestNoise(&random, 8),
-	spawnMobs(spawnMobs),
-	pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-	offsetX(784426), offsetZ(1)   // 新增
+:   random(seed),
+    level(level),
+    lperlinNoise1(&random, 16),
+    lperlinNoise2(&random, 16),
+    perlinNoise1(&random, 8),
+    perlinNoise2(&random, 4),
+    perlinNoise3(&random, 4),
+    scaleNoise(&random, 10),
+    depthNoise(&random, 16),
+    forestNoise(&random, 8),
+    spawnMobs(spawnMobs),
+    pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
+    offsetX(784426), offsetZ(1)   // 任意偏移值
 {
-	for (int i=0; i<32; ++i)
+    for (int i=0; i<32; ++i)
 	for (int j=0; j<32; ++j)
 		waterDepths[i][j] = 0;
 
@@ -217,19 +217,15 @@ void RandomLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* block
 
 /*public*/
 void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
-
-	level->isGeneratingTerrain = true;
-
+    level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
-    
-    // 应用偏移量，获得实际地形坐标
+
     int realXt = xt + offsetX;
     int realZt = zt + offsetZ;
     int xo = realXt * 16;
     int zo = realZt * 16;
 
     Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
-    //    Biome* biome = Biome::forest;
 
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
@@ -486,8 +482,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 	//printf("Time to place features: %f. Total %f\n", et - st, totalTime);
 
     HeavyTile::instaFall = false;
-
-	level->isGeneratingTerrain = false;
+    level->isGeneratingTerrain = false;
 }
 
 LevelChunk* RandomLevelSource::create(int x, int z) {
@@ -495,31 +490,29 @@ LevelChunk* RandomLevelSource::create(int x, int z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
-	// 应用偏移，获得实际地形坐标
-	int realX = xOffs + offsetX;
-	int realZ = zOffs + offsetZ;
+    // 应用偏移，获得实际地形坐标
+    int realX = xOffs + offsetX;
+    int realZ = zOffs + offsetZ;
 
-	// 哈希基于实际坐标，确保缓存正确
-	int hashedPos = ChunkPos::hashCode(realX, realZ);
-	ChunkMap::iterator it = chunkMap.find(hashedPos);
-	if (it != chunkMap.end())
-		return it->second;
+    // 使用64位哈希作为键
+    int64_t hashedPos = ((int64_t)realX << 32) | (realZ & 0xffffffff);
+    ChunkMap::iterator it = chunkMap.find(hashedPos);
+    if (it != chunkMap.end())
+        return it->second;
 
-	// 随机种子基于实际坐标
+    // 随机种子基于实际坐标
     random.setSeed((long)(realX * 341872712l + realZ * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    // 区块对象存储玩家视角坐标
     LevelChunk* levelChunk = new LevelChunk(level, blocks, xOffs, zOffs);
-	chunkMap.insert(std::make_pair(hashedPos, levelChunk));
+    chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-	Biome** biomes = level->getBiomeSource()->getBiomeBlock(realX * 16, realZ * 16, 16, 16);
+    Biome** biomes = level->getBiomeSource()->getBiomeBlock(realX * 16, realZ * 16, 16, 16);
     float* temperatures = level->getBiomeSource()->temperatures;
     prepareHeights(realX, realZ, blocks, 0, temperatures);
     buildSurfaces(realX, realZ, blocks, biomes);
 
-	// Carve caves into the chunk
-	caveFeature.apply(this, level, realX, realZ, blocks, LevelChunk::ChunkBlockCount);
+    caveFeature.apply(this, level, realX, realZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
