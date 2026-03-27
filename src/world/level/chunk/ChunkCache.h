@@ -54,9 +54,7 @@ public:
     }
 
     LevelChunk* getChunk(int x, int z) {
-        FILE* f = fopen("/sdcard/debug.txt", "a");
-        fprintf(f, "ChunkCache::getChunk x=%d z=%d\n", x, z);
-        fclose(f);
+        
         if (x == xLast && z == zLast && last != NULL) {
             return last;
         }
