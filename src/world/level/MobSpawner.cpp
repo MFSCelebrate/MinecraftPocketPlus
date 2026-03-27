@@ -26,42 +26,46 @@ static const std::vector<int> bedEnemies(_bedEnemies, _bedEnemies + sizeof(_bedE
 
 /*static*/
 int MobSpawner::tick(Level* level, bool spawnEnemies, bool spawnFriendlies) {
-
-	//return 0;
-
-	if (!spawnEnemies && !spawnFriendlies) {
+    if (!spawnEnemies && !spawnFriendlies) {
         return 0;
     }
 
     chunksToPoll.clear();
-	// Add all chunks as a quick-and-dirty test
-	// (The code above is the same as in the java version)
-	// This code goes over the whole map one "row" at a time
 
-	// Spawn friendlies == loop over whole map, and disable Monster spawning this tick
-	if (spawnFriendlies) {
-		spawnEnemies = false;
-		for (int i = 0; i < 256; ++i)
-			chunksToPoll.insert( std::make_pair( ChunkPos(i>>4, i&15), false) );
-
-	} else {
-		// Only spawn mobs, check around one player per tick (@todo: optimize the "count instances of"?)
-		static unsigned int _pid = 0;
-		if (++_pid >= level->players.size()) _pid = 0;
-		if (level->players.size()) {
-			Player* p = level->players[_pid];
-			int xx = Mth::floor(p->x / 16);
-			int zz = Mth::floor(p->z / 16);
-			int r = 128 / 16;
-			for (int x = -r; x <= r; x++)
-			for (int z = -r; z <= r; z++) {
-				const int cx = xx + x;
-				const int cz = zz + z;
-				if (cx >= 0 && cx < 16 && cz >= 0 && cz < 16)
-					chunksToPoll.insert(std::make_pair(ChunkPos(cx, cz), false ));
-			}
-		}
-	}
+    if (spawnFriendlies) {
+        // 改为按玩家周围遍历
+        static unsigned int _pid = 0;
+        if (++_pid >= level->players.size()) _pid = 0;
+        if (level->players.size()) {
+            Player* p = level->players[_pid];
+            int xx = Mth::floor(p->x / 16);
+            int zz = Mth::floor(p->z / 16);
+            int r = 128 / 16;
+            for (int x = -r; x <= r; x++)
+                for (int z = -r; z <= r; z++) {
+                    const int cx = xx + x;
+                    const int cz = zz + z;
+                    chunksToPoll.insert(std::make_pair(ChunkPos(cx, cz), false));
+                }
+        }
+        spawnEnemies = false;
+    } else {
+        // 原有按玩家周围逻辑
+        static unsigned int _pid = 0;
+        if (++_pid >= level->players.size()) _pid = 0;
+        if (level->players.size()) {
+            Player* p = level->players[_pid];
+            int xx = Mth::floor(p->x / 16);
+            int zz = Mth::floor(p->z / 16);
+            int r = 128 / 16;
+            for (int x = -r; x <= r; x++)
+                for (int z = -r; z <= r; z++) {
+                    const int cx = xx + x;
+                    const int cz = zz + z;
+                    chunksToPoll.insert(std::make_pair(ChunkPos(cx, cz), false));
+                }
+        }
+    }
 
     int count = 0;
     Pos spawnPos = level->getSharedSpawnPos();
