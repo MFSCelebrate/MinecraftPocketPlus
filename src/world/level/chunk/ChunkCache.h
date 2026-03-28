@@ -153,6 +153,9 @@ public:
         return "ChunkCache: dynamic";
     }
 
+    // 新增：获取内部的地形生成源
+    ChunkSource* getSource() const { return source; }
+
     void saveAll(bool onlyUnsaved) {
         if (storage != NULL) {
             std::vector<LevelChunk*> chunksToSave;
@@ -199,4 +202,4 @@ private:
     LevelChunk* last;
 };
 
-#endif
+#endif /*NET_MINECRAFT_WORLD_LEVEL_CHUNK__ChunkCache_H__*/
