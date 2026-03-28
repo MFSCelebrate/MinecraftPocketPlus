@@ -72,6 +72,8 @@ OptionInt keyDrop("key.drop", Keyboard::KEY_Q);
 OptionInt keyChat("key.chat", Keyboard::KEY_T);
 OptionInt keyFog("key.fog", Keyboard::KEY_F);
 OptionInt keyUse("key.use", Keyboard::KEY_U);
+OptionInt worldOffsetX("world_offset_x", 0, -2147483648, 2147483647);
+OptionInt worldOffsetZ("world_offset_z", 0, -2147483648, 2147483647);
 
 // TODO: make human readable keycodes here
 OptionInt keyMenuNext("key.menu.next", 40);
@@ -165,6 +167,8 @@ void Options::initTable() {
 	m_options[OPTIONS_AUTOJUMP] = &autoJump;
 	m_options[OPTIONS_LAST_IP] = &lastIp;
 	m_options[OPTIONS_FARLANDS_SCALE] = &farlandsScale;
+	m_options[OPTIONS_WORLD_OFFSET_X] = &worldOffsetX;
+    m_options[OPTIONS_WORLD_OFFSET_Z] = &worldOffsetZ;
 }
 
 void Options::set(OptionId key, const std::string& value) {
