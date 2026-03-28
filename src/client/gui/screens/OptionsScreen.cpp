@@ -236,6 +236,7 @@ void OptionsScreen::generateOptionScreens() {
         .addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
         .addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
         .addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
+	optionPanes[5]->addOptionItem(OPTIONS_SEA_LEVEL, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
