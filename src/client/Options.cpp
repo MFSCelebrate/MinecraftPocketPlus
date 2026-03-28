@@ -72,8 +72,8 @@ OptionInt keyDrop("key.drop", Keyboard::KEY_Q);
 OptionInt keyChat("key.chat", Keyboard::KEY_T);
 OptionInt keyFog("key.fog", Keyboard::KEY_F);
 OptionInt keyUse("key.use", Keyboard::KEY_U);
-OptionInt worldOffsetX("world_offset_x", 0, -2147483648, 2147483647);
-OptionInt worldOffsetZ("world_offset_z", 0, -2147483648, 2147483647);
+OptionString worldOffsetX("world_offset_x", "0");
+OptionString worldOffsetZ("world_offset_z", "0");
 
 // TODO: make human readable keycodes here
 OptionInt keyMenuNext("key.menu.next", 40);
