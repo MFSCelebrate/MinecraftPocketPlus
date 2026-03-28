@@ -13,6 +13,7 @@
 #define OPTIONS_WORLD_OFFSET_X world_offset_x
 #define OPTIONS_WORLD_OFFSET_Z world_offset_z
 #define OPTIONS_POSTPONED_FRINGE postponed_fringe
+#define OPTIONS_DEBUG_SCREEN_SIZE debug_screen_size
 
 //package net.minecraft.client;
 
@@ -90,6 +91,7 @@ enum OptionId {
     OPTIONS_WORLD_OFFSET_X,
     OPTIONS_WORLD_OFFSET_Z,
     OPTIONS_POSTPONED_FRINGE,
+    OPTIONS_DEBUG_SCREEN_SIZE,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
