@@ -527,6 +527,17 @@ LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
 
 /*private*/
 float* RandomLevelSource::getHeights(float* buffer, int x, int y, int z, int xSize, int ySize, int zSize) {
+	float farlandsScale = 1.0f;
+if (minecraft && minecraft->options) {
+    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_FARLANDS_SCALE);
+    if (!scaleStr.empty()) {
+        farlandsScale = (float)atof(scaleStr.c_str());
+        if (farlandsScale < 0.0f) farlandsScale = 0.0f;  // 防止负数
+    }
+}
+float s = 1 * 684.412f * farlandsScale;
+float hs = 1 * 684.412f * farlandsScale;
+	
 	const int size = xSize * ySize * zSize;
 	if (size > MAX_BUFFER_SIZE) {
 		LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
