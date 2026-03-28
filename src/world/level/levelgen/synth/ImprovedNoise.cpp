@@ -1,6 +1,6 @@
 #include "ImprovedNoise.h"
 #include "../../../../util/Random.h"
-#include "../../../client/Minecraft.h"   // 新增，用于访问选项
+#include "../../../../client/Minecraft.h"   // 正确的相对路径
 
 ImprovedNoise::ImprovedNoise()
 {
