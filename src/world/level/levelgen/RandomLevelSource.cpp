@@ -41,12 +41,25 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
 
-    // 从选项读取偏移量（方块为单位）
+    // 从选项读取偏移量（方块为单位），并强制对齐到 16 的倍数（区块边界）
     if (Minecraft::instance) {
         std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
         std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-        if (!xStr.empty()) offsetX = atoi(xStr.c_str());
-        if (!zStr.empty()) offsetZ = atoi(zStr.c_str());
+        if (!xStr.empty()) {
+            int rawX = atoi(xStr.c_str());
+            // 向下取整到 16 的倍数
+            offsetX = (rawX / 16) * 16;
+            if (rawX != offsetX) {
+                LOGI("World Offset X adjusted from %d to %d (must be multiple of 16)\n", rawX, offsetX);
+            }
+        }
+        if (!zStr.empty()) {
+            int rawZ = atoi(zStr.c_str());
+            offsetZ = (rawZ / 16) * 16;
+            if (rawZ != offsetZ) {
+                LOGI("World Offset Z adjusted from %d to %d (must be multiple of 16)\n", rawZ, offsetZ);
+            }
+        }
     }
 }
 
@@ -69,7 +82,7 @@ void RandomLevelSource::prepareHeights(int x0, int z0, unsigned char* blocks, /*
     int ySize = 128 / CHUNK_HEIGHT + 1;
     int zSize = xChunks + 1;
 
-    // 直接传递绝对坐标起始点
+    // 直接传递绝对坐标起始点（已经是 16 的倍数）
     buffer = getHeights(buffer, x0, 0, z0, xSize, ySize, zSize);
 
     for (int xc = 0; xc < xChunks; xc++) {
@@ -102,7 +115,10 @@ void RandomLevelSource::prepareHeights(int x0, int z0, unsigned char* blocks, /*
                         float val = _s0;
                         float vala = (_s1 - _s0) * zStep;
                         for (int z = 0; z < CHUNK_WIDTH; z++) {
-                            float temp = temperatures[(xc * CHUNK_WIDTH + x) * 16 + (zc * CHUNK_WIDTH + z)];
+                            // 温度数据：temperatures 是按区块内局部坐标 (0..15,0..15) 组织的
+                            int tx = xc * CHUNK_WIDTH + x;
+                            int tz = zc * CHUNK_WIDTH + z;
+                            float temp = temperatures[tx * 16 + tz];
                             int tileId = 0;
                             if (yc * CHUNK_HEIGHT + y < waterHeight) {
                                 if (temp < SNOW_CUTOFF && yc * CHUNK_HEIGHT + y >= waterHeight - 1) {
@@ -231,7 +247,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
-    random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed()); // 种子仍基于区块索引，保持一致性
+    random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
 
     static float totalTime = 0;
     const float st = getTimeS();
@@ -433,7 +449,7 @@ LevelChunk* RandomLevelSource::create(int x, int z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
-    // 绝对坐标起始点（方块）
+    // 绝对坐标起始点（方块），已经对齐到 16 的倍数
     int absX = xOffs * 16 + offsetX;
     int absZ = zOffs * 16 + offsetZ;
 
@@ -452,12 +468,12 @@ LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
 
     // 获取生物群系数据（基于绝对坐标）
     Biome** biomes = level->getBiomeSource()->getBiomeBlock(absX, absZ, 16, 16);
-    float* temperatures = level->getBiomeSource()->temperatures;
+    float* temperatures = level->getBiomeSource()->temperatures; // 注意：temperatures 是 16x16 数组，对应当前区块的绝对坐标
 
     prepareHeights(absX, absZ, blocks, 0, temperatures);
     buildSurfaces(absX, absZ, blocks, biomes);
 
-    caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount); // 洞穴仍用区块索引
+    caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
