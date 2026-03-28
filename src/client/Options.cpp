@@ -40,6 +40,7 @@ OptionString username("username", "Steve");
 
 OptionBool destroyVibration("destroyVibration", true);
 OptionBool isLeftHanded("isLeftHanded", false);
+OptionBool postponedFringe("postponed_fringe", false);  // 默认 false，允许破碎
 OptionBool isJoyTouchArea("isJoyTouchArea", false);
 
 OptionFloat musicVolume("music", 1.f, MUSIC_MIN_VALUE, MUSIC_MAX_VALUE);
@@ -169,6 +170,7 @@ void Options::initTable() {
 	m_options[OPTIONS_FARLANDS_SCALE] = &farlandsScale;
 	m_options[OPTIONS_WORLD_OFFSET_X] = &worldOffsetX;
     m_options[OPTIONS_WORLD_OFFSET_Z] = &worldOffsetZ;
+	m_options[OPTIONS_POSTPONED_FRINGE] = &postponedFringe;
 }
 
 void Options::set(OptionId key, const std::string& value) {
