@@ -1,200 +1,24 @@
-# MinecraftPE
+# Minecraft Pocket Edition Plus
 > [!Warning]
-> Github repository **isnt main**. All issues and pull requests should be send in [Gitea Repository](https://gitea.sffempire.ru/Kolyah35/minecraft-pe-0.6.1).
+> 该仓库仅用于构建和修改携带版源码，最新构建请跳转Actions获取
 
 > [!Important]
-> We have a discord server, where you can report bugs or send feedback https://discord.gg/c58YesBxve
+> 当你在使用此版本的时候，你也许会遇到崩溃现象，这是正常的，因为这版本不稳定
 
-Source code for **Minecraft Pocket Edition 0.6.1 alpha** with various fixes and improvements.
+# 主目标 靠前的先更新
+- [ ] 当打开F3时，始终启用噪声检测器
+- [ ] 调整玩家飞行速度
+- [ ] 加入指令或其预期功能
+- [X] 修改海平面
+- [X] 使用无限世界
+- [X] 地形偏移(精确到区块)与禁用32位边境之地，地形缩放
+- [X] 更好的F3
 
-This project aims to preserve and improve this early version of Minecraft PE.
+# 构建
+> 目前的构建包含Android (V8A与V7A) ，Windows和Web版，可以按照自己的平台下载
+> Linux不支持!!!!!!!!
 
-# TODO / Roadmap
-- [x] Add platform GLFW
-- [x] Compile for Linux
-- [x] Compile for android aarch64
-    - [x] Touch control improvements
-    - [ ] Screen fixes
-- [ ] Rewrite platform logic
-- [x] Fix sound
-- [x] Do a server connection GUI
-- [ ] Controller support
-- [x] Minecraft server hosting
-- [x] Screen fixess
-- [x] Fix fog
-- [x] Add sprinting
-- [x] Chat (semi working) and commands
-- [x] Implementing options
-- [x] Better F3
-
-# Build
-
-## CMake
-### Linux 
-1. Install dependiences
-
-(Debian-like)
-
-``sudo apt install build-essential git cmake libgl-dev libwayland-dev xorg-dev libxkbcommon-dev``
-
-(Arch-like)
-
-``sudo pacman -S base-devel git cmake libglvnd wayland xorg-server-devel xorgproto libxkbcommon``
-
-2. Create build folder
-``mkdir build && cd build``
-
-3. Generate CMake cache and build the project
-```
-cmake .. -B .
-cmake --build .
-```
-
-### Windows
-1. Install [Visual studio Build Tools](https://aka.ms/vs/stable/vs_BuildTools.exe) and [CMake](https://github.com/Kitware/CMake/releases/download/v4.3.0-rc3/cmake-4.3.0-rc3-windows-x86_64.msi)
-
-2. Create build folder
-``mkdir build && cd build``
-
-3. Generate CMake cache and build the project
-```
-cmake ..
-cmake --build .
-```
-
-## Visual Studio
-
-1. Open the repository folder in **Visual Studio**.  
-2. Visual Studio will automatically detect the `CMakeLists.txt` file and generate the project configuration.  
-3. Set **MinecraftPE.exe** as the **target**.  
-4. Press **Run** (or F5) to build and launch the game.
-
-## Android
-### Windows
-1. Download **Android NDK r14b**:  
-   http://dl.google.com/android/repository/android-ndk-r14b-windows-x86_64.zip
-
-2. Extract it to the root of your `C:` drive so the path becomes:
-
-   ```
-   C:\android-ndk-r14b
-   ```
-
-3. Run the build script:
-
-```powershell
-# Full build (NDK + Java + APK + install)
-.\build.ps1
-
-# Skip C++ compilation (Java/assets changed only)
-.\build.ps1 -NoCpp
-
-# Skip Java compilation (C++ changed only)
-.\build.ps1 -NoJava
-
-# Only repackage + install (no compilation)
-.\build.ps1 -NoBuild
-```
-
-### Linux
-1. Download **Command line tools**:  
-   https://developer.android.com/studio#command-line-tools-only
-
-2. Unzip it into a folder, e.g.:
-
-   ```bash
-   mkdir -p "$HOME/Android/Sdk/"
-   unzip commandlinetools-linux-*.zip -d "$HOME/Android/Sdk/"
-   ```
-
-3. Your structure should look like
-
-   ```bash
-   $HOME/Android/Sdk/cmdline-tools/bin/sdkmanager
-   ```
-
-   > [!Note] 
-   > `sdkmanager` expects the SDK to include a `cmdline-tools/latest/` folder.
-   > If you only have `cmdline-tools/bin`, create the required layout:
-   >
-   > ```bash
-   > mkdir -p "$HOME/Android/Sdk/cmdline-tools/latest"
-   > ln -snf ../bin  "$HOME/Android/Sdk/cmdline-tools/latest/bin"
-   > ln -snf ../lib  "$HOME/Android/Sdk/cmdline-tools/latest/lib"
-   > ln -snf ../source.properties "$HOME/Android/Sdk/cmdline-tools/latest/source.properties"
-   > ln -snf ../NOTICE.txt        "$HOME/Android/Sdk/cmdline-tools/latest/NOTICE.txt"
-   > ```
-
-4. Install the build tools (and platform) using `sdkmanager`
-   
-   ```bash
-   export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-   export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
-
-   sdkmanager --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-   ```
-
-   > [!Note]
-   > if you want build.sh to always find the SDK,
-   > Set ANDROID_SDK_ROOT in your shell config (~/.bashrc / ~/.profile / ~/.config/fish/config.fish), for example:
-   >
-   > ```bash
-   > export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-   > ```
-   >
-   > Then restart your shell (or `source` the file)
-
-5. Verify the install
-
-   ```bash
-   ls "$ANDROID_SDK_ROOT/build-tools"
-   ```
-
-   You should see a version folder like:
-
-   ```bash
-   35.0.0
-   33.0.2
-   ```
-
-6. Download **Android NDK r14b**:  
-   https://dl.google.com/android/repository/android-ndk-r14b-linux-x86_64.zip
-
-7. Extract the archive to `/home/username/`, so that the final directory path is `/home/username/android-ndk-r14b/` 
-   
-   > [!Warning]
-   > Make sure you don’t end up with a nested folder like `/home/username/android-ndk-r14b/android-ndk-r14b/`.
-
-8. Re run `build.sh`
-
-## Web
-1. Download and install **emsdk**: https://emscripten.org/docs/getting_started/downloads.html
-   > [!Note]
-   > On arch linux you can use AUR:
-   > `yay -Sy emsdk`
-   
-2. Configure and build project:
-   ```
-   mkdir build && cd build
-   cmake .. -B . -G Ninja "-DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
-   cmake --build . --target MinecraftPE
-   ```
-   > [!Note]
-   > If you are using VSCode with CMake plugin, you can add Emscripten kit
-   > 1. Press Ctrl + Shift + P
-   > 2. Type `CMake: Edit User-Local CMake Kits` and hit Enter
-   > 3. Add this:
-      ```json
-      {
-         "name": "Emscripten",
-         "compilers": {
-            "C": "/usr/lib/emsdk/upstream/bin/clang",
-            "CXX": "/usr/lib/emsdk/upstream/bin/clang++"
-         },
-         "toolchainFile": "/usr/lib/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
-      }
-      ```
-3. Run game:
-   ```
-   emrun --port 8080 .
-   ```
+# 作者
+> BiliBili: https://b23.tv/JSjjPKH
+> QQ:       https://qm.qq.com/q/r1vSzaRyO4
+> 你可以在此版本上进行二次创作，但必须标清原作者!!!
