@@ -1,4 +1,3 @@
-
 #include "ClientSideNetworkHandler.h"
 #include "client/Options.h"
 #include "packet/PacketInclude.h"
@@ -39,8 +38,9 @@ ClientSideNetworkHandler::ClientSideNetworkHandler(Minecraft* minecraft, IRakNet
 :	minecraft(minecraft),
 	raknetInstance(raknetInstance),
 	level(NULL),
-	requestNextChunkPosition(0),
-    requestNextChunkIndex(0)
+	initialChunksLoaded(false),
+	totalInitialChunks(0),
+	loadedInitialChunks(0)
 {
 	rakPeer = raknetInstance->getPeer();
 }
@@ -51,33 +51,25 @@ ClientSideNetworkHandler::~ClientSideNetworkHandler()
 
 void ClientSideNetworkHandler::requestNextChunk()
 {
-	if (requestNextChunkIndex < NumRequestChunks)
-	{
-        IntPair& chunk = requestNextChunkIndexList[requestNextChunkIndex];
-		RequestChunkPacket packet(chunk.x, chunk.y);
-        raknetInstance->send(packet);
+	if (pendingChunks.empty()) return;
 
-        //LOGI("requesting chunks @ (%d, %d)\n", chunk.x, chunk.y);
-        
-		//raknetInstance->send(new RequestChunkPacket(requestNextChunkPosition % CHUNK_CACHE_WIDTH, requestNextChunkPosition / CHUNK_CACHE_WIDTH));
-		requestNextChunkIndex++;
-        requestNextChunkPosition++;
-	}
+	auto chunk = pendingChunks.front();
+	pendingChunks.pop();
+
+	RequestChunkPacket packet(chunk.first, chunk.second);
+	raknetInstance->send(packet);
 }
 
 bool ClientSideNetworkHandler::areAllChunksLoaded()
 {
-	return (requestNextChunkPosition >= (CHUNK_CACHE_WIDTH * CHUNK_CACHE_WIDTH));
+	// 不再使用，但保留以兼容可能的调用
+	return false;
 }
 
 bool ClientSideNetworkHandler::isChunkLoaded(int x, int z)
 {
-	if (x < 0 || x >= CHUNK_CACHE_WIDTH || z < 0 || z >= CHUNK_CACHE_WIDTH) {
-		LOGE("Error: Tried to request chunk (%d, %d)\n", x, z);
-		return true;
-	}
-	return chunksLoaded[x * CHUNK_CACHE_WIDTH + z];
-	//return areAllChunksLoaded();
+	auto it = loadedChunks.find(std::make_pair(x, z));
+	return it != loadedChunks.end() && it->second;
 }
 
 void ClientSideNetworkHandler::onConnect(const RakNet::RakNetGUID& hostGuid)
@@ -579,28 +571,65 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, ChunkDat
 	//chunk->terrainPopulated = true;
 	chunk->unsaved = false;
 
-	chunksLoaded[packet->x * CHUNK_CACHE_WIDTH + packet->z] = true;
+	// 标记区块已加载
+	loadedChunks[std::make_pair(packet->x, packet->z)] = true;
 
-	if (areAllChunksLoaded())
-	{
-		ReadyPacket packet(ReadyPacket::READY_REQUESTEDCHUNKS);
-		raknetInstance->send(packet);
+	// 如果是初始加载阶段，统计已加载数量
+	if (!initialChunksLoaded) {
+		loadedInitialChunks++;
+		if (loadedInitialChunks == totalInitialChunks) {
+			// 所有初始区块加载完毕，通知服务端
+			ReadyPacket readyPkt(ReadyPacket::READY_REQUESTEDCHUNKS);
+			raknetInstance->send(readyPkt);
+			initialChunksLoaded = true;
 
-		for (unsigned int i = 0; i < bufferedBlockUpdates.size(); i++)
-		{
-			const SBufferedBlockUpdate& update = bufferedBlockUpdates[i];
-			int tileId = Tile::transformToValidBlockId( update.blockId, update.x, update.y, update.z );
-			if (update.setData)
-				level->setTileAndData(update.x, update.y, update.z, tileId, update.blockData);
-			else
-				level->setTile(update.x, update.y, update.z, tileId);
+			// 应用所有缓冲的方块更新（只做一次）
+			for (unsigned int i = 0; i < bufferedBlockUpdates.size(); i++) {
+				const SBufferedBlockUpdate& update = bufferedBlockUpdates[i];
+				int tileId = Tile::transformToValidBlockId(update.blockId, update.x, update.y, update.z);
+				if (update.setData)
+					level->setTileAndData(update.x, update.y, update.z, tileId, update.blockData);
+				else
+					level->setTile(update.x, update.y, update.z, tileId);
+			}
+			bufferedBlockUpdates.clear();
 		}
-		bufferedBlockUpdates.clear();
+	} else {
+		// 动态加载阶段：当有新区块加载时，应用属于该区块的缓冲更新
+		for (auto it = bufferedBlockUpdates.begin(); it != bufferedBlockUpdates.end(); ) {
+			const SBufferedBlockUpdate& update = *it;
+			if ((update.x >> 4) == packet->x && (update.z >> 4) == packet->z) {
+				int tileId = Tile::transformToValidBlockId(update.blockId, update.x, update.y, update.z);
+				if (update.setData)
+					level->setTileAndData(update.x, update.y, update.z, tileId, update.blockData);
+				else
+					level->setTile(update.x, update.y, update.z, tileId);
+				it = bufferedBlockUpdates.erase(it);
+			} else {
+				++it;
+			}
+		}
 	}
-	else
-	{
-		requestNextChunk();
+
+	// 检查玩家位置变化，补充新区域（简单实现：每次区块加载后尝试补充周围）
+	if (initialChunksLoaded) {
+		int cx = Mth::floor(minecraft->player->x / 16.0f);
+		int cz = Mth::floor(minecraft->player->z / 16.0f);
+		const int radius = 5;
+		// 只补充缺失的区块
+		for (int dx = -radius; dx <= radius; ++dx) {
+			for (int dz = -radius; dz <= radius; ++dz) {
+				int nx = cx + dx, nz = cz + dz;
+				if (loadedChunks.find(std::make_pair(nx, nz)) == loadedChunks.end()) {
+					// 尚未请求或加载，加入队列（避免重复加入）
+					pendingChunks.push(std::make_pair(nx, nz));
+				}
+			}
+		}
 	}
+
+	// 继续请求下一个区块
+	requestNextChunk();
 }
 
 class _ChunkSorter
@@ -623,31 +652,39 @@ private:
 };
 
 
-void ClientSideNetworkHandler::arrangeRequestChunkOrder() {
+void ClientSideNetworkHandler::arrangeRequestChunkOrder()
+{
 	clearChunksLoaded();
 
-    // Default sort is around center of the world
-    int cx = CHUNK_CACHE_WIDTH / 2;
-    int cz = CHUNK_CACHE_WIDTH / 2;
+	// 获取玩家所在的区块坐标
+	int cx = 0, cz = 0;
+	Player* p = minecraft ? minecraft->player : NULL;
+	if (p) {
+		cx = Mth::floor(p->x / 16.0f);
+		cz = Mth::floor(p->z / 16.0f);
+	}
 
-    // If player exists, let's sort around him
-    Player* p = minecraft? minecraft->player : NULL;
-    if (p) {
-        cx = Mth::floor(p->x / (float)CHUNK_WIDTH);
-        cz = Mth::floor(p->z / (float)CHUNK_DEPTH);
-    }
+	// 请求周围 5x5 区块（半径5，共121个）
+	const int radius = 5;
+	int requested = 0;
+	for (int dx = -radius; dx <= radius; ++dx) {
+		for (int dz = -radius; dz <= radius; ++dz) {
+			int nx = cx + dx;
+			int nz = cz + dz;
+			pendingChunks.push(std::make_pair(nx, nz));
+			requested++;
+		}
+	}
 
-    _ChunkSorter sorter(cx, cz);
-    std::sort(requestNextChunkIndexList, requestNextChunkIndexList + NumRequestChunks, sorter);
+	totalInitialChunks = requested;
+	loadedInitialChunks = 0;
+	initialChunksLoaded = false;
 }
 
 void ClientSideNetworkHandler::levelGenerated(Level* level)
 {
 	this->level = level;
-	ReadyPacket packet(ReadyPacket::READY_CLIENTGENERATION);
-	raknetInstance->send(packet);
-
-    arrangeRequestChunkOrder();
+	arrangeRequestChunkOrder();
 	requestNextChunk();
 }
 
@@ -917,10 +954,9 @@ void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, Adventur
 
 void ClientSideNetworkHandler::clearChunksLoaded()
 {
-	// Init the chunk positions
-	for (int i = 0; i < NumRequestChunks; ++i) {
-		requestNextChunkIndexList[i].x = i/CHUNK_WIDTH;
-		requestNextChunkIndexList[i].y = i%CHUNK_WIDTH;
-		chunksLoaded[i] = false;
-	}
+	loadedChunks.clear();
+	while (!pendingChunks.empty()) pendingChunks.pop();
+	initialChunksLoaded = false;
+	totalInitialChunks = 0;
+	loadedInitialChunks = 0;
 }
