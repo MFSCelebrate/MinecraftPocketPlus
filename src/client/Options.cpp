@@ -32,6 +32,7 @@ OptionInt guiScale("guiScale", 0, 0, 5);
 
 OptionString skin("skin", "Default");
 OptionString debugScreenSize("debug_screen_size", "1.0");
+OptionString seaLevel("sea_level", "63");
 
 #ifdef RPI
 OptionString username("username", "StevePi");
@@ -142,6 +143,8 @@ void Options::initTable() {
     m_options[OPTIONS_USE_TOUCHSCREEN] = &useTouchscreen;
 
     m_options[OPTIONS_SERVER_VISIBLE] = &serverVisible;
+
+	m_options[OPTIONS_SEA_LEVEL] = &seaLevel;
 
     m_options[OPTIONS_KEY_FORWARD] = &keyForward;
     m_options[OPTIONS_KEY_LEFT] = &keyLeft;
