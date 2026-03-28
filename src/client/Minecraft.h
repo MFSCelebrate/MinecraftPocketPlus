@@ -50,8 +50,9 @@ class Minecraft: public App
 protected:
 	Minecraft();
 public:
+    static Minecraft* instance;
 	virtual ~Minecraft();
-
+    
 	void init();
 	void setSize(int width, int height);
 	void reloadOptions();
