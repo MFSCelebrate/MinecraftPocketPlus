@@ -6,7 +6,7 @@
 #include "../world/level/LevelConstants.h"
 
 #include <vector>
-#include <unordered_map>
+#include <map>          // 替换 unordered_map
 #include <queue>
 
 class Minecraft;
@@ -35,6 +35,7 @@ public:
     virtual void onUnableToConnect();
     virtual void onDisconnect(const RakNet::RakNetGUID& guid);
 
+    // ... 所有 handle 声明保持不变 ...
     virtual void handle(const RakNet::RakNetGUID& source, LoginStatusPacket* packet);
     virtual void handle(const RakNet::RakNetGUID& source, StartGamePacket* packet);
     virtual void handle(const RakNet::RakNetGUID& source, MessagePacket* packet);
@@ -89,9 +90,9 @@ private:
 
     BlockUpdateList bufferedBlockUpdates;
 
-    // 动态区块管理
-    std::unordered_map<std::pair<int,int>, bool> loadedChunks;   // 已加载区块
-    std::queue<std::pair<int,int>> pendingChunks;                // 待请求的区块队列
+    // 动态区块管理（使用 map 避免哈希问题）
+    std::map<std::pair<int,int>, bool> loadedChunks;   // 已加载区块
+    std::queue<std::pair<int,int>> pendingChunks;      // 待请求的区块队列
     bool initialChunksLoaded;          // 是否已发送 ReadyPacket
     int totalInitialChunks;            // 初始请求的区块总数
     int loadedInitialChunks;           // 已加载的初始区块数
