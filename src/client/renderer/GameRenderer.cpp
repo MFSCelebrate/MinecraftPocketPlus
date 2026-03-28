@@ -29,6 +29,8 @@
 #include "../gui/components/ImageButton.h"
 #include "Tesselator.h"
 
+extern int _t_keepPic;
+
 static int _shTicks = -1;
 
 GameRenderer::GameRenderer( Minecraft* mc )
