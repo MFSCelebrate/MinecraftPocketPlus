@@ -12,6 +12,7 @@
 #define OPTIONS_FARLANDS_SCALE farlands_scale
 #define OPTIONS_WORLD_OFFSET_X world_offset_x
 #define OPTIONS_WORLD_OFFSET_Z world_offset_z
+#define OPTIONS_POSTPONED_FRINGE postponed_fringe
 
 //package net.minecraft.client;
 
@@ -88,6 +89,7 @@ enum OptionId {
     OPTIONS_FARLANDS_SCALE,
     OPTIONS_WORLD_OFFSET_X,
     OPTIONS_WORLD_OFFSET_Z,
+    OPTIONS_POSTPONED_FRINGE,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
