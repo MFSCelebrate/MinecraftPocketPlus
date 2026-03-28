@@ -118,6 +118,7 @@ int Minecraft::customDebugId = Minecraft::CDI_NONE;
 bool Minecraft::useAmbientOcclusion = false;
 
 Minecraft::Minecraft() :	
+    instance(this),
 	level(NULL),
 	player(NULL),
 	cameraTargetPlayer(NULL),
