@@ -184,78 +184,57 @@ void OptionsScreen::selectCategory(int index) {
 }
 
 void OptionsScreen::generateOptionScreens() {
-	// how the fuck it works
+    optionPanes.push_back(new OptionsGroup("options.group.general"));
+    optionPanes.push_back(new OptionsGroup("options.group.game"));
+    optionPanes.push_back(new OptionsGroup("options.group.controls"));
+    optionPanes.push_back(new OptionsGroup("options.group.graphics"));
+    optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
+    optionPanes.push_back(new OptionsGroup("options.group.world"));   // 使用语言键
 
-	optionPanes.push_back(new OptionsGroup("options.group.general"));
-	optionPanes.push_back(new OptionsGroup("options.group.game"));
-	optionPanes.push_back(new OptionsGroup("options.group.controls"));
-	optionPanes.push_back(new OptionsGroup("options.group.graphics"));
-	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
-	optionPanes.push_back(new OptionsGroup("World"));
-	
-	OptionsGroup* worldGroup = optionPanes.back();  // 获取最后添加的分类
+    // General Pane
+    optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
+        .addOptionItem(OPTIONS_SENSITIVITY, minecraft);
 
-	// General Pane
-	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
-		.addOptionItem(OPTIONS_SENSITIVITY, minecraft);
+    // Game Pane
+    optionPanes[1]->addOptionItem(OPTIONS_DIFFICULTY, minecraft)
+        .addOptionItem(OPTIONS_SERVER_VISIBLE, minecraft)
+        .addOptionItem(OPTIONS_THIRD_PERSON_VIEW, minecraft)
+        .addOptionItem(OPTIONS_GUI_SCALE, minecraft)
+        .addOptionItem(OPTIONS_SENSITIVITY, minecraft)
+        .addOptionItem(OPTIONS_MUSIC_VOLUME, minecraft)
+        .addOptionItem(OPTIONS_SOUND_VOLUME, minecraft)
+        .addOptionItem(OPTIONS_SMOOTH_CAMERA, minecraft)
+        .addOptionItem(OPTIONS_DESTROY_VIBRATION, minecraft)
+        .addOptionItem(OPTIONS_IS_LEFT_HANDED, minecraft);
 
-	// Game Pane
-	optionPanes[1]->addOptionItem(OPTIONS_DIFFICULTY, minecraft)
-		.addOptionItem(OPTIONS_SERVER_VISIBLE, minecraft)
-		.addOptionItem(OPTIONS_THIRD_PERSON_VIEW, minecraft)
-		.addOptionItem(OPTIONS_GUI_SCALE, minecraft)
-		.addOptionItem(OPTIONS_SENSITIVITY, minecraft)
-		.addOptionItem(OPTIONS_MUSIC_VOLUME, minecraft)
-		.addOptionItem(OPTIONS_SOUND_VOLUME, minecraft)
-		.addOptionItem(OPTIONS_SMOOTH_CAMERA, minecraft)
-		.addOptionItem(OPTIONS_DESTROY_VIBRATION, minecraft)
-		.addOptionItem(OPTIONS_IS_LEFT_HANDED, minecraft);
+    // Controls Pane
+    optionPanes[2]->addOptionItem(OPTIONS_INVERT_Y_MOUSE, minecraft)
+        .addOptionItem(OPTIONS_USE_TOUCHSCREEN, minecraft)
+        .addOptionItem(OPTIONS_AUTOJUMP, minecraft);
 
-	// // Controls Pane
-	optionPanes[2]->addOptionItem(OPTIONS_INVERT_Y_MOUSE, minecraft)
-		.addOptionItem(OPTIONS_USE_TOUCHSCREEN, minecraft)
-		.addOptionItem(OPTIONS_AUTOJUMP, minecraft);
+    for (int i = OPTIONS_KEY_FORWARD; i <= OPTIONS_KEY_USE; i++) {
+        optionPanes[2]->addOptionItem((OptionId)i, minecraft);
+    }
 
-	for (int i = OPTIONS_KEY_FORWARD; i <= OPTIONS_KEY_USE; i++) {
-		optionPanes[2]->addOptionItem((OptionId)i, minecraft);
-	}
+    // Graphics Pane
+    optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
+        .addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
+        .addOptionItem(OPTIONS_VSYNC, minecraft)
+        .addOptionItem(OPTIONS_RENDER_DEBUG, minecraft)
+        .addOptionItem(OPTIONS_ANAGLYPH_3D, minecraft)
+        .addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
+        .addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
+    
+    // Tweaks Pane
+    optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
+        .addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
+        .addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
 
-	// // Graphics Pane
-	optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
-		.addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
-		.addOptionItem(OPTIONS_VSYNC, minecraft)
-		.addOptionItem(OPTIONS_RENDER_DEBUG, minecraft)
-		.addOptionItem(OPTIONS_ANAGLYPH_3D, minecraft)
-		.addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
-		.addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
-	
-	optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
-		.addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
-		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
-
-    // 手动添加选项
-    // 1. Far Lands Scale (字符串输入框)
-    TextOption* farlandsScaleOpt = new TextOption(minecraft, OPTIONS_FARLANDS_SCALE);
-    OptionsItem* farlandsScaleItem = new OptionsItem(OPTIONS_FARLANDS_SCALE, "Far Lands Scale", farlandsScaleOpt);
-    worldGroup->addChild(farlandsScaleItem);
-
-    // 2. World Offset X (字符串输入框)
-    TextOption* offsetXOpt = new TextOption(minecraft, OPTIONS_WORLD_OFFSET_X);
-    OptionsItem* offsetXItem = new OptionsItem(OPTIONS_WORLD_OFFSET_X, "World Offset X", offsetXOpt);
-    worldGroup->addChild(offsetXItem);
-
-    // 3. World Offset Z (字符串输入框)
-    TextOption* offsetZOpt = new TextOption(minecraft, OPTIONS_WORLD_OFFSET_Z);
-    OptionsItem* offsetZItem = new OptionsItem(OPTIONS_WORLD_OFFSET_Z, "World Offset Z", offsetZOpt);
-    worldGroup->addChild(offsetZItem);
-
-    // 4. Postponed Fringe Lands (复选框)
-    OptionButton* fringeOpt = new OptionButton(OPTIONS_POSTPONED_FRINGE);
-    fringeOpt->updateImage(&minecraft->options); // 同步当前值
-    OptionsItem* fringeItem = new OptionsItem(OPTIONS_POSTPONED_FRINGE, "Postponed Fringe Lands (Disabled 32Bit Farlands)", fringeOpt);
-    worldGroup->addChild(fringeItem);
-
-	worldGroup->setupPositions();
+    // World Pane
+    optionPanes[5]->addOptionItem(OPTIONS_FARLANDS_SCALE, minecraft)
+        .addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
+        .addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
+        .addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
