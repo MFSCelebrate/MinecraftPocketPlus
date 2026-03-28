@@ -83,6 +83,7 @@ enum OptionId {
 
     OPTIONS_FIRST_LAUNCH,
     OPTIONS_LAST_IP,
+    OPTIONS_FARLANDS_SCALE,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
