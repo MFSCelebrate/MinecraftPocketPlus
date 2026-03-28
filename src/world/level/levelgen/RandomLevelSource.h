@@ -29,8 +29,8 @@ public:
     LevelChunk* create(int x, int z);
     LevelChunk* getChunk(int xOffs, int zOffs);
 
-    void prepareHeights(int x0, int z0, unsigned char* blocks, /*Biome*/void* biomes, float* temperatures);
-    void buildSurfaces(int x0, int z0, unsigned char* blocks, Biome** biomes);
+    void prepareHeights(int xOffs, int zOffs, unsigned char* blocks, /*Biome*/void* biomes, float* temperatures);
+    void buildSurfaces(int xOffs, int zOffs, unsigned char* blocks, Biome** biomes);
     void postProcess(ChunkSource* parent, int xt, int zt);
 
     bool tick();
@@ -40,7 +40,7 @@ public:
     bool shouldSave();
     std::string gatherStats();
 
-    // 返回地形偏移量（方块为单位）
+    // 新增：获取地形偏移量
     int getOffsetX() const { return offsetX; }
     int getOffsetZ() const { return offsetZ; }
 
@@ -79,8 +79,8 @@ private:
     float* fi;
     float* fis;
 
-    // 地形偏移量（方块为单位）
-    int offsetX, offsetZ;
+    // 地形偏移量（区块为单位）
+    int offsetX, offsetZ;   // 注意：此处为唯一声明，原有 offsetX, OffsetZ 已被替换
 };
 
 class PerformanceTestChunkSource : public ChunkSource
