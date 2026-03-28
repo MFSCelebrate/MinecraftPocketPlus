@@ -29,8 +29,9 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     forestNoise(&random, 8),
     spawnMobs(spawnMobs),
     pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-    offsetX(134217727), offsetZ(0)   // 任意偏移值
+    offsetX(0), offsetZ(0)   // 临时初始值
 {
+    // ... 原有代码（如 waterDepths 初始化、buffer 分配等） ...
     for (int i=0; i<32; ++i)
 	for (int j=0; j<32; ++j)
 		waterDepths[i][j] = 0;
@@ -39,6 +40,11 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 
 	Random randomCopy = random;
 	printf("random.get : %d\n", randomCopy.nextInt());
+    // 从选项读取偏移量
+    if (Minecraft::instance) {
+        offsetX = Minecraft::instance->options.getIntValue(OPTIONS_WORLD_OFFSET_X);
+        offsetZ = Minecraft::instance->options.getIntValue(OPTIONS_WORLD_OFFSET_Z);
+    }
 }
 
 RandomLevelSource::~RandomLevelSource() {
