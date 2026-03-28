@@ -29,8 +29,6 @@
 #include "../gui/components/ImageButton.h"
 #include "Tesselator.h"
 
-extern int _t_keepPic;
-
 static int _shTicks = -1;
 
 GameRenderer::GameRenderer( Minecraft* mc )
@@ -106,33 +104,10 @@ void GameRenderer::setupCamera(float a, int eye) {
     if (zoom != 1) {
         glTranslatef2((float) zoom_x, (float) -zoom_y, 0);
 		glScalef2(zoom, zoom, 1);
+        gluPerspective(_setupCameraFov = getFov(a, true), mc->width / (float) mc->height, 0.05f, renderDistance);
+    } else {
+        gluPerspective(_setupCameraFov = getFov(a, true), mc->width / (float) mc->height, 0.05f, renderDistance);
     }
-
-    // 计算视锥体参数
-    float fovDeg = getFov(a, true);
-    float aspect = mc->width / (float) mc->height;
-    float zNear = 0.05f;
-    float zFar = renderDistance;
-
-    // 原 gluPerspective 等效的上下平面位置
-    float top = (float)tan(fovDeg * Mth::PI / 360.0) * zNear;
-    float bottom = -top;
-    float left = bottom * aspect;
-    float right = top * aspect;
-
-    // 扩大垂直视野，使整个高度范围可见（系数可根据需要调整）
-    const float yScale = 3.0f;   // 增大此值可以看到更高/更低的区块，但可能增加渲染负担
-    top *= yScale;
-    bottom *= yScale;
-
-    // 重新计算左右以保持宽高比
-    left = bottom * aspect;
-    right = top * aspect;
-
-    // 设置投影矩阵
-    glFrustumf(left, right, bottom, top, zNear, zFar);
-
-    _setupCameraFov = fovDeg;   // 保留原值，用于其他地方
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity2();
@@ -143,6 +118,8 @@ void GameRenderer::setupCamera(float a, int eye) {
 	 
 	moveCameraToPlayer(a);
 }
+
+extern int _t_keepPic;
 
 /*public*/
 void GameRenderer::render(float a) {
@@ -978,3 +955,4 @@ void GameRenderer::prepareAndRenderClouds( LevelRenderer* levelRenderer, float a
 	TIMER_POP();
 	//}
 }
+
