@@ -51,6 +51,7 @@ private:
 public:
     LargeCaveFeature caveFeature;
     int waterDepths[16+16][16+16];
+    int getSeaLevel() const { return customSeaLevel; }
 private:
     ChunkMap chunkMap;
 
@@ -78,6 +79,8 @@ private:
     float* dr;
     float* fi;
     float* fis;
+
+    int customSeaLevel;     // 用户自定义海平面高度（0-127），默认63
 
     // 地形偏移量（区块为单位）
     int offsetX, offsetZ;   // 注意：此处为唯一声明，原有 offsetX, OffsetZ 已被替换
