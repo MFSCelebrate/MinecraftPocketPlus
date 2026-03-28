@@ -19,8 +19,8 @@ UsernameScreen::~UsernameScreen()
 
 void UsernameScreen::init()
 {
-    _input = "";
-    _btnDone.active = false; // disabled until name typed
+    _input = "MFSCelebrate";
+    _btnDone.active = true; // disabled until name typed
     buttons.push_back(&_btnDone);
     tabButtons.push_back(&_btnDone);
     textBoxes.push_back(&tUsername);
@@ -71,7 +71,7 @@ void UsernameScreen::removed()
 
 void UsernameScreen::buttonClicked(Button* button)
 {
-    if (button == &_btnDone && tUsername.text.empty()) {
+    if (button == &_btnDone && !tUsername.text.empty()) {
         minecraft->options.set(OPTIONS_USERNAME, tUsername.text);
         minecraft->options.save();
         minecraft->setScreen(NULL); // goes to StartMenuScreen
