@@ -14,6 +14,7 @@
 #define OPTIONS_WORLD_OFFSET_Z world_offset_z
 #define OPTIONS_POSTPONED_FRINGE postponed_fringe
 #define OPTIONS_DEBUG_SCREEN_SIZE debug_screen_size
+#define OPTIONS_SEA_LEVEL sea_level
 
 //package net.minecraft.client;
 
@@ -92,6 +93,7 @@ enum OptionId {
     OPTIONS_WORLD_OFFSET_Z,
     OPTIONS_POSTPONED_FRINGE,
     OPTIONS_DEBUG_SCREEN_SIZE,
+    OPTIONS_SEA_LEVEL,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
