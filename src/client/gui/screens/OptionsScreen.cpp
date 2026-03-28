@@ -252,8 +252,10 @@ void OptionsScreen::generateOptionScreens() {
     // 4. Postponed Fringe Lands (复选框)
     OptionButton* fringeOpt = new OptionButton(OPTIONS_POSTPONED_FRINGE);
     fringeOpt->updateImage(&minecraft->options); // 同步当前值
-    OptionsItem* fringeItem = new OptionsItem(OPTIONS_POSTPONED_FRINGE, "Postponed Fringe Lands (Disabled Farlands)", fringeOpt);
+    OptionsItem* fringeItem = new OptionsItem(OPTIONS_POSTPONED_FRINGE, "Postponed Fringe Lands (Disabled 32Bit Farlands)", fringeOpt);
     worldGroup->addChild(fringeItem);
+
+	worldGroup->setupPositions();
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
