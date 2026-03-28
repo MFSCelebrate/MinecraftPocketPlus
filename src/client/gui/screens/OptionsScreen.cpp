@@ -192,7 +192,8 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsGroup("options.group.graphics"));
 	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
 	optionPanes.push_back(new OptionsGroup("World"));
-
+	
+	OptionsGroup* worldGroup = optionPanes.back();  // 获取最后添加的分类
 
 	// General Pane
 	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
