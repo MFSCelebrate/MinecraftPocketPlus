@@ -61,6 +61,16 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
             }
         }
     }
+	// 读取海平面高度（默认63）
+customSeaLevel = 63;
+if (Minecraft::instance) {
+    std::string seaStr = Minecraft::instance->options.getStringValue(OPTIONS_SEA_LEVEL);
+    if (!seaStr.empty()) {
+        int sl = atoi(seaStr.c_str());
+        if (sl >= 0 && sl <= 127) customSeaLevel = sl;
+        else LOGI("Sea level adjusted from %d to %d (must be 0-127)\n", sl, customSeaLevel);
+    }
+}
 }
 
 RandomLevelSource::~RandomLevelSource() {
@@ -87,7 +97,9 @@ RandomLevelSource::~RandomLevelSource() {
 void RandomLevelSource::prepareHeights(int xOffs, int zOffs, unsigned char* blocks, /*Biome*/void* biomes, float* temperatures) {
 	
 	int xChunks = 16 / CHUNK_WIDTH;
-    int waterHeight = Level::DEPTH - 64;
+    int waterHeight = customSeaLevel + 1;   // 水面顶部高度 = 海平面 + 1
+if (waterHeight < 0) waterHeight = 0;
+if (waterHeight > 127) waterHeight = 127;
 
     int xSize = xChunks + 1;
     int ySize = 128 / CHUNK_HEIGHT + 1;
@@ -158,8 +170,10 @@ void RandomLevelSource::prepareHeights(int xOffs, int zOffs, unsigned char* bloc
 }
 
 void RandomLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* blocks, Biome** biomes) {
-    int waterHeight = Level::DEPTH - 64;
-
+    int waterHeight = customSeaLevel + 1;   // 水面顶部高度 = 海平面 + 1
+if (waterHeight < 0) waterHeight = 0;
+if (waterHeight > 127) waterHeight = 127;
+	
     float s = 1 / 32.0f;
     perlinNoise2.getRegion(sandBuffer, (float)(xOffs * 16), (float)(zOffs * 16), 0, 16, 16, 1, s, s, 1);
     perlinNoise2.getRegion(gravelBuffer, (float)(xOffs * 16), 109.01340f, (float)(zOffs * 16), 16, 1, 16, s, 1, s);
@@ -496,7 +510,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
             int xp = x - (xo + 8);
             int zp = z - (zo + 8); 
             int y = level->getTopSolidBlock(x, z);
-            float temp = temperatures[xp * 16 + zp] - (y - 64) / 64.0f * SNOW_SCALE;
+            float temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0f * SNOW_SCALE;
             if (temp < SNOW_CUTOFF) {
                 if (y > 0 && y < 128 && level->isEmptyTile(x, y, z) && level->getMaterial(x, y - 1, z)->blocksMotion()) {
                     if (level->getMaterial(x, y - 1, z) != Material::ice) level->setTile(x, y, z, Tile::topSnow->id);
