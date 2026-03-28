@@ -10,6 +10,8 @@
 #define PIXELS_PER_MILLIMETER_MIN_VALUE 3.0f
 #define PIXELS_PER_MILLIMETER_MAX_VALUE 4.0f
 #define OPTIONS_FARLANDS_SCALE farlands_scale
+#define OPTIONS_WORLD_OFFSET_X world_offset_x
+#define OPTIONS_WORLD_OFFSET_Z world_offset_z
 
 //package net.minecraft.client;
 
@@ -84,6 +86,8 @@ enum OptionId {
     OPTIONS_FIRST_LAUNCH,
     OPTIONS_LAST_IP,
     OPTIONS_FARLANDS_SCALE,
+    OPTIONS_WORLD_OFFSET_X,
+    OPTIONS_WORLD_OFFSET_Z,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
