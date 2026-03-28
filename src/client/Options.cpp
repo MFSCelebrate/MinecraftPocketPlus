@@ -23,6 +23,7 @@ OptionBool allowSprint("allowSprint", true);
 OptionBool rpiCursor("rpiCursor", false);
 OptionBool autoJump("autoJump", true);
 
+OptionString farlandsScale("farlands_scale", "1.0");
 
 OptionFloat flySpeed("flySpeed", 1.f);
 OptionFloat cameraSpeed("cameraSpeed", 1.f);
@@ -163,6 +164,7 @@ void Options::initTable() {
 
 	m_options[OPTIONS_AUTOJUMP] = &autoJump;
 	m_options[OPTIONS_LAST_IP] = &lastIp;
+	m_options[OPTIONS_FARLANDS_SCALE] = &farlandsScale;
 }
 
 void Options::set(OptionId key, const std::string& value) {
