@@ -10,7 +10,7 @@
 #include "../components/ImageButton.h"
 #include "../components/OptionsGroup.h"
 #include "../components/TextOption.h"
-#include ",,/components/OptionsItem.h"
+#include "../components/OptionsItem.h"
 #include "platform/input/Keyboard.h"
 
 OptionsScreen::OptionsScreen()
