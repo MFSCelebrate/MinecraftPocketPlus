@@ -1,6 +1,5 @@
 #include "RandomLevelSource.h"
 
-#include "Minecraft.h"
 #include "feature/FeatureInclude.h"
 #include "../Level.h"
 #include "../ChunkPos.h"
@@ -12,7 +11,7 @@
 #include "../tile/Tile.h"
 #include "../tile/HeavyTile.h"
 #include "../../../util/Random.h"
-
+#include "../../../client/Minecraft.h"   // <-- 添加此行
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
 const float RandomLevelSource::SNOW_SCALE = 0.3f;
 static const int MAX_BUFFER_SIZE = 1024;
