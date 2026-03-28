@@ -4,6 +4,7 @@ options.farlands_scale=Farlands Scale (F/S)
 options.world_offset_x=World Offset X
 options.world_offset_z=World Offset Z
 options.postponed_fringe=Postponed Fringe Lands (Disabled 32Bit Farlands)
+options.debug_screen_size=Debug Screen Size
 
 language.name=English
 language.region=US
