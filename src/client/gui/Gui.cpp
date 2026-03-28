@@ -732,7 +732,7 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p   = minecraft->player;
     Level*       lvl = minecraft->level;
 
-    // 获取地形偏移量（方块为单位）
+    // 获取地形偏移量（区块为单位）
     int terrainOffsetX = 0, terrainOffsetZ = 0;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -751,9 +751,9 @@ void Gui::renderDebugInfo() {
     int bx = (int)floorf(px), by = (int)floorf(py), bz = (int)floorf(pz);
     int cx = bx >> 4, cz = bz >> 4;
 
-    // 偏移后的坐标（原始坐标 + 偏移量）
-    float pxo = px + (float)terrainOffsetX;
-    float pzo = pz + (float)terrainOffsetZ;
+    // 偏移后的坐标（原始坐标 + 偏移量 * 16）
+    float pxo = px + (float)(terrainOffsetX * 16);
+    float pzo = pz + (float)(terrainOffsetZ * 16);
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
@@ -803,7 +803,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[5], "X(Float Offset): %.15f", pxo);
     sprintf(ln[6], "Y(Float Offset): %.10f", py);
     sprintf(ln[7], "Z(Float Offset): %.15f", pzo);
-    sprintf(ln[8], "Terrain Offset (Blocks): %d / %d", terrainOffsetX, terrainOffsetZ);
+    sprintf(ln[8], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
     ln[9][0] = '\0'; // 空行
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
