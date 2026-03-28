@@ -90,6 +90,8 @@
 #include "../network/command/CommandServer.h"
 #include "gamemode/CreatorMode.h"
 
+Minecraft* Minecraft::instance = nullptr;
+
 static void checkGlError(const char* tag) {
 #ifdef GLDEBUG
 	while (1) {
@@ -118,7 +120,6 @@ int Minecraft::customDebugId = Minecraft::CDI_NONE;
 bool Minecraft::useAmbientOcclusion = false;
 
 Minecraft::Minecraft() :	
-    instance(this),
 	level(NULL),
 	player(NULL),
 	cameraTargetPlayer(NULL),
@@ -169,7 +170,6 @@ Minecraft::Minecraft() :
 	screenChooser(this),
 #endif
 	width(1), height(1),
-	//_respawnPlayerTicks(-1),
 #ifdef __APPLE__
     _isSuperFast(false),
 #endif
@@ -178,9 +178,9 @@ Minecraft::Minecraft() :
 	reserved_d1(0),reserved_d2(0),
 	reserved_f1(0),reserved_f2(0), options(this)
 {
+    instance = this;   // <-- 添加这一行
 //#ifdef ANDROID
-
-#if defined(NO_NETWORK)
+    #if defined(NO_NETWORK)
     raknetInstance = new IRakNetInstance();
 #else
 	raknetInstance = new RakNetInstance();
