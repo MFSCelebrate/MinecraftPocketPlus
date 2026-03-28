@@ -528,7 +528,7 @@ LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
 /*private*/
 float* RandomLevelSource::getHeights(float* buffer, int x, int y, int z, int xSize, int ySize, int zSize) {
 	float farlandsScale = 1.0f;
-if (Minecraft::instance && Minecraft::instance->options) {
+if (Minecraft::instance) {
     std::string scaleStr = Minecraft::instance->options.getStringValue(OPTIONS_FARLANDS_SCALE);
     if (!scaleStr.empty()) {
         farlandsScale = (float)atof(scaleStr.c_str());
