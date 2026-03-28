@@ -9,6 +9,7 @@
 #define SENSITIVITY_MAX_VALUE 1.0f
 #define PIXELS_PER_MILLIMETER_MIN_VALUE 3.0f
 #define PIXELS_PER_MILLIMETER_MAX_VALUE 4.0f
+#define OPTIONS_FARLANDS_SCALE  "farlands_scale"
 
 //package net.minecraft.client;
 
