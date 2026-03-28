@@ -65,10 +65,11 @@ void OptionsScreen::init() {
 	btnClose->setImageDef(def, true);
 
 	categoryButtons.push_back(new Touch::TButton(2, "General"));
-	categoryButtons.push_back(new Touch::TButton(3, "Game"));
-	categoryButtons.push_back(new Touch::TButton(4, "Controls"));
-	categoryButtons.push_back(new Touch::TButton(5, "Graphics"));
-	categoryButtons.push_back(new Touch::TButton(6, "Tweaks"));
+categoryButtons.push_back(new Touch::TButton(3, "Game"));
+categoryButtons.push_back(new Touch::TButton(4, "Controls"));
+categoryButtons.push_back(new Touch::TButton(5, "Graphics"));
+categoryButtons.push_back(new Touch::TButton(6, "Tweaks"));
+categoryButtons.push_back(new Touch::TButton(7, "World"));   // 新增
 
 	btnCredits = new Touch::TButton(11, "Credits");
 
@@ -154,9 +155,9 @@ void OptionsScreen::buttonClicked(Button* button) {
 			minecraft->screenChooser.setScreen(SCREEN_STARTMENU);
 		}
 	}
-	else if (button->id > 1 && button->id < 7) {
-		int categoryButton = button->id - categoryButtons[0]->id;
-		selectCategory(categoryButton);
+	else if (button->id >= categoryButtons[0]->id && button->id <= categoryButtons.back()->id) {
+        int categoryButton = button->id - categoryButtons[0]->id;
+        selectCategory(categoryButton);
 	}
 	else if (button == btnCredits) {
 		minecraft->setScreen(new CreditsScreen());
@@ -188,6 +189,7 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsGroup("options.group.controls"));
 	optionPanes.push_back(new OptionsGroup("options.group.graphics"));
 	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
+	optionPanes.push_back(new OptionsGroup("options.group.world"));
 
 	// General Pane
 	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
@@ -226,6 +228,8 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
 		.addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
 		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
+
+	optionPanes[5]->addOptionItem(OPTIONS_FARLANDS_SCALE, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
