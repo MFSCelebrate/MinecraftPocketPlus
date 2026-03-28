@@ -780,28 +780,53 @@ void Gui::renderDebugInfo() {
     long day       = worldTime / Level::TICKS_PER_DAY;
     long seed      = lvl ? lvl->getSeed() : 0;
 
-    // 构建显示行（共 12 行，数组大小调整为 10）
-    static char ln[12][96];
+    // 获取 Postponed Fringe Lands 选项状态
+    bool fringeEnabled = false;
+    if (minecraft->options.getOpt(OPTIONS_POSTPONED_FRINGE)) {
+        fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+
+    // --- 新增：获取调试屏幕缩放因子 ---
+    float debugScale = 1.0f;
+    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
+    if (!scaleStr.empty()) {
+        debugScale = (float)atof(scaleStr.c_str());
+        if (debugScale < 0.5f) debugScale = 0.5f;   // 限制范围
+        if (debugScale > 3.0f) debugScale = 3.0f;
+    }
+    // --- 新增结束 ---
+
+    // 构建显示行（共 18 行）
+    static char ln[17][96];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
-    ln[2][0] = '\0'; // 空行分隔
-    sprintf(ln[3], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-    sprintf(ln[4], "X(Float Offset): %.15f", pxo);
-	sprintf(ln[5], "Y(Float Offset): %.10f", py);
-	sprintf(ln[6], "Z(Float Offset): %.15f", pzo);
-    sprintf(ln[7], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
-    sprintf(ln[8], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[9], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
-    sprintf(ln[10], "Biome: %s", biomeName);
-    sprintf(ln[11], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    ln[2][0] = '\0'; // 空行
+    sprintf(ln[3], "--- Local Server Position ---");
+    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
+    sprintf(ln[5], "X(Float Offset): %.15f", pxo);
+    sprintf(ln[6], "Y(Float Offset): %.10f", py);
+    sprintf(ln[7], "Z(Float Offset): %.15f", pzo);
+    sprintf(ln[8], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
+    ln[9][0] = '\0'; // 空行
+    sprintf(ln[10], "--- World Generator ---");
+    sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
+    sprintf(ln[12], "--- Other Information ---");
+    sprintf(ln[13], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[14], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
+    sprintf(ln[15], "Biome: %s", biomeName);
+    sprintf(ln[16], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
 
-    const int N   = 12;   // 行数
+    const int N   = 17;
     const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
     const float MGN = 2.0f;  // left/top margin in font-pixels
     const float PAD = 2.0f;  // horizontal padding for background
     Font* font = minecraft->font;
 
-    // 1) Draw semi-transparent background boxes behind each line
+    // --- 应用缩放变换 ---
+    glPushMatrix();
+    glScalef(debugScale, debugScale, 1.0f);
+
+    // 1) 绘制半透明背景框
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float w  = (float)font->width(ln[i]);
@@ -812,16 +837,21 @@ void Gui::renderDebugInfo() {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 2) Draw text (no extra scale — font coords are in GUI units, same as fill)
+    // 2) 绘制文本（为第12行单独设置颜色）
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
-        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // title yellow, rest white
+        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // 标题黄色
+        if (i == 12) {
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // True为绿色，False为红色
+        }
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
+
+    glPopMatrix();  // 恢复变换
 }
 
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
