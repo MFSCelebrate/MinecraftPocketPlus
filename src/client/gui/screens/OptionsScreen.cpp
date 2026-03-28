@@ -189,7 +189,8 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsGroup("options.group.controls"));
 	optionPanes.push_back(new OptionsGroup("options.group.graphics"));
 	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
-	optionPanes.push_back(new OptionsGroup("options.group.world"));
+	optionPanes.push_back(new OptionsGroup("World"));
+
 
 	// General Pane
 	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
@@ -229,10 +230,27 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
 		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
 
-	optionPanes[5]->addOptionItem(OPTIONS_FARLANDS_SCALE, minecraft);
-	optionPanes[5]->addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft);
-    optionPanes[5]->addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft);
-	optionPanes[5]->addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
+    // 手动添加选项
+    // 1. Far Lands Scale (字符串输入框)
+    TextOption* farlandsScaleOpt = new TextOption(minecraft, OPTIONS_FARLANDS_SCALE);
+    OptionsItem* farlandsScaleItem = new OptionsItem(OPTIONS_FARLANDS_SCALE, "Far Lands Scale", farlandsScaleOpt);
+    worldGroup->addChild(farlandsScaleItem);
+
+    // 2. World Offset X (字符串输入框)
+    TextOption* offsetXOpt = new TextOption(minecraft, OPTIONS_WORLD_OFFSET_X);
+    OptionsItem* offsetXItem = new OptionsItem(OPTIONS_WORLD_OFFSET_X, "World Offset X", offsetXOpt);
+    worldGroup->addChild(offsetXItem);
+
+    // 3. World Offset Z (字符串输入框)
+    TextOption* offsetZOpt = new TextOption(minecraft, OPTIONS_WORLD_OFFSET_Z);
+    OptionsItem* offsetZItem = new OptionsItem(OPTIONS_WORLD_OFFSET_Z, "World Offset Z", offsetZOpt);
+    worldGroup->addChild(offsetZItem);
+
+    // 4. Postponed Fringe Lands (复选框)
+    OptionButton* fringeOpt = new OptionButton(OPTIONS_POSTPONED_FRINGE);
+    fringeOpt->updateImage(&minecraft->options); // 同步当前值
+    OptionsItem* fringeItem = new OptionsItem(OPTIONS_POSTPONED_FRINGE, "Postponed Fringe Lands (Disabled Farlands)", fringeOpt);
+    worldGroup->addChild(fringeItem);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
