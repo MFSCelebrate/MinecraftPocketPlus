@@ -31,6 +31,7 @@ OptionFloat cameraSpeed("cameraSpeed", 1.f);
 OptionInt guiScale("guiScale", 0, 0, 5);
 
 OptionString skin("skin", "Default");
+OptionString debugScreenSize("debug_screen_size", "1.0");
 
 #ifdef RPI
 OptionString username("username", "StevePi");
@@ -171,6 +172,7 @@ void Options::initTable() {
 	m_options[OPTIONS_WORLD_OFFSET_X] = &worldOffsetX;
     m_options[OPTIONS_WORLD_OFFSET_Z] = &worldOffsetZ;
 	m_options[OPTIONS_POSTPONED_FRINGE] = &postponedFringe;
+    m_options[OPTIONS_DEBUG_SCREEN_SIZE] = &debugScreenSize;
 }
 
 void Options::set(OptionId key, const std::string& value) {
