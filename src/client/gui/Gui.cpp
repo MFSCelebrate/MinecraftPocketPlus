@@ -31,6 +31,7 @@
 
 // 新增：用于获取地形偏移量
 #include "../../world/level/levelgen/RandomLevelSource.h"
+#include "../../world/level/chunk/ChunkCache.h"
 
 float Gui::InvGuiScale = 1.0f / 3.0f;
 float Gui::GuiScale = 1.0f / Gui::InvGuiScale;
