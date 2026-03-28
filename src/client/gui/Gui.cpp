@@ -734,10 +734,13 @@ void Gui::renderDebugInfo() {
     // 获取地形偏移量（区块为单位）
     int terrainOffsetX = 0, terrainOffsetZ = 0;
     if (lvl && lvl->getChunkSource()) {
-        RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(lvl->getChunkSource());
-        if (rls) {
-            terrainOffsetX = rls->getOffsetX();   // 使用 getter
-            terrainOffsetZ = rls->getOffsetZ();   // 使用 getter
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+        if (cache) {
+            RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            if (rls) {
+                terrainOffsetX = rls->getOffsetX();
+                terrainOffsetZ = rls->getOffsetZ();
+            }
         }
     }
 
@@ -776,20 +779,22 @@ void Gui::renderDebugInfo() {
     long day       = worldTime / Level::TICKS_PER_DAY;
     long seed      = lvl ? lvl->getSeed() : 0;
 
-    // 构建显示行（共 9 行）
-    static char ln[9][96];
-    sprintf(ln[0], "Minecraft PE 0.6.1 alpha (mcpe64)");
-    sprintf(ln[1], "%.1f fps", fps);
+    // 构建显示行（共 12 行，数组大小调整为 10）
+    static char ln[12][96];
+    sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
+    sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0'; // 空行分隔
-    sprintf(ln[3], "XYZ: %.6f / %.6f / %.6f", px, py, pz);
-    sprintf(ln[4], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[5], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
-    sprintf(ln[6], "Biome: %s", biomeName);
-    sprintf(ln[7], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
-    sprintf(ln[8], "Terrain Offset (chunks): %d / %d  XYZ(Offset): %.6f / %.6f / %.6f",
-            terrainOffsetX, terrainOffsetZ, pxo, py, pzo);
+    sprintf(ln[3], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
+    sprintf(ln[4], "X(Float Offset): %.15f", pxo);
+	sprintf(ln[5], "Y(Float Offset): %.10f", py);
+	sprintf(ln[6], "Z(Float Offset): %.15f", pzo);
+    sprintf(ln[7], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
+    sprintf(ln[8], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[9], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
+    sprintf(ln[10], "Biome: %s", biomeName);
+    sprintf(ln[11], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
 
-    const int N   = 9;   // 行数
+    const int N   = 12;   // 行数
     const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
     const float MGN = 2.0f;  // left/top margin in font-pixels
     const float PAD = 2.0f;  // horizontal padding for background
