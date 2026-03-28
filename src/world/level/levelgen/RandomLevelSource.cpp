@@ -42,9 +42,11 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 	printf("random.get : %d\n", randomCopy.nextInt());
     // 从选项读取偏移量
     if (Minecraft::instance) {
-        offsetX = Minecraft::instance->options.getIntValue(OPTIONS_WORLD_OFFSET_X);
-        offsetZ = Minecraft::instance->options.getIntValue(OPTIONS_WORLD_OFFSET_Z);
-    }
+        std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+        std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+        if (!xStr.empty()) offsetX = atoi(xStr.c_str());
+        if (!zStr.empty()) offsetZ = atoi(zStr.c_str());
+	}
 }
 
 RandomLevelSource::~RandomLevelSource() {
