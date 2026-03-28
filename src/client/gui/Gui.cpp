@@ -745,6 +745,13 @@ void Gui::renderDebugInfo() {
         }
     }
 
+    // 获取海平面高度（从选项读取）
+int seaLevel = 63;
+if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
+    std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
+    if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
+}
+
     // 原始玩家坐标（已经经过世界偏移修正）
     float px = p->x, py = p->y - p->heightOffset, pz = p->z;
     posTranslator.to(px, py, pz);
@@ -793,8 +800,7 @@ void Gui::renderDebugInfo() {
         if (debugScale > 3.0f) debugScale = 3.0f;
     }
 
-    // 构建显示行（共 17 行）
-    static char ln[17][96];
+    static char ln[18][96];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0'; // 空行
@@ -807,13 +813,14 @@ void Gui::renderDebugInfo() {
     ln[9][0] = '\0'; // 空行
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
-    sprintf(ln[12], "--- Other Information ---");
-    sprintf(ln[13], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[14], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
-    sprintf(ln[15], "Biome: %s", biomeName);
-    sprintf(ln[16], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    sprintf(ln[12], "Sea Level: %d", seaLevel);
+    sprintf(ln[13], "--- Other Information ---");
+    sprintf(ln[14], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[15], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
+    sprintf(ln[16], "Biome: %s", biomeName);
+    sprintf(ln[17], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
 
-    const int N   = 17;
+    const int N   = 18;   // 行数
     const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
     const float MGN = 2.0f;  // left/top margin in font-pixels
     const float PAD = 2.0f;  // horizontal padding for background
