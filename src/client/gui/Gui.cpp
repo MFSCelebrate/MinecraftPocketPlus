@@ -732,7 +732,7 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p   = minecraft->player;
     Level*       lvl = minecraft->level;
 
-    // 获取地形偏移量（区块为单位）
+    // 获取地形偏移量（方块为单位）
     int terrainOffsetX = 0, terrainOffsetZ = 0;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -751,11 +751,9 @@ void Gui::renderDebugInfo() {
     int bx = (int)floorf(px), by = (int)floorf(py), bz = (int)floorf(pz);
     int cx = bx >> 4, cz = bz >> 4;
 
-    // 偏移后的坐标（原始坐标 + 偏移量 * 16）
-    float offsetX = (float)(terrainOffsetX * 16);
-    float offsetZ = (float)(terrainOffsetZ * 16);
-    float pxo = px + offsetX;
-    float pzo = pz + offsetZ;
+    // 偏移后的坐标（原始坐标 + 偏移量）
+    float pxo = px + (float)terrainOffsetX;
+    float pzo = pz + (float)terrainOffsetZ;
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
@@ -786,17 +784,16 @@ void Gui::renderDebugInfo() {
         fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
     }
 
-    // --- 新增：获取调试屏幕缩放因子 ---
+    // 获取调试屏幕缩放因子
     float debugScale = 1.0f;
     std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
     if (!scaleStr.empty()) {
         debugScale = (float)atof(scaleStr.c_str());
-        if (debugScale < 0.5f) debugScale = 0.5f;   // 限制范围
+        if (debugScale < 0.5f) debugScale = 0.5f;
         if (debugScale > 3.0f) debugScale = 3.0f;
     }
-    // --- 新增结束 ---
 
-    // 构建显示行（共 18 行）
+    // 构建显示行（共 17 行）
     static char ln[17][96];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
@@ -806,7 +803,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[5], "X(Float Offset): %.15f", pxo);
     sprintf(ln[6], "Y(Float Offset): %.10f", py);
     sprintf(ln[7], "Z(Float Offset): %.15f", pzo);
-    sprintf(ln[8], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
+    sprintf(ln[8], "Terrain Offset (Blocks): %d / %d", terrainOffsetX, terrainOffsetZ);
     ln[9][0] = '\0'; // 空行
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
@@ -822,7 +819,7 @@ void Gui::renderDebugInfo() {
     const float PAD = 2.0f;  // horizontal padding for background
     Font* font = minecraft->font;
 
-    // --- 应用缩放变换 ---
+    // 应用缩放变换
     glPushMatrix();
     glScalef(debugScale, debugScale, 1.0f);
 
@@ -837,21 +834,21 @@ void Gui::renderDebugInfo() {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 2) 绘制文本（为第12行单独设置颜色）
+    // 2) 绘制文本（为第11行（64Bit Farlands）单独设置颜色）
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
         int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // 标题黄色
-        if (i == 12) {
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // True为绿色，False为红色
+        if (i == 11) {
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // True绿色，False红色
         }
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
 
-    glPopMatrix();  // 恢复变换
+    glPopMatrix(); // 恢复变换
 }
 
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
