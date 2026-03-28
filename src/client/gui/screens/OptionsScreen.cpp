@@ -224,6 +224,7 @@ void OptionsScreen::generateOptionScreens() {
         .addOptionItem(OPTIONS_ANAGLYPH_3D, minecraft)
         .addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
         .addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
+	optionPanes[3]->addOptionItem(OPTIONS_DEBUG_SCREEN_SIZE, minecraft);
     
     // Tweaks Pane
     optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
