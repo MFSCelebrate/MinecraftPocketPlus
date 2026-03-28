@@ -232,6 +232,7 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes[5]->addOptionItem(OPTIONS_FARLANDS_SCALE, minecraft);
 	optionPanes[5]->addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft);
     optionPanes[5]->addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft);
+	optionPanes[5]->addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
