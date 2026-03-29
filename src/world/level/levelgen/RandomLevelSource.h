@@ -19,6 +19,16 @@ class RandomLevelSource: public ChunkSource
     static const float SNOW_SCALE;
 
 public:
+    // 在 public 区域添加
+double getLPerlinNoise1(double x, double z) const { return lperlinNoise1.getValue(x, z); }
+double getLPerlinNoise2(double x, double z) const { return lperlinNoise2.getValue(x, z); }
+double getPerlinNoise1(double x, double z) const { return perlinNoise1.getValue(x, z); }
+double getPerlinNoise2(double x, double z) const { return perlinNoise2.getValue(x, z); }
+double getPerlinNoise3(double x, double z) const { return perlinNoise3.getValue(x, z); }
+double getScaleNoise(double x, double z) const { return scaleNoise.getValue(x, z); }
+double getDepthNoise(double x, double z) const { return depthNoise.getValue(x, z); }
+double getForestNoise(double x, double z) const { return forestNoise.getValue(x, z); }
+
     static const int CHUNK_HEIGHT = 8;
     static const int CHUNK_WIDTH = 4;
 
