@@ -51,7 +51,7 @@ void RenderList::render() {
     }
     if (listIndex < bufferLimit) {
         glPushMatrix2();
-        // 如果使用相对平移，则不添加外层平移（区块内部已处理相对偏移）
+        // 启用相对平移时，跳过外层平移
         if (!m_useRelativeTranslation) {
             glTranslatef2(-xOff, -yOff, -zOff);
         }
@@ -59,7 +59,7 @@ void RenderList::render() {
             glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
         #else
             renderChunks();
-        #endif/*!USE_VBO*/
+        #endif
         glPopMatrix2();
     }
 }
