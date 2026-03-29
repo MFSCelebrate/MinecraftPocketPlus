@@ -41,25 +41,25 @@ void RenderList::addR(const RenderChunk& chunk) {
 }
 
 void RenderList::render() {
-
-	if (!inited) return;
-	if (!rendered) {
-		bufferLimit = listIndex;
-		listIndex = 0;
-		rendered = true;
-	}
-	if (listIndex < bufferLimit) {
-		glPushMatrix2();
-		glTranslatef2(-xOff, -yOff, -zOff);
-
-		#ifndef USE_VBO
-			glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
-		#else
-			renderChunks();
-		#endif/*!USE_VBO*/
-
-		glPopMatrix2();
-	}
+    if (!inited) return;
+    if (!rendered) {
+        bufferLimit = listIndex;
+        listIndex = 0;
+        rendered = true;
+    }
+    if (listIndex < bufferLimit) {
+        glPushMatrix2();
+        // 如果使用相对平移，则不添加外层平移（区块内部已处理相对偏移）
+        if (!m_useRelativeTranslation) {
+            glTranslatef2(-xOff, -yOff, -zOff);
+        }
+        #ifndef USE_VBO
+            glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
+        #else
+            renderChunks();
+        #endif/*!USE_VBO*/
+        glPopMatrix2();
+    }
 }
 
 void RenderList::renderChunks() {
