@@ -567,6 +567,10 @@ int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
 	renderList.clear();
 	renderList.init(xOff, yOff, zOff);
 
+	// 设置是否启用条纹修复
+	bool useRelative = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+	renderList.setUseRelativeTranslation(useRelative);
+
 	for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
 		Chunk* chunk = _renderChunks[i];
 		#ifdef USE_VBO
