@@ -95,6 +95,7 @@ enum OptionId {
     OPTIONS_DEBUG_SCREEN_SIZE,
     OPTIONS_SEA_LEVEL,
     OPTIONS_TELEPORT,           // 新增
+    OPTIONS_STRIPE_REPAIR,   // 新增
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
