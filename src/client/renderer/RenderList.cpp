@@ -75,13 +75,12 @@ void RenderList::renderChunks() {
         glPushMatrix2();
 
         if (m_useRelativeTranslation) {
-            // 使用双精度计算相对平移，避免大数相减时的精度损失
-            double transX = (double)rc.pos.x - (double)xOff;
-            double transY = (double)rc.pos.y - (double)yOff;
-            double transZ = (double)rc.pos.z - (double)zOff;
+            // 使用整型坐标（区块原点）与相机坐标计算差值，保留精确整数部分
+            double transX = (double)rc.baseX - (double)xOff;
+            double transY = (double)rc.baseY - (double)yOff;
+            double transZ = (double)rc.baseZ - (double)zOff;
             glTranslatef2((float)transX, (float)transY, (float)transZ);
         } else {
-            // 原版绝对平移
             glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
         }
 
