@@ -6,15 +6,15 @@
 
 
 RenderList::RenderList()
-	:	inited(false),
-	rendered(false),
-    m_useRelativeTranslation(false)
+    :   inited(false),
+        rendered(false),
+        m_useRelativeTranslation(false),
+        m_camX(0.0), m_camY(0.0), m_camZ(0.0)
 {
-	lists = new int[MAX_NUM_OBJECTS];
-	rlists = new RenderChunk[MAX_NUM_OBJECTS];
-
-	for (int i = 0; i < MAX_NUM_OBJECTS; ++i)
-		rlists[i].vboId = -1;
+    lists = new int[MAX_NUM_OBJECTS];
+    rlists = new RenderChunk[MAX_NUM_OBJECTS];
+    for (int i = 0; i < MAX_NUM_OBJECTS; ++i)
+        rlists[i].vboId = -1;
 }
 
 RenderList::~RenderList() {
@@ -23,12 +23,14 @@ RenderList::~RenderList() {
 }
 
 void RenderList::init(float xOff, float yOff, float zOff) {
-	inited = true;
-	listIndex = 0;
-
-	this->xOff = (float) xOff;
-	this->yOff = (float) yOff;
-	this->zOff = (float) zOff;
+    inited = true;
+    listIndex = 0;
+    this->xOff = xOff;     // 保留
+    this->yOff = yOff;
+    this->zOff = zOff;
+    m_camX = (double)xOff; // 存储为双精度
+    m_camY = (double)yOff;
+    m_camZ = (double)zOff;
 }
 
 void RenderList::add(int list) {
@@ -75,10 +77,10 @@ void RenderList::renderChunks() {
         glPushMatrix2();
 
         if (m_useRelativeTranslation) {
-            // 使用整型坐标（区块原点）与相机坐标计算差值，保留精确整数部分
-            double transX = (double)rc.baseX - (double)xOff;
-            double transY = (double)rc.baseY - (double)yOff;
-            double transZ = (double)rc.baseZ - (double)zOff;
+            // 使用区块的整数坐标（baseX）和双精度相机坐标计算差值
+            double transX = (double)rc.baseX - m_camX;
+            double transY = (double)rc.baseY - m_camY;
+            double transZ = (double)rc.baseZ - m_camZ;
             glTranslatef2((float)transX, (float)transY, (float)transZ);
         } else {
             glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
