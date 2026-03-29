@@ -130,7 +130,7 @@ void Chunk::rebuild()
 							t.begin();
 							//printf(".");
 							//printf("Tesselator::offset : %d, %d, %d\n", this->x, this->y, this->z);
-							t.offset((float)(-this->x), (float)(-this->y), (float)(-this->z));
+							t.offset((double)(-this->x), (double)(-this->y), (double)(-this->z));
 							//printf("Tesselator::offset : %f, %f, %f\n", this->x, this->y, this->z);
 						}
 
