@@ -802,30 +802,28 @@ void Gui::renderDebugInfo() {
     }
 
     // --- 噪声值计算 ---
-    double noiseVals[8] = {0.0};
-    if (rls) {
-        // 使用世界绝对坐标（p->x, p->z）
-        float worldX = p->x;
-        float worldZ = p->z;
+double noiseVals[8] = {0.0};
+if (rls) {
+    float worldX = p->x;
+    float worldZ = p->z;
 
-        // 各噪声的缩放因子（取自 RandomLevelSource 源码）
-        const float s = 684.412f;      // 大尺度基频
-        const float scale_large = s / 80.0f;        // 用于 lperlinNoise1/2, perlinNoise1
-        const float scale_sand = 1.0f / 32.0f;      // perlinNoise2 (砂石)
-        const float scale_depth = 1.0f / 64.0f;     // perlinNoise3 (深度)
-        const float scale_scale = 1.0f / 80.0f;     // scaleNoise
-        const float scale_depth_noise = 1.0f / 200.0f; // depthNoise
-        const float scale_forest = 0.5f;            // forestNoise
+    const float s = 684.412f;
+    const float scale_large = s / 80.0f;
+    const float scale_sand = 1.0f / 32.0f;
+    const float scale_depth = 1.0f / 64.0f;
+    const float scale_scale = 1.0f / 80.0f;
+    const float scale_depth_noise = 1.0f / 200.0f;
+    const float scale_forest = 0.5f;
 
-        noiseVals[0] = rls->lperlinNoise1.getValue(worldX * scale_large, worldZ * scale_large);
-        noiseVals[1] = rls->lperlinNoise2.getValue(worldX * scale_large, worldZ * scale_large);
-        noiseVals[2] = rls->perlinNoise1.getValue(worldX * scale_large, worldZ * scale_large);
-        noiseVals[3] = rls->perlinNoise2.getValue(worldX * scale_sand, worldZ * scale_sand);
-        noiseVals[4] = rls->perlinNoise3.getValue(worldX * scale_depth, worldZ * scale_depth);
-        noiseVals[5] = rls->scaleNoise.getValue(worldX * scale_scale, worldZ * scale_scale);
-        noiseVals[6] = rls->depthNoise.getValue(worldX * scale_depth_noise, worldZ * scale_depth_noise);
-        noiseVals[7] = rls->forestNoise.getValue(worldX * scale_forest, worldZ * scale_forest);
-    }
+    noiseVals[0] = rls->getLPerlinNoise1(worldX * scale_large, worldZ * scale_large);
+    noiseVals[1] = rls->getLPerlinNoise2(worldX * scale_large, worldZ * scale_large);
+    noiseVals[2] = rls->getPerlinNoise1(worldX * scale_large, worldZ * scale_large);
+    noiseVals[3] = rls->getPerlinNoise2(worldX * scale_sand, worldZ * scale_sand);
+    noiseVals[4] = rls->getPerlinNoise3(worldX * scale_depth, worldZ * scale_depth);
+    noiseVals[5] = rls->getScaleNoise(worldX * scale_scale, worldZ * scale_scale);
+    noiseVals[6] = rls->getDepthNoise(worldX * scale_depth_noise, worldZ * scale_depth_noise);
+    noiseVals[7] = rls->getForestNoise(worldX * scale_forest, worldZ * scale_forest);
+}
 
     // 构建显示行（共 18 行，索引 0-17）
     static char ln[18][96];
