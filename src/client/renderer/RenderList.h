@@ -7,7 +7,7 @@ class RenderChunk;
 
 class RenderList
 {
-	static const int MAX_NUM_OBJECTS = 1024 * 3;
+    static const int MAX_NUM_OBJECTS = 1024 * 3;
 
 public:
     RenderList();
@@ -23,10 +23,9 @@ public:
     void renderChunks();
     void clear();
 
-    // 新增：设置是否使用相对平移
     void setUseRelativeTranslation(bool use) { m_useRelativeTranslation = use; }
 
-    float xOff, yOff, zOff;
+    float xOff, yOff, zOff;          // 保留，兼容原代码（不再使用）
     int* lists;
     RenderChunk* rlists;
 
@@ -36,7 +35,8 @@ public:
 
 private:
     int bufferLimit;
-    bool m_useRelativeTranslation;   // 新增
+    bool m_useRelativeTranslation;
+    double m_camX, m_camY, m_camZ;   // 双精度相机坐标
 };
 
 #endif /*NET_MINECRAFT_CLIENT_RENDERER__RenderList_H__*/
