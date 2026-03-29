@@ -7,8 +7,7 @@
 
 RenderList::RenderList()
 	:	inited(false),
-	rendered(false),
-    m_useRelativeTranslation(false)   // 新增
+	rendered(false)
 {
 	lists = new int[MAX_NUM_OBJECTS];
 	rlists = new RenderChunk[MAX_NUM_OBJECTS];
@@ -63,40 +62,36 @@ void RenderList::render() {
 }
 
 void RenderList::renderChunks() {
-    glEnableClientState2(GL_VERTEX_ARRAY);
-    glEnableClientState2(GL_COLOR_ARRAY);
-    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
+	//glDisableClientState2(GL_NORMAL_ARRAY);
+	glEnableClientState2(GL_VERTEX_ARRAY);
+	glEnableClientState2(GL_COLOR_ARRAY);
+	glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    const int Stride = VertexSizeBytes;
+	const int Stride = VertexSizeBytes;
 
-    for (int i = 0; i < bufferLimit; ++i) {
-        RenderChunk& rc = rlists[i];
+	for (int i = 0; i < bufferLimit; ++i) {
+		RenderChunk& rc = rlists[i];
 
-        glPushMatrix2();
+		glPushMatrix2();
+		glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
+		glBindBuffer2(GL_ARRAY_BUFFER, rc.vboId);
 
-        if (m_useRelativeTranslation) {
-            // 相对平移：将区块平移到相机附近（相机位置为 xOff, yOff, zOff）
-            glTranslatef2(rc.pos.x - xOff, rc.pos.y - yOff, rc.pos.z - zOff);
-        } else {
-            // 原版绝对平移
-            glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
-        }
+		glVertexPointer2	(3, GL_FLOAT, Stride,  0);
+		glTexCoordPointer2	(2, GL_FLOAT, Stride, (GLvoid*) (3 * 4));
+		glColorPointer2		(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*) (5 * 4));
 
-        glBindBuffer2(GL_ARRAY_BUFFER, rc.vboId);
-        glVertexPointer2(3, GL_FLOAT, Stride, 0);
-        glTexCoordPointer2(2, GL_FLOAT, Stride, (GLvoid*) (3 * 4));
-        glColorPointer2(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*) (5 * 4));
+		glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
 
-        glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
+		glPopMatrix2();
+	}
 
-        glPopMatrix2();
-    }
-
-    glDisableClientState2(GL_VERTEX_ARRAY);
-    glDisableClientState2(GL_COLOR_ARRAY);
-    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState2(GL_VERTEX_ARRAY);
+	glDisableClientState2(GL_COLOR_ARRAY);
+	glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
+
 void RenderList::clear() {
 	inited = false;
 	rendered = false;
 }
+
