@@ -154,9 +154,6 @@ public:
         return "ChunkCache: dynamic";
     }
 
-    // 新增：获取内部的地形生成源
-    ChunkSource* getSource() const { return source; }
-
     void saveAll(bool onlyUnsaved) {
         if (storage != NULL) {
             std::vector<LevelChunk*> chunksToSave;
