@@ -17,6 +17,7 @@ struct pair_hash {
 class ChunkCache: public ChunkSource {
     static const int MAX_SAVES = 2;
 public:
+    ChunkSource* getSource() const { return source; }
     ChunkCache(Level* level_, ChunkStorage* storage_, ChunkSource* source_)
     :   xLast(-999999999),
         zLast(-999999999),
