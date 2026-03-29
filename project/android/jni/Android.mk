@@ -82,6 +82,8 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/client/gui/screens/crafting/PaneCraftingScreen.cpp \
 ../../../src/client/gui/screens/crafting/StonecutterScreen.cpp \
 ../../../src/client/gui/screens/crafting/WorkbenchScreen.cpp \
+../../../src/client/gui/screens/TeleportScreen.cpp \
+../../../src/client/gui/components/TeleportButton.cpp \
 ../../../src/client/model/ChickenModel.cpp \
 ../../../src/client/model/CowModel.cpp \
 ../../../src/client/model/HumanoidModel.cpp \
