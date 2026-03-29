@@ -566,6 +566,9 @@ int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
     renderList.clear();
     renderList.init(xOff, yOff, zOff);
 
+    // 根据选项设置是否使用相对平移
+    renderList.setUseRelativeTranslation(mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR));
+
     for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
         Chunk* chunk = _renderChunks[i];
         #ifdef USE_VBO
@@ -576,15 +579,7 @@ int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
         renderList.next();
     }
 
-    // 启用条纹修复时，在渲染前抵消相机平移，实现相对坐标渲染
-    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
-        glPushMatrix();
-        glTranslatef(-xOff, -yOff, -zOff);
-    }
     renderSameAsLast(layer, alpha);
-    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
-        glPopMatrix();
-    }
 
     return count;
 }
