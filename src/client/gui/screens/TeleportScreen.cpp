@@ -57,8 +57,14 @@ void TeleportScreen::teleport() {
     float x, y, z;
     if (ss >> x >> y >> z) {
         LocalPlayer* player = minecraft->player;
-        if (player) {
-            player->setPos(x, y, z);
+        Level* level = minecraft->level;
+        if (player && level) {
+            // 获取世界出生点偏移（显示坐标转世界坐标）
+            Pos spawnPos = level->getSharedSpawnPos();
+            float worldX = x + spawnPos.x;
+            float worldY = y + spawnPos.y;
+            float worldZ = z + spawnPos.z;
+            player->setPos(worldX, worldY, worldZ);
             // 强制同步旧位置，避免插值错误
             player->xOld = player->x;
             player->yOld = player->y;
