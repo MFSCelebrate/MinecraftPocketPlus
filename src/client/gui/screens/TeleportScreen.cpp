@@ -23,11 +23,11 @@ void TeleportScreen::render(int xm, int ym, float a) {
     fill(0, 0, width, height, 0x80000000);
     minecraft->font->draw("Enter coordinates (X Y Z):",
                           width / 2 - 100, height / 2 - 50, 0xffffff);
-    if (textBox) textBox->render(xm, ym, a);
+    if (textBox) textBox->render(minecraft, xm, ym);
 }
 
 void TeleportScreen::tick() {
-    if (textBox) textBox->tick();
+    if (textBox) textBox->tick(minecraft);
 }
 
 void TeleportScreen::keyPressed(int key) {
@@ -37,20 +37,20 @@ void TeleportScreen::keyPressed(int key) {
     } else if (key == Keyboard::KEY_ESCAPE) {
         minecraft->setScreen(nullptr);
     } else if (textBox) {
-        textBox->keyPressed(key);
+        textBox->keyPressed(minecraft, key);
     }
 }
 
 void TeleportScreen::charPressed(char inputChar) {
-    if (textBox) textBox->charPressed(inputChar);
+    if (textBox) textBox->charPressed(minecraft, inputChar);
 }
 
 void TeleportScreen::mouseClicked(int x, int y, int button) {
-    if (textBox) textBox->mouseClicked(x, y, button);
+    if (textBox) textBox->mouseClicked(minecraft, x, y, button);
 }
 
 void TeleportScreen::teleport() {
-    std::string input = textBox->getText();
+    std::string input = textBox->text;   // 直接访问 text 成员（公有）
     if (input.empty()) return;
 
     std::stringstream ss(input);
@@ -59,7 +59,7 @@ void TeleportScreen::teleport() {
         LocalPlayer* player = minecraft->player;
         if (player) {
             player->setPos(x, y, z);
-            player->resetPos();      // 刷新碰撞箱，避免卡在方块中
+            player->resetPos(false);      // resetPos 需要一个 bool 参数
         }
     }
 }
