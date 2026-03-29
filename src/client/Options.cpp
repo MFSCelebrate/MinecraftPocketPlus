@@ -24,6 +24,7 @@ OptionBool rpiCursor("rpiCursor", false);
 OptionBool autoJump("autoJump", true);
 
 OptionString farlandsScale("farlands_scale", "1.0");
+OptionString teleport("teleport", "");
 
 OptionFloat flySpeed("flySpeed", 1.f);
 OptionFloat cameraSpeed("cameraSpeed", 1.f);
@@ -176,6 +177,7 @@ void Options::initTable() {
     m_options[OPTIONS_WORLD_OFFSET_Z] = &worldOffsetZ;
 	m_options[OPTIONS_POSTPONED_FRINGE] = &postponedFringe;
     m_options[OPTIONS_DEBUG_SCREEN_SIZE] = &debugScreenSize;
+	m_options[OPTIONS_TELEPORT] = &teleport;
 }
 
 void Options::set(OptionId key, const std::string& value) {
