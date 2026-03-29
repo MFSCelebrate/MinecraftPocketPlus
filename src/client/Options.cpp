@@ -65,6 +65,8 @@ OptionBool useTouchscreen("useTouchscreen", true);
 
 OptionBool serverVisible("servervisible", true);
 
+OptionBool stripeRepair("stripe_repair", false);
+
 OptionInt keyForward("key.forward", Keyboard::KEY_W);
 OptionInt keyLeft("key.left", Keyboard::KEY_A);
 OptionInt keyBack("key.back", Keyboard::KEY_S);
@@ -178,6 +180,7 @@ void Options::initTable() {
 	m_options[OPTIONS_POSTPONED_FRINGE] = &postponedFringe;
     m_options[OPTIONS_DEBUG_SCREEN_SIZE] = &debugScreenSize;
 	m_options[OPTIONS_TELEPORT] = &teleport;
+	m_options[OPTIONS_STRIPE_REPAIR] = &stripeRepair;
 }
 
 void Options::set(OptionId key, const std::string& value) {
