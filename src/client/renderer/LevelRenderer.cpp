@@ -538,52 +538,55 @@ void LevelRenderer::render(const AABB& b) const
 
 int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
 {
-	_renderChunks.clear();
-	int count = 0;
-	for (int i = from; i < to; i++) {
-		if (layer == 0) {
-			totalChunks++;
-			if (sortedChunks[i]->empty[layer]) emptyChunks++;
-			else if (!sortedChunks[i]->visible) offscreenChunks++;
-			else if (occlusionCheck && !sortedChunks[i]->occlusion_visible) occludedChunks++;
-			else renderedChunks++;
-		}
+    _renderChunks.clear();
+    int count = 0;
+    for (int i = from; i < to; i++) {
+        if (layer == 0) {
+            totalChunks++;
+            if (sortedChunks[i]->empty[layer]) emptyChunks++;
+            else if (!sortedChunks[i]->visible) offscreenChunks++;
+            else if (occlusionCheck && !sortedChunks[i]->occlusion_visible) occludedChunks++;
+            else renderedChunks++;
+        }
 
-		if (!sortedChunks[i]->empty[layer] && sortedChunks[i]->visible && sortedChunks[i]->occlusion_visible) {
-			int list = sortedChunks[i]->getList(layer);
-			if (list >= 0) {
-				_renderChunks.push_back(sortedChunks[i]);
-				count++;
-			}
-		}
-	}
+        if (!sortedChunks[i]->empty[layer] && sortedChunks[i]->visible && sortedChunks[i]->occlusion_visible) {
+            int list = sortedChunks[i]->getList(layer);
+            if (list >= 0) {
+                _renderChunks.push_back(sortedChunks[i]);
+                count++;
+            }
+        }
+    }
 
-	Mob* player = mc->cameraTargetPlayer;
-	float xOff = player->xOld + (player->x - player->xOld) * alpha;
-	float yOff = player->yOld + (player->y - player->yOld) * alpha;
-	float zOff = player->zOld + (player->z - player->zOld) * alpha;
+    Mob* player = mc->cameraTargetPlayer;
+    float xOff = player->xOld + (player->x - player->xOld) * alpha;
+    float yOff = player->yOld + (player->y - player->yOld) * alpha;
+    float zOff = player->zOld + (player->z - player->zOld) * alpha;
 
-	//int lists = 0;
-	renderList.clear();
-	renderList.init(xOff, yOff, zOff);
+    renderList.clear();
+    renderList.init(xOff, yOff, zOff);
 
-	// 设置是否启用条纹修复
-	bool useRelative = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-	renderList.setUseRelativeTranslation(useRelative);
+    for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
+        Chunk* chunk = _renderChunks[i];
+        #ifdef USE_VBO
+            renderList.addR(chunk->getRenderChunk(layer));
+        #else
+            renderList.add(chunk->getList(layer));
+        #endif
+        renderList.next();
+    }
 
-	for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
-		Chunk* chunk = _renderChunks[i];
-		#ifdef USE_VBO
-			renderList.addR(chunk->getRenderChunk(layer));
-		#else
-			renderList.add(chunk->getList(layer));
-		#endif
-		renderList.next();
-	}
+    // 启用条纹修复时，在渲染前抵消相机平移，实现相对坐标渲染
+    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
+        glPushMatrix();
+        glTranslatef(-xOff, -yOff, -zOff);
+    }
+    renderSameAsLast(layer, alpha);
+    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
+        glPopMatrix();
+    }
 
-	renderSameAsLast(layer, alpha);
-
-	return count;
+    return count;
 }
 
 void LevelRenderer::renderSameAsLast( int layer, float alpha )
