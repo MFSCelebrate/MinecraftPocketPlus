@@ -825,8 +825,8 @@ if (rls) {
     noiseVals[7] = rls->getForestNoise(worldX * scale_forest, worldZ * scale_forest);
 }
 
-    // 构建显示行（共 18 行，索引 0-17）
-    static char ln[18][96];
+    // 构建显示行（共 20 行，索引 0-19）
+    static char ln[20][96];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0'; // 空行
@@ -840,15 +840,19 @@ if (rls) {
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
-    sprintf(ln[13], "MainTerrainNoise: LPerlin1: %.4f  LPerlin2: %.4f  Perlin1: %.4f  Perlin2: %.4f  Perlin3: %.4f  Scale: %.4f  Depth: %.4f  Forest: %.4f",
-            noiseVals[0], noiseVals[1], noiseVals[2], noiseVals[3], noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
-    ln[14][0] = '\0'; // 空行
-    sprintf(ln[15], "--- Other Information ---");
-    sprintf(ln[16], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[17], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s  Day %ld  Time: %ld  Seed: %ld",
-            facing, axis, p->yRot, p->xRot, biomeName, day, dayTime, seed);
+    sprintf(ln[13], "MainTerrainNoise: LPerlin1: %.4f  LPerlin2: %.4f  Perlin1: %.4f  Perlin2: %.4f",
+            noiseVals[0], noiseVals[1], noiseVals[2], noiseVals[3]);
+	sprintf(ln[14], "                  Perlin3: %.4f  Scale: %.4f  Depth: %.4f  Forest: %.4f",
+            noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
+    ln[15][0] = '\0'; // 空行
+    sprintf(ln[16], "--- Other Information ---");
+    sprintf(ln[17], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[18], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
+            facing, axis, p->yRot, p->xRot, biomeName);
+	sprintf(ln[19], "Day %ld  Time: %ld  Seed: %ld",
+            day, dayTime, seed);
 
-    const int N = 18;   // 行数
+    const int N = 20;   // 行数
     const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
     const float MGN = 2.0f;  // left/top margin in font-pixels
     const float PAD = 2.0f;  // horizontal padding for background
