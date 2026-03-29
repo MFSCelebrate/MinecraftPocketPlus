@@ -50,7 +50,7 @@ void TeleportScreen::mouseClicked(int x, int y, int button) {
 }
 
 void TeleportScreen::teleport() {
-    std::string input = textBox->text;   // 直接访问 text 成员（公有）
+    std::string input = textBox->text;
     if (input.empty()) return;
 
     std::stringstream ss(input);
@@ -59,7 +59,10 @@ void TeleportScreen::teleport() {
         LocalPlayer* player = minecraft->player;
         if (player) {
             player->setPos(x, y, z);
-            player->resetPos(false);      // resetPos 需要一个 bool 参数
+            // 强制同步旧位置，避免插值错误
+            player->xOld = player->x;
+            player->yOld = player->y;
+            player->zOld = player->z;
         }
     }
 }
