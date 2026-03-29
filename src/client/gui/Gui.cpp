@@ -802,28 +802,28 @@ void Gui::renderDebugInfo() {
     }
 
     // --- 噪声值计算 ---
-double noiseVals[8] = {0.0};
-if (rls) {
-    float worldX = p->x;
-    float worldZ = p->z;
+    double noiseVals[8] = {0.0};
+    if (rls) {
+        float worldX = p->x;
+        float worldZ = p->z;
 
-    const float s = 684.412f;
-    const float scale_large = s / 80.0f;
-    const float scale_sand = 1.0f / 32.0f;
-    const float scale_depth = 1.0f / 64.0f;
-    const float scale_scale = 1.0f / 80.0f;
-    const float scale_depth_noise = 1.0f / 200.0f;
-    const float scale_forest = 0.5f;
+        const float s = 684.412f;
+        const float scale_large = s / 80.0f;
+        const float scale_sand = 1.0f / 32.0f;
+        const float scale_depth = 1.0f / 64.0f;
+        const float scale_scale = 1.0f / 80.0f;
+        const float scale_depth_noise = 1.0f / 200.0f;
+        const float scale_forest = 0.5f;
 
-    noiseVals[0] = rls->getLPerlinNoise1(worldX * scale_large, worldZ * scale_large);
-    noiseVals[1] = rls->getLPerlinNoise2(worldX * scale_large, worldZ * scale_large);
-    noiseVals[2] = rls->getPerlinNoise1(worldX * scale_large, worldZ * scale_large);
-    noiseVals[3] = rls->getPerlinNoise2(worldX * scale_sand, worldZ * scale_sand);
-    noiseVals[4] = rls->getPerlinNoise3(worldX * scale_depth, worldZ * scale_depth);
-    noiseVals[5] = rls->getScaleNoise(worldX * scale_scale, worldZ * scale_scale);
-    noiseVals[6] = rls->getDepthNoise(worldX * scale_depth_noise, worldZ * scale_depth_noise);
-    noiseVals[7] = rls->getForestNoise(worldX * scale_forest, worldZ * scale_forest);
-}
+        noiseVals[0] = rls->getLPerlinNoise1(worldX * scale_large, worldZ * scale_large);
+        noiseVals[1] = rls->getLPerlinNoise2(worldX * scale_large, worldZ * scale_large);
+        noiseVals[2] = rls->getPerlinNoise1(worldX * scale_large, worldZ * scale_large);
+        noiseVals[3] = rls->getPerlinNoise2(worldX * scale_sand, worldZ * scale_sand);
+        noiseVals[4] = rls->getPerlinNoise3(worldX * scale_depth, worldZ * scale_depth);
+        noiseVals[5] = rls->getScaleNoise(worldX * scale_scale, worldZ * scale_scale);
+        noiseVals[6] = rls->getDepthNoise(worldX * scale_depth_noise, worldZ * scale_depth_noise);
+        noiseVals[7] = rls->getForestNoise(worldX * scale_forest, worldZ * scale_forest);
+    }
 
     // 构建显示行（共 20 行，索引 0-19）
     static char ln[20][96];
@@ -840,16 +840,18 @@ if (rls) {
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
-    sprintf(ln[13], "MainTerrainNoise: LPerlin1: %.4f  LPerlin2: %.4f  Perlin1: %.4f  Perlin2: %.4f",
+    // 第一行噪声（前四个）
+    sprintf(ln[13], "MainTerrainNoise: LPerl1:%.2f LPerl2:%.2f Perl1:%.2f Perl2:%.2f",
             noiseVals[0], noiseVals[1], noiseVals[2], noiseVals[3]);
-	sprintf(ln[14], "                  Perlin3: %.4f  Scale: %.4f  Depth: %.4f  Forest: %.4f",
+    // 第二行噪声（后四个）
+    sprintf(ln[14], "                      Perl3:%.2f Scale:%.2f Depth:%.2f Forest:%.2f",
             noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
     ln[15][0] = '\0'; // 空行
     sprintf(ln[16], "--- Other Information ---");
     sprintf(ln[17], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
     sprintf(ln[18], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
             facing, axis, p->yRot, p->xRot, biomeName);
-	sprintf(ln[19], "Day %ld  Time: %ld  Seed: %ld",
+    sprintf(ln[19], "Day %ld  Time: %ld  Seed: %ld",
             day, dayTime, seed);
 
     const int N = 20;   // 行数
