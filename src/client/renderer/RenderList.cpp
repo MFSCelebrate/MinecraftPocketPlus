@@ -75,19 +75,20 @@ void RenderList::renderChunks() {
         glPushMatrix2();
 
         if (m_useRelativeTranslation) {
-            // 相对平移：将区块平移到相机附近
-            glTranslatef2(rc.pos.x - xOff, rc.pos.y - yOff, rc.pos.z - zOff);
+            // 使用双精度计算相对平移，避免大数相减时的精度损失
+            double transX = (double)rc.pos.x - (double)xOff;
+            double transY = (double)rc.pos.y - (double)yOff;
+            double transZ = (double)rc.pos.z - (double)zOff;
+            glTranslatef2((float)transX, (float)transY, (float)transZ);
         } else {
             // 原版绝对平移
             glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
         }
 
         glBindBuffer2(GL_ARRAY_BUFFER, rc.vboId);
-
         glVertexPointer2(3, GL_FLOAT, Stride, 0);
         glTexCoordPointer2(2, GL_FLOAT, Stride, (GLvoid*) (3 * 4));
         glColorPointer2(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*) (5 * 4));
-
         glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
 
         glPopMatrix2();
