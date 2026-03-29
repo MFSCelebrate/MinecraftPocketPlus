@@ -841,10 +841,10 @@ void Gui::renderDebugInfo() {
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
     // 第一行噪声（前四个）
-    sprintf(ln[13], "MainTerrainNoise: LPerl1:%.2f LPerl2:%.2f Perl1:%.2f Perl2:%.2f",
+    sprintf(ln[13], "MainTerrainNoise: LPerlin1:%.4f LPerlin2:%.4f Perlin1:%.4f Perlin2:%.4f",
             noiseVals[0], noiseVals[1], noiseVals[2], noiseVals[3]);
     // 第二行噪声（后四个）
-    sprintf(ln[14], "                      Perl3:%.2f Scale:%.2f Depth:%.2f Forest:%.2f",
+    sprintf(ln[14], "                      Perlin3:%.4f Scale:%.4f Depth:%.4f Forest:%.4f",
             noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
     ln[15][0] = '\0'; // 空行
     sprintf(ln[16], "--- Other Information ---");
