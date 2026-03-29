@@ -732,12 +732,13 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p   = minecraft->player;
     Level*       lvl = minecraft->level;
 
-    // 获取地形偏移量（区块为单位）
+    // 获取地形偏移量（区块为单位）及噪声源
     int terrainOffsetX = 0, terrainOffsetZ = 0;
+    RandomLevelSource* rls = nullptr;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
         if (cache) {
-            RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
             if (rls) {
                 terrainOffsetX = rls->getOffsetX();
                 terrainOffsetZ = rls->getOffsetZ();
@@ -746,11 +747,11 @@ void Gui::renderDebugInfo() {
     }
 
     // 获取海平面高度（从选项读取）
-int seaLevel = 63;
-if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
-    std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
-    if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
-}
+    int seaLevel = 63;
+    if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
+        std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
+        if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
+    }
 
     // 原始玩家坐标（已经经过世界偏移修正）
     float px = p->x, py = p->y - p->heightOffset, pz = p->z;
@@ -800,6 +801,33 @@ if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
         if (debugScale > 3.0f) debugScale = 3.0f;
     }
 
+    // --- 噪声值计算 ---
+    double noiseVals[8] = {0.0};
+    if (rls) {
+        // 使用世界绝对坐标（p->x, p->z）
+        float worldX = p->x;
+        float worldZ = p->z;
+
+        // 各噪声的缩放因子（取自 RandomLevelSource 源码）
+        const float s = 684.412f;      // 大尺度基频
+        const float scale_large = s / 80.0f;        // 用于 lperlinNoise1/2, perlinNoise1
+        const float scale_sand = 1.0f / 32.0f;      // perlinNoise2 (砂石)
+        const float scale_depth = 1.0f / 64.0f;     // perlinNoise3 (深度)
+        const float scale_scale = 1.0f / 80.0f;     // scaleNoise
+        const float scale_depth_noise = 1.0f / 200.0f; // depthNoise
+        const float scale_forest = 0.5f;            // forestNoise
+
+        noiseVals[0] = rls->lperlinNoise1.getValue(worldX * scale_large, worldZ * scale_large);
+        noiseVals[1] = rls->lperlinNoise2.getValue(worldX * scale_large, worldZ * scale_large);
+        noiseVals[2] = rls->perlinNoise1.getValue(worldX * scale_large, worldZ * scale_large);
+        noiseVals[3] = rls->perlinNoise2.getValue(worldX * scale_sand, worldZ * scale_sand);
+        noiseVals[4] = rls->perlinNoise3.getValue(worldX * scale_depth, worldZ * scale_depth);
+        noiseVals[5] = rls->scaleNoise.getValue(worldX * scale_scale, worldZ * scale_scale);
+        noiseVals[6] = rls->depthNoise.getValue(worldX * scale_depth_noise, worldZ * scale_depth_noise);
+        noiseVals[7] = rls->forestNoise.getValue(worldX * scale_forest, worldZ * scale_forest);
+    }
+
+    // 构建显示行（共 18 行，索引 0-17）
     static char ln[18][96];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
@@ -814,13 +842,15 @@ if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
-    sprintf(ln[13], "--- Other Information ---");
-    sprintf(ln[14], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[15], "Facing: %s (%s)  (%.1f / %.1f)", facing, axis, p->yRot, p->xRot);
-    sprintf(ln[16], "Biome: %s", biomeName);
-    sprintf(ln[17], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    sprintf(ln[13], "MainTerrainNoise: LPerlin1: %.4f  LPerlin2: %.4f  Perlin1: %.4f  Perlin2: %.4f  Perlin3: %.4f  Scale: %.4f  Depth: %.4f  Forest: %.4f",
+            noiseVals[0], noiseVals[1], noiseVals[2], noiseVals[3], noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
+    ln[14][0] = '\0'; // 空行
+    sprintf(ln[15], "--- Other Information ---");
+    sprintf(ln[16], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[17], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s  Day %ld  Time: %ld  Seed: %ld",
+            facing, axis, p->yRot, p->xRot, biomeName, day, dayTime, seed);
 
-    const int N   = 18;   // 行数
+    const int N = 18;   // 行数
     const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
     const float MGN = 2.0f;  // left/top margin in font-pixels
     const float PAD = 2.0f;  // horizontal padding for background
@@ -841,14 +871,14 @@ if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 2) 绘制文本（为第11行（64Bit Farlands）单独设置颜色）
+    // 2) 绘制文本（为特定行设置颜色）
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
         int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // 标题黄色
-        if (i == 11) {
+        if (i == 11) { // 64Bit Farlands 行
             col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // True绿色，False红色
         }
         font->draw(ln[i], MGN, y, col);
