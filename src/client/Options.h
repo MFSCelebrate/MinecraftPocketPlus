@@ -94,6 +94,7 @@ enum OptionId {
     OPTIONS_POSTPONED_FRINGE,
     OPTIONS_DEBUG_SCREEN_SIZE,
     OPTIONS_SEA_LEVEL,
+    OPTIONS_TELEPORT,           // 新增
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
