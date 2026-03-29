@@ -6,6 +6,7 @@
 #include "../../../locale/I18n.h"
 #include "TextOption.h"
 #include "KeyOption.h"
+#include "TeleportButton.h"
 
 OptionsGroup::OptionsGroup( std::string labelID )  {
 	label = I18n::get(labelID);
@@ -34,19 +35,29 @@ void OptionsGroup::render( Minecraft* minecraft, int xm, int ym ) {
 	super::render(minecraft, xm, ym);
 }
 
-OptionsGroup& OptionsGroup::addOptionItem(OptionId optId, Minecraft* minecraft ) {
-	auto option = minecraft->options.getOpt(optId);
+OptionsGroup& OptionsGroup::addOptionItem(OptionId optId, Minecraft* minecraft) {
+    auto option = minecraft->options.getOpt(optId);
 
-	if (option == nullptr) return *this;
+    if (option == nullptr) return *this;
 
-	// TODO: do a options key class to check it faster via dynamic_cast
-	if (option->getStringId().find("options.key") != std::string::npos) createKey(optId, minecraft);
-	else if (dynamic_cast<OptionBool*>(option)) createToggle(optId, minecraft);
-	else if (dynamic_cast<OptionFloat*>(option)) createProgressSlider(optId, minecraft);
-	else if (dynamic_cast<OptionInt*>(option)) createStepSlider(optId, minecraft);
-	else if (dynamic_cast<OptionString*>(option)) createTextbox(optId, minecraft);
+    // 特殊处理 Teleport 选项：创建按钮而不是文本框
+    if (optId == OPTIONS_TELEPORT) {
+        TeleportButton* button = new TeleportButton(0, minecraft);
+        std::string itemLabel = I18n::get(minecraft->options.getOpt(optId)->getStringId());
+        OptionsItem* item = new OptionsItem(optId, itemLabel, button);
+        addChild(item);
+        setupPositions();
+        return *this;
+    }
 
-	return *this;
+    // 原有逻辑保持不变
+    if (option->getStringId().find("options.key") != std::string::npos) createKey(optId, minecraft);
+    else if (dynamic_cast<OptionBool*>(option)) createToggle(optId, minecraft);
+    else if (dynamic_cast<OptionFloat*>(option)) createProgressSlider(optId, minecraft);
+    else if (dynamic_cast<OptionInt*>(option)) createStepSlider(optId, minecraft);
+    else if (dynamic_cast<OptionString*>(option)) createTextbox(optId, minecraft);
+
+    return *this;
 }
 
 // TODO: wrap this copypaste shit into templates
