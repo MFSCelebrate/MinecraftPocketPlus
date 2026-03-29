@@ -19,10 +19,9 @@ Tesselator::Tesselator( int size )
 	count(0),
 	_noColor(false),
 	mode(0),
-	xo(0), yo(0), zo(0),
+	xo(0.0), yo(0.0), zo(0.0),   // 双精度偏移量初始化
 	_normal(0),
 	_sx(1), _sy(1),
-
 	tesselating(false),
 	vboId(-1),
 	vboCounts(128),
@@ -32,7 +31,6 @@ Tesselator::Tesselator( int size )
 	_voidBeginEnd(false)
 {
 	vboIds = new GLuint[vboCounts];
-
 	_varray = new VERTEX[maxVertices];
 
 	char* a = (char*)&_varray[0];
@@ -305,9 +303,14 @@ void Tesselator::vertex( float x, float y, float z )
 	//	vertex.normal = _normal;
 	//}
 
-	vertex.x = _sx * (x + xo);
-	vertex.y = _sy * (y + yo);
-	vertex.z = z + zo;
+	// 使用双精度计算顶点坐标，避免大坐标下的浮点误差
+	double dx = _sx * (x + xo);
+	double dy = _sy * (y + yo);
+	double dz = z + zo;
+
+	vertex.x = (float)dx;
+	vertex.y = (float)dy;
+	vertex.z = (float)dz;
 
 	++p;
 	++vertices;
@@ -346,16 +349,16 @@ void Tesselator::normal( float x, float y, float z )
 	_normal = xx | (yy << 8) | (zz << 16);
 }
 
-void Tesselator::offset( float xo, float yo, float zo ) {
-	this->xo = xo;
-	this->yo = yo;
-	this->zo = zo;
+void Tesselator::offset(double xo, double yo, double zo) {
+    this->xo = xo;
+    this->yo = yo;
+    this->zo = zo;
 }
 
-void Tesselator::addOffset( float x, float y, float z ) {
-	xo += x;
-	yo += y;
-	zo += z;
+void Tesselator::addOffset(double x, double y, double z) {
+    xo += x;
+    yo += y;
+    zo += z;
 }
 
 void Tesselator::offset( const Vec3& v ) {
