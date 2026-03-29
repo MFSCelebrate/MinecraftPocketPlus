@@ -61,12 +61,13 @@ public:
 	void enableColor();
 private:
 	void setAccessMode(int mode);
+    
 public:
 
-    void offset(float xo, float yo, float zo);
-	void offset(const Vec3& v);
-    void addOffset(float x, float y, float z);
-	void addOffset(const Vec3& v);
+    void offset(double xo, double yo, double zo);    // 改为 double
+    void addOffset(double x, double y, double z);    // 改为 double
+    void offset(const Vec3& v);                     // 保持原样，但需将 Vec3 中的 float 转为 double
+    void addOffset(const Vec3& v);
 
 	int getVboCount();
 
@@ -95,7 +96,7 @@ private:
 
 	int vertices;
 
-	float xo, yo, zo;
+	double xo, yo, zo;      // 改为 double
 	float u, v;
 	unsigned int _color;
 	int _normal;
