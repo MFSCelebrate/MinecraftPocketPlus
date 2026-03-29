@@ -10,7 +10,6 @@ class RenderList
 	static const int MAX_NUM_OBJECTS = 1024 * 3;
 
 public:
-    void setUseRelativeTranslation(bool use) { m_useRelativeTranslation = use; }
 	RenderList();
 	~RenderList();
 
@@ -37,7 +36,6 @@ public:
 
 private:
 	int bufferLimit;
-    bool m_useRelativeTranslation;   // 新增
 };
 
 #endif /*NET_MINECRAFT_CLIENT_RENDERER__RenderList_H__*/
