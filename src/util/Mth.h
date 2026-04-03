@@ -4,10 +4,11 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <cmath>
 
 namespace Mth {
-	constexpr float PI = 3.1415926535897932384626433832795028841971f; // exactly!
-	constexpr float TWO_PI = 2.0f * PI; // exactly!
+	constexpr float PI = 3.1415926535897932384626433832795028841971f;
+	constexpr float TWO_PI = 2.0f * PI;
 	constexpr float DEGRAD = PI / 180.0f;
 	const float RADDEG = 180.0f / PI;
 
@@ -27,21 +28,21 @@ namespace Mth {
 	float random();
 	int random(int n);
 
-	float abs(float a);
-	float Min(float a, float b);
-	float Max(float a, float b);
-	int abs(int a);
-	int Min(int a, int b);
-	int Max(int a, int b);
+	// 通用模板函数，替代原有的 abs, Min, Max
+	template<typename T>
+	inline T abs(T a) { return a < 0 ? -a : a; }
+
+	template<typename T, typename U>
+	inline auto Min(T a, U b) -> decltype(a < b ? a : b) { return a < b ? a : b; }
+
+	template<typename T, typename U>
+	inline auto Max(T a, U b) -> decltype(a > b ? a : b) { return a > b ? a : b; }
 
 	int   clamp(int v, int low, int high);
 	float clamp(float v, float low, float high);
 	float lerp(float src, float dst, float alpha);
 	int   lerp(int src, int dst, float alpha);
 
-	///@param value The original signed value
-	///@param with  The (possibly signed) value to "abs-decrease" <value> with
-	///@param min   The minimum value
 	float absDecrease(float value, float with, float min);
 	//float absIncrease(float value, float with, float max);
 
