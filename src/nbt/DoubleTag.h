@@ -22,6 +22,12 @@ public:
 		data(data)
 	{}
 
+    // 新增：接受单一 double 值的构造函数（用于 ListTag::addDouble）
+    DoubleTag(double data)
+	:	super(""),
+		data(data)
+	{}
+
     void write(IDataOutput* dos) /*throws IOException*/ {
         dos->writeDouble(data);
     }
