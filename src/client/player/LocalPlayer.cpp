@@ -745,6 +745,8 @@ void LocalPlayer::_init() {
 	descendTriggerTime	= 0;
 	ascending	= false;
 	descending	= false;
+	sentX = sentY = sentZ = 0.0;
+    sentRotX = sentRotY = 0.0f;
 
 	ItemInstance* item = inventory->getSelected();
 	sentInventoryItemId = item? item->id : 0;
