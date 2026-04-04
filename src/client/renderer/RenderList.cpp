@@ -77,19 +77,20 @@ void RenderList::renderChunks() {
         glPushMatrix2();
 
         if (m_useRelativeTranslation) {
-            // 使用区块的整数坐标（baseX）和双精度相机坐标计算差值
+            // 相对平移：区块在世界中的位置减去相机位置
             double transX = (double)rc.baseX - m_camX;
             double transY = (double)rc.baseY - m_camY;
             double transZ = (double)rc.baseZ - m_camZ;
             glTranslatef2((float)transX, (float)transY, (float)transZ);
         } else {
+            // 传统模式：直接平移区块到世界位置（因为顶点是局部坐标）
             glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
         }
 
         glBindBuffer2(GL_ARRAY_BUFFER, rc.vboId);
         glVertexPointer2(3, GL_FLOAT, Stride, 0);
-        glTexCoordPointer2(2, GL_FLOAT, Stride, (GLvoid*) (3 * 4));
-        glColorPointer2(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*) (5 * 4));
+        glTexCoordPointer2(2, GL_FLOAT, Stride, (GLvoid*)(3 * 4));
+        glColorPointer2(4, GL_UNSIGNED_BYTE, Stride, (GLvoid*)(5 * 4));
         glDrawArrays2(GL_TRIANGLES, 0, rc.vertexCount);
 
         glPopMatrix2();
@@ -99,9 +100,3 @@ void RenderList::renderChunks() {
     glDisableClientState2(GL_COLOR_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
-
-void RenderList::clear() {
-	inited = false;
-	rendered = false;
-}
-
