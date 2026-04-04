@@ -245,10 +245,10 @@ void GameRenderer::renderLevel(float a) {
     Mob* cameraEntity = mc->cameraTargetPlayer;
     LevelRenderer* levelRenderer = mc->levelRenderer;
     ParticleEngine* particleEngine = mc->particleEngine;
-    float xOff = cameraEntity->xOld + (cameraEntity->x - cameraEntity->xOld) * a;
-    float yOff = cameraEntity->yOld + (cameraEntity->y - cameraEntity->yOld) * a;
-    float zOff = cameraEntity->zOld + (cameraEntity->z - cameraEntity->zOld) * a;
-
+    double xOff = cameraEntity->xo + (cameraEntity->x - cameraEntity->xo) * a;
+double yOff = cameraEntity->yo + (cameraEntity->y - cameraEntity->yo) * a;
+double zOff = cameraEntity->zo + (cameraEntity->z - cameraEntity->zo) * a;
+	
     for (int i = 0; i < 2; i++) {
         if (mc->options.getBooleanValue(OPTIONS_ANAGLYPH_3D)) {
             if (i == 0) glColorMask(false, true, true, false);
@@ -421,11 +421,10 @@ void GameRenderer::moveCameraToPlayer(float a) {
 
     float heightOffset = player->heightOffset - 1.62f;
 
-    float x = player->xo + (player->x - player->xo) * a;
-    float y = player->yo + (player->y - player->yo) * a - heightOffset;
-	//printf("camera y: %f\n", y);
-    float z = player->zo + (player->z - player->zo) * a;
-
+    double x = player->xo + (player->x - player->xo) * a;
+double y = player->yo + (player->y - player->yo) * a - heightOffset;
+double z = player->zo + (player->z - player->zo) * a;
+	
 	//printf("rot: %f %f\n", cameraRollO, cameraRoll);
     glRotatef2(cameraRollO + (cameraRoll - cameraRollO) * a, 0, 0, 1);
 
