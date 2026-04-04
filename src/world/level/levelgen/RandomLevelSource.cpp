@@ -615,9 +615,9 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
 }
 
 /*private*/
-void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int xt, int zt) {
-    int xo = xt * 16;
-    int zo = zt * 16;
+void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt) {
+    int xo = (int)(xt * 16);
+    int zo = (int)(zt * 16);
     for (int x = 0; x < 16; x++) {
         int y = level->getSeaLevel();
         for (int z = 0; z < 16; z++) {
@@ -696,40 +696,31 @@ Biome::MobList RandomLevelSource::getMobsAt(const MobCategory& mobCategory, int 
 }
 
 
-LevelChunk* PerformanceTestChunkSource::create(int x, int z)
-{
-	unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-	memset(blocks, 0, LevelChunk::ChunkBlockCount);
+LevelChunk* PerformanceTestChunkSource::create(int64_t x, int64_t z) {
+    unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
+    memset(blocks, 0, LevelChunk::ChunkBlockCount);
 
-	for (int y = 0; y < 65; y++)
-	{
-		if (y < 60)
-		{
-			for (int x = (y + 1) & 1; x < 16; x += 2)
-			{
-				for (int z = y & 1; z < 16; z += 2)
-				{
-					blocks[x << 11 | z << 7 | y] = 3;
-				}
-			}
-		}
-		else
-		{
-			for (int x = 0; x < 16; x += 2)
-			{
-				for (int z = 0; z < 16; z += 2)
-				{
-					blocks[x << 11 | z << 7 | y] = 3;
-				}
-			}
+    // 使用 x, z 时可能需要转换为 int，但这里只是用于区块坐标，范围不大，可以强转
+    int xi = (int)x;
+    int zi = (int)z;
+    // 原函数体中的代码使用 xi, zi 替代 x, z
+    for (int y = 0; y < 65; y++) {
+        if (y < 60) {
+            for (int xx = (y + 1) & 1; xx < 16; xx += 2) {
+                for (int zz = y & 1; zz < 16; zz += 2) {
+                    blocks[xx << 11 | zz << 7 | y] = 3;
+                }
+            }
+        } else {
+            for (int xx = 0; xx < 16; xx += 2) {
+                for (int zz = 0; zz < 16; zz += 2) {
+                    blocks[xx << 11 | zz << 7 | y] = 3;
+                }
+            }
+        }
+    }
 
-		}
-	}
-
-	LevelChunk* levelChunk = new LevelChunk(level, blocks, x, z);
-
-	//caveFeature.apply(this, level, xOffs, zOffs, blocks, LevelChunk::ChunkBlockCount);
-	levelChunk->recalcHeightmap();
-
-	return levelChunk;
+    LevelChunk* levelChunk = new LevelChunk(level, blocks, xi, zi);
+    levelChunk->recalcHeightmap();
+    return levelChunk;
 }
