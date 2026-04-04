@@ -233,7 +233,8 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
-    random.setSeed(((realXt * xScale) + (realZt * zScale)) ^ level->getSeed());
+    // 使用区块坐标 xt, zt 而不是 worldBlockX/worldBlockZ 来计算种子，保持随机性一致（旧 offsetX 为 0）
+    random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
 
     // 以下所有使用 xo, zo 的地方不变，因为它们已经是 int 范围内的世界坐标
     // ... 原有代码（生成树、矿石、花朵等）保持不变 ...
