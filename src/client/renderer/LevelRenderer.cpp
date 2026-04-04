@@ -295,127 +295,150 @@ void LevelRenderer::resortChunks( int xc, int yc, int zc )
 	}
 }
 
-int LevelRenderer::render( Mob* player, int layer, float alpha )
+int LevelRenderer::render(Mob* player, int layer, float alpha)
 {
-	if (mc->options.getIntValue(OPTIONS_VIEW_DISTANCE) != lastViewDistance) {
-		allChanged();
-	}
+    if (mc->options.getIntValue(OPTIONS_VIEW_DISTANCE) != lastViewDistance) {
+        allChanged();
+    }
 
-	TIMER_PUSH("sortchunks");
-	for (int i = 0; i < 10; i++) {
-		chunkFixOffs = (chunkFixOffs + 1) % chunksLength;
-		Chunk* c = chunks[chunkFixOffs];
-		if (c->isDirty() && std::find(dirtyChunks.begin(), dirtyChunks.end(), c) == dirtyChunks.end()) {
-			dirtyChunks.push_back(c);
-		}
-	}
+    TIMER_PUSH("sortchunks");
+    for (int i = 0; i < 10; i++) {
+        chunkFixOffs = (chunkFixOffs + 1) % chunksLength;
+        Chunk* c = chunks[chunkFixOffs];
+        if (c->isDirty() && std::find(dirtyChunks.begin(), dirtyChunks.end(), c) == dirtyChunks.end()) {
+            dirtyChunks.push_back(c);
+        }
+    }
 
-	if (layer == 0) {
-		totalChunks = 0;
-		offscreenChunks = 0;
-		occludedChunks = 0;
-		renderedChunks = 0;
-		emptyChunks = 0;
-	}
+    if (layer == 0) {
+        totalChunks = 0;
+        offscreenChunks = 0;
+        occludedChunks = 0;
+        renderedChunks = 0;
+        emptyChunks = 0;
+    }
 
-	float xOff = player->xOld + (player->x - player->xOld) * alpha;
-	float yOff = player->yOld + (player->y - player->yOld) * alpha;
-	float zOff = player->zOld + (player->z - player->zOld) * alpha;
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+    double xOff_d = 0.0, yOff_d = 0.0, zOff_d = 0.0;
+    float xOff_f = 0.0f, yOff_f = 0.0f, zOff_f = 0.0f;
 
-	float xd = player->x - xOld;
-	float yd = player->y - yOld;
-	float zd = player->z - zOld;
-	if (xd * xd + yd * yd + zd * zd > 4 * 4) {
-		xOld = player->x;
-		yOld = player->y;
-		zOld = player->z;
+    if (useRepair) {
+        // 双精度偏移计算
+        xOff_d = player->xOld + (player->x - player->xOld) * alpha;
+        yOff_d = player->yOld + (player->y - player->yOld) * alpha;
+        zOff_d = player->zOld + (player->z - player->zOld) * alpha;
+        // 设置 Tesselator 的偏移，使后续顶点计算减去相机位置
+        Tesselator::instance.offset(-xOff_d, -yOff_d, -zOff_d);
+    } else {
+        // 单精度偏移（传统模式）
+        xOff_f = (float)(player->xOld + (player->x - player->xOld) * alpha);
+        yOff_f = (float)(player->yOld + (player->y - player->yOld) * alpha);
+        zOff_f = (float)(player->zOld + (player->z - player->zOld) * alpha);
+        Tesselator::instance.offset(0.0, 0.0, 0.0);
+    }
 
-		resortChunks(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
-		DistanceChunkSorter distanceSorter(player);
-		std::sort(sortedChunks, sortedChunks + chunksLength, distanceSorter);
-	}
+    // 更新上一帧位置（使用 double 存储，即使传统模式也保留精度）
+    double xd = player->x - xOld;
+    double yd = player->y - yOld;
+    double zd = player->z - zOld;
+    if (xd * xd + yd * yd + zd * zd > 4 * 4) {
+        xOld = player->x;
+        yOld = player->y;
+        zOld = player->z;
 
-	int count = 0;
-	if (occlusionCheck && !mc->options.getBooleanValue(OPTIONS_ANAGLYPH_3D) && layer == 0) {
-		int from = 0;
-		int to = 16;
-		//checkQueryResults(from, to);
-		for (int i = from; i < to; i++) {
-			sortedChunks[i]->occlusion_visible = true;
-		}
+        resortChunks(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
+        DistanceChunkSorter distanceSorter(player);
+        std::sort(sortedChunks, sortedChunks + chunksLength, distanceSorter);
+    }
 
-		count += renderChunks(from, to, layer, alpha);
+    int count = 0;
+    if (occlusionCheck && !mc->options.getBooleanValue(OPTIONS_ANAGLYPH_3D) && layer == 0) {
+        int from = 0;
+        int to = 16;
+        for (int i = from; i < to; i++) {
+            sortedChunks[i]->occlusion_visible = true;
+        }
 
-		do {
-			from = to;
-			to = to * 2;
-			if (to > chunksLength) to = chunksLength;
+        count += renderChunks(from, to, layer, alpha);
 
-			glDisable2(GL_TEXTURE_2D);
-			glDisable2(GL_LIGHTING);
-			glDisable2(GL_ALPHA_TEST);
-			glDisable2(GL_FOG);
+        do {
+            from = to;
+            to = to * 2;
+            if (to > chunksLength) to = chunksLength;
 
-			glColorMask(false, false, false, false);
-			glDepthMask(false);
-			//checkQueryResults(from, to);
-			glPushMatrix2();
-			float xo = 0;
-			float yo = 0;
-			float zo = 0;
-			for (int i = from; i < to; i++) {
-				if (sortedChunks[i]->isEmpty()) {
-					sortedChunks[i]->visible = false;
-					continue;
-				}
-				if (!sortedChunks[i]->visible) {
-					sortedChunks[i]->occlusion_visible = true;
-				}
+            glDisable2(GL_TEXTURE_2D);
+            glDisable2(GL_LIGHTING);
+            glDisable2(GL_ALPHA_TEST);
+            glDisable2(GL_FOG);
 
-				if (sortedChunks[i]->visible && !sortedChunks[i]->occlusion_querying) {
-					float dist = Mth::sqrt(sortedChunks[i]->distanceToSqr(player));
+            glColorMask(false, false, false, false);
+            glDepthMask(false);
+            glPushMatrix2();
+            float xo = 0;
+            float yo = 0;
+            float zo = 0;
+            for (int i = from; i < to; i++) {
+                if (sortedChunks[i]->isEmpty()) {
+                    sortedChunks[i]->visible = false;
+                    continue;
+                }
+                if (!sortedChunks[i]->visible) {
+                    sortedChunks[i]->occlusion_visible = true;
+                }
 
-					int frequency = (int) (1 + dist / 128);
+                if (sortedChunks[i]->visible && !sortedChunks[i]->occlusion_querying) {
+                    float dist = Mth::sqrt(sortedChunks[i]->distanceToSqr(player));
+                    int frequency = (int)(1 + dist / 128);
 
-					if (ticks % frequency == i % frequency) {
-						Chunk* chunk = sortedChunks[i];
-						float xt = (float) (chunk->x - xOff);
-						float yt = (float) (chunk->y - yOff);
-						float zt = (float) (chunk->z - zOff);
-						float xdd = xt - xo;
-						float ydd = yt - yo;
-						float zdd = zt - zo;
+                    if (ticks % frequency == i % frequency) {
+                        Chunk* chunk = sortedChunks[i];
+                        float xt, yt, zt;
+                        if (useRepair) {
+                            xt = (float)(chunk->x - xOff_d);
+                            yt = (float)(chunk->y - yOff_d);
+                            zt = (float)(chunk->z - zOff_d);
+                        } else {
+                            xt = (float)(chunk->x - xOff_f);
+                            yt = (float)(chunk->y - yOff_f);
+                            zt = (float)(chunk->z - zOff_f);
+                        }
+                        float xdd = xt - xo;
+                        float ydd = yt - yo;
+                        float zdd = zt - zo;
 
-						if (xdd != 0 || ydd != 0 || zdd != 0) {
-							glTranslatef2(xdd, ydd, zdd);
-							xo += xdd;
-							yo += ydd;
-							zo += zdd;
-						}
+                        if (xdd != 0 || ydd != 0 || zdd != 0) {
+                            glTranslatef2(xdd, ydd, zdd);
+                            xo += xdd;
+                            yo += ydd;
+                            zo += zdd;
+                        }
 
-						sortedChunks[i]->renderBB();
-						sortedChunks[i]->occlusion_querying = true;
-					}
-				}
-			}
-			glPopMatrix2();
-			glColorMask(true, true, true, true);
-			glDepthMask(true);
-			glEnable2(GL_TEXTURE_2D);
-			glEnable2(GL_ALPHA_TEST);
-			glEnable2(GL_FOG);
+                        sortedChunks[i]->renderBB();
+                        sortedChunks[i]->occlusion_querying = true;
+                    }
+                }
+            }
+            glPopMatrix2();
+            glColorMask(true, true, true, true);
+            glDepthMask(true);
+            glEnable2(GL_TEXTURE_2D);
+            glEnable2(GL_ALPHA_TEST);
+            glEnable2(GL_FOG);
 
-			count += renderChunks(from, to, layer, alpha);
+            count += renderChunks(from, to, layer, alpha);
 
-		} while (to < chunksLength);
+        } while (to < chunksLength);
 
-	} else {
-		TIMER_POP_PUSH("render");
-		count += renderChunks(0, chunksLength, layer, alpha);
-	}
+    } else {
+        TIMER_POP_PUSH("render");
+        count += renderChunks(0, chunksLength, layer, alpha);
+    }
 
-	TIMER_POP();
-	return count;
+    // 重置 Tesselator 偏移，避免影响其他渲染
+    Tesselator::instance.offset(0.0, 0.0, 0.0);
+
+    TIMER_POP();
+    return count;
 }
 
 void LevelRenderer::renderDebug(const AABB& b, float a) const {
@@ -536,7 +559,7 @@ void LevelRenderer::render(const AABB& b) const
 //	}
 //}
 
-int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
+int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
 {
     _renderChunks.clear();
     int count = 0;
@@ -558,16 +581,24 @@ int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
         }
     }
 
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     Mob* player = mc->cameraTargetPlayer;
-    float xOff = player->xOld + (player->x - player->xOld) * alpha;
-    float yOff = player->yOld + (player->y - player->yOld) * alpha;
-    float zOff = player->zOld + (player->z - player->zOld) * alpha;
 
-    renderList.clear();
-    renderList.init(xOff, yOff, zOff);
+    if (useRepair) {
+        // 双精度偏移（条纹修复）
+        double xOff = player->xOld + (player->x - player->xOld) * alpha;
+        double yOff = player->yOld + (player->y - player->yOld) * alpha;
+        double zOff = player->zOld + (player->z - player->zOld) * alpha;
+        renderList.init(xOff, yOff, zOff);
+    } else {
+        // 单精度偏移（传统模式）
+        float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
+        float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
+        float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
+        renderList.init(xOff, yOff, zOff);
+    }
 
-    // 根据选项设置是否使用相对平移
-    renderList.setUseRelativeTranslation(mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR));
+    renderList.setUseRelativeTranslation(useRepair);
 
     for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
         Chunk* chunk = _renderChunks[i];
@@ -583,7 +614,6 @@ int LevelRenderer::renderChunks( int from, int to, int layer, float alpha )
 
     return count;
 }
-
 void LevelRenderer::renderSameAsLast( int layer, float alpha )
 {
 	renderList.render();
