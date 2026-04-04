@@ -24,6 +24,22 @@ public:
 	{
     }
 
+    void addDouble(double value) {
+    add(new DoubleTag(value));
+}
+
+double getDouble(int index) {
+    Tag* tag = get(index);
+    if (!tag) return 0.0;
+    if (tag->getId() == TAG_Double) {
+        return ((DoubleTag*)tag)->data;
+    } else if (tag->getId() == TAG_Float) {
+        return (double)((FloatTag*)tag)->data;
+    }
+    errorState |= TAGERR_BAD_TYPE;
+    return 0.0;
+}
+
     void write(IDataOutput* dos) /*throws IOException*/ {
         if (list.size() > 0) type = list.front()->getId();
         else type = TAG_Byte;
