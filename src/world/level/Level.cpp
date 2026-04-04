@@ -502,17 +502,10 @@ void Level::saveLevelData() {
 //	levelStorage->savePlayerData(&levelData, players);
 //}
 
-int Level::getTile(int x, int y, int z) {
-    //if (x < -MAX_LEVEL_SIZE || z < -MAX_LEVEL_SIZE || x >= MAX_LEVEL_SIZE || z > MAX_LEVEL_SIZE) {
-    //    return 0;
-    //}
+int Level::getTile(int64_t x, int y, int64_t z) {
     if (y < 0) return 0;
     if (y >= DEPTH) return 0;
-	//if (z == 128) {
-	//	int a = 0;
-	//}
-	//LOGI("%d ", z);
-    return getChunk(x >> 4, z >> 4)->getTile(x & 15, y, z & 15);
+    return getChunk(x >> 4, z >> 4)->getTile((int)(x & 15), y, (int)(z & 15));
 }
 
 bool Level::isEmptyTile(int x, int y, int z) {
@@ -656,7 +649,7 @@ void Level::tileUpdated(int x, int y, int z, int tile) {
     this->updateNeighborsAt(x, y, z, tile);
 }
 
-void Level::lightColumnChanged(int x, int z, int y0, int y1) {
+void Level::lightColumnChanged(int64_t x, int64_t z, int y0, int y1) {
     if (y0 > y1) {
         int tmp = y1;
         y1 = y0;
@@ -713,11 +706,7 @@ int Level::getRawBrightness(int x, int y, int z) {
     return getRawBrightness(x, y, z, true);
 }
 
-int Level::getRawBrightness(int x, int y, int z, bool propagate) {
-    //if (x < -MAX_LEVEL_SIZE || z < -MAX_LEVEL_SIZE || x >= MAX_LEVEL_SIZE || z > MAX_LEVEL_SIZE) {
-    //    return MAX_BRIGHTNESS;
-    //}
-
+int Level::getRawBrightness(int64_t x, int y, int64_t z, bool propagate) {
     if (propagate) {
         int id = getTile(x, y, z);
         if (id == Tile::stoneSlabHalf->id || id == Tile::farmland->id) {
@@ -733,18 +722,14 @@ int Level::getRawBrightness(int x, int y, int z, bool propagate) {
             return br;
         }
     }
-
     if (y < 0) return 0;
     if (y >= DEPTH) {
         int br = MAX_BRIGHTNESS - skyDarken;
         if (br < 0) br = 0;
         return br;
     }
-
     LevelChunk* c = getChunk(x >> 4, z >> 4);
-    x &= 15;
-    z &= 15;
-    return c->getRawBrightness(x, y, z, skyDarken);
+    return c->getRawBrightness((int)(x & 15), y, (int)(z & 15), skyDarken);
 }
 
 bool Level::isSkyLit(int x, int y, int z) {
@@ -762,14 +747,10 @@ bool Level::isSkyLit(int x, int y, int z) {
 	return c->isSkyLit(x, y, z);
 }
 
-int Level::getHeightmap(int x, int z) {
-    //if (x < -MAX_LEVEL_SIZE || z < -MAX_LEVEL_SIZE || x >= MAX_LEVEL_SIZE || z > MAX_LEVEL_SIZE) {
-    //    return 0;
-    //}
+int Level::getHeightmap(int64_t x, int64_t z) {
     if (!hasChunk(x >> 4, z >> 4)) return 0;
-
     LevelChunk* c = getChunk(x >> 4, z >> 4);
-    return c->getHeightmap(x & 15, z & 15);
+    return c->getHeightmap((int)(x & 15), (int)(z & 15));
 }
 
 BiomeSource* Level::getBiomeSource() {
