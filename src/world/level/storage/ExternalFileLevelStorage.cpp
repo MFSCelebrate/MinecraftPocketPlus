@@ -68,10 +68,6 @@ public:
 		//LOGI("time: %d\n", et - st);
 		return changed;
 	}
-
-	//static bool ConvertPlayerDatToLevelDat() {
-	//	return false;
-	//}
 };
 
 
@@ -94,7 +90,8 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
 	if (readLevelData(levelPath, *loadedLevelData))
 	{
 		loadedStorageVersion = loadedLevelData->getStorageVersion();
-		readPlayerData(levelFileName, *loadedLevelData);
+		// 注释掉旧 player.dat 读取，因为二进制格式与 double 版 Vec3 不兼容
+		// readPlayerData(levelFileName, *loadedLevelData);
 	} else {
 		delete loadedLevelData;
 		loadedLevelData = NULL;
@@ -252,39 +249,10 @@ bool ExternalFileLevelStorage::writeLevelData(const std::string& datFileName, Le
 	return true;
 }
 
+// 旧版 player.dat 读取函数，因二进制格式与 double 版 Vec3 不兼容，直接返回 false
 bool ExternalFileLevelStorage::readPlayerData(const std::string& filename, LevelData& dest)
 {
-    FILE* fp = fopen(filename.c_str(), "rb");
-    if (!fp)
-        return false;
-
-    do {
-        int version;
-        if (fread(&version, 4, 1, fp) != 1)
-            break;
-
-        int size;
-        if (fread(&size, 4, 1, fp) != 1)
-            break;
-
-        if (version == 1) {
-            if (fread(&dest.playerData, 1, sizeof(dest.playerData), fp) != size)
-                break;
-
-            // 删除以下坐标调整代码：
-            // Vec3& pos = dest.playerData.pos;
-            // if (pos.x < 0.5f) pos.x = 0.5f;
-            // if (pos.z < 0.5f) pos.z = 0.5f;
-            // if (pos.x > (LEVEL_WIDTH - 0.5f)) pos.x = LEVEL_WIDTH - 0.5f;
-            // if (pos.z > (LEVEL_DEPTH - 0.5f)) pos.z = LEVEL_DEPTH - 0.5f;
-            // if (pos.y < 0) pos.y = 64;
-
-            dest.playerDataVersion = version;
-        }
-    } while (false);
-
-    fclose(fp);
-    return true;
+    return false;
 }
 
 void ExternalFileLevelStorage::tick()
