@@ -19,12 +19,8 @@ class ChunkCache: public ChunkSource {
 public:
     ChunkSource* getSource() const { return source; }
     ChunkCache(Level* level_, ChunkStorage* storage_, ChunkSource* source_)
-    :   xLast(-999999999),
-        zLast(-999999999),
-        last(NULL),
-        level(level_),
-        storage(storage_),
-        source(source_)
+    :   xLast(-999999999), zLast(-999999999), last(NULL),
+        level(level_), storage(storage_), source(source_)
     {
         isChunkCache = true;
         emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
@@ -41,25 +37,22 @@ public:
         }
     }
 
-    bool fits(int x, int z) {
-        return true;   // 不再限制范围
-    }
+    bool fits(int64_t x, int64_t z) { return true; }
 
-    bool hasChunk(int x, int z) {
-        auto key = std::make_pair((int64_t)x, (int64_t)z);
+    bool hasChunk(int64_t x, int64_t z) {
+        auto key = std::make_pair(x, z);
         return chunks.find(key) != chunks.end();
     }
 
-    LevelChunk* create(int x, int z) {
+    LevelChunk* create(int64_t x, int64_t z) {
         return getChunk(x, z);
     }
 
-    LevelChunk* getChunk(int x, int z) {
-        
+    LevelChunk* getChunk(int64_t x, int64_t z) {
         if (x == xLast && z == zLast && last != NULL) {
             return last;
         }
-        auto key = std::make_pair((int64_t)x, (int64_t)z);
+        auto key = std::make_pair(x, z);
         auto it = chunks.find(key);
         if (it != chunks.end()) {
             xLast = x;
@@ -68,7 +61,6 @@ public:
             return last;
         }
 
-        // 加载或生成新区块
         LevelChunk* newChunk = load(x, z);
         bool updateLights = false;
         if (newChunk == NULL) {
@@ -86,10 +78,10 @@ public:
         if (updateLights) {
             for (int cx = 0; cx < 16; cx++) {
                 for (int cz = 0; cz < 16; cz++) {
-                    int height = level->getHeightmap(cx + x * 16, cz + z * 16);
+                    int height = level->getHeightmap((int)(cx + x * 16), (int)(cz + z * 16));
                     for (int cy = height; cy >= 0; cy--) {
-                        level->updateLight(LightLayer::Sky, cx + x * 16, cy, cz + z * 16, cx + x * 16, cy, cz + z * 16);
-                        level->updateLight(LightLayer::Block, cx + x * 16 - 1, cy, cz + z * 16 - 1, cx + x * 16 + 1, cy, cz + z * 16 + 1);
+                        level->updateLight(LightLayer::Sky, (int)(cx + x * 16), cy, (int)(cz + z * 16), (int)(cx + x * 16), cy, (int)(cz + z * 16));
+                        level->updateLight(LightLayer::Block, (int)(cx + x * 16 - 1), cy, (int)(cz + z * 16 - 1), (int)(cx + x * 16 + 1), cy, (int)(cz + z * 16 + 1));
                     }
                 }
             }
@@ -99,14 +91,13 @@ public:
             newChunk->load();
         }
 
-        // 后处理相邻区块
-       if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
+        if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
             postProcess(this, x, z);
-       if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
+        if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
             postProcess(this, x - 1, z);
-       if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
+        if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
             postProcess(this, x, z - 1);
-       if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
+        if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
             postProcess(this, x - 1, z - 1);
 
         xLast = x;
@@ -119,40 +110,32 @@ public:
         return source->getMobsAt(mobCategory, x, y, z);
     }
 
-    void postProcess(ChunkSource* parent, int x, int z) {
-    static int depth = 0;
-    if (depth > 20) return; // 限制递归深度
-    depth++;
-
-    if (!fits(x, z)) {
-        depth--;
-        return;
-    }
-    LevelChunk* chunk = getChunk(x, z);
-    if (!chunk->terrainPopulated) {
-        chunk->terrainPopulated = true;
-        if (source != NULL) {
-            source->postProcess(parent, x, z);
+    void postProcess(ChunkSource* parent, int64_t x, int64_t z) {
+        static int depth = 0;
+        if (depth > 20) return;
+        depth++;
+        if (!fits(x, z)) {
+            depth--;
+            return;
         }
-        chunk->clearUpdateMap();
+        LevelChunk* chunk = getChunk(x, z);
+        if (!chunk->terrainPopulated) {
+            chunk->terrainPopulated = true;
+            if (source != NULL) {
+                source->postProcess(parent, x, z);
+            }
+            chunk->clearUpdateMap();
+        }
+        depth--;
     }
-
-    depth--;
-    }
-    
 
     bool tick() {
         if (storage != NULL) storage->tick();
         return source->tick();
     }
 
-    bool shouldSave() {
-        return true;
-    }
-
-    std::string gatherStats() {
-        return "ChunkCache: dynamic";
-    }
+    bool shouldSave() { return true; }
+    std::string gatherStats() { return "ChunkCache: dynamic"; }
 
     void saveAll(bool onlyUnsaved) {
         if (storage != NULL) {
@@ -167,9 +150,9 @@ public:
     }
 
 private:
-    LevelChunk* load(int x, int z) {
+    LevelChunk* load(int64_t x, int64_t z) {
         if (storage == NULL) return emptyChunk;
-        LevelChunk* levelChunk = storage->load(level, x, z);
+        LevelChunk* levelChunk = storage->load(level, (int)x, (int)z);
         if (levelChunk != NULL) {
             levelChunk->lastSaveTime = level->getTime();
         }
@@ -188,16 +171,15 @@ private:
     }
 
 public:
-    int xLast;
-    int zLast;
+    int64_t xLast;
+    int64_t zLast;
 private:
     LevelChunk* emptyChunk;
     ChunkSource* source;
     ChunkStorage* storage;
     std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, pair_hash> chunks;
     Level* level;
-
     LevelChunk* last;
 };
 
-#endif /*NET_MINECRAFT_WORLD_LEVEL_CHUNK__ChunkCache_H__*/
+#endif
