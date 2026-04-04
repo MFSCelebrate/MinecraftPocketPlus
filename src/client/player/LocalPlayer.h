@@ -87,6 +87,8 @@ private:
     // -----------------------
     float flyX, flyY, flyZ;
 
+    double sentX, sentY, sentZ;
+    float sentRotX, sentRotY;
     // smooth camera settings
     SmoothFloat smoothFlyX;
     SmoothFloat smoothFlyY;
