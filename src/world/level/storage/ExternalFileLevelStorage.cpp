@@ -300,126 +300,70 @@ void ExternalFileLevelStorage::tick()
 	}
 }
 
-void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
-{
-	if (!regionFile)
-	{
-		regionFile = new RegionFile(levelPath);
-		if (!regionFile->open())
-		{
-			delete regionFile;
-			regionFile = NULL;
-			return;
-		}
-	}
+// 修改 load 函数签名和实现
+LevelChunk* ExternalFileLevelStorage::load(Level* level, int64_t x, int64_t z) {
+    if (!regionFile) {
+        regionFile = new RegionFile(levelPath);
+        if (!regionFile->open()) {
+            delete regionFile;
+            regionFile = NULL;
+            return NULL;
+        }
+    }
 
-	// Write chunk
-	RakNet::BitStream chunkData;
-	chunkData.Write((const char*)levelChunk->getBlockData(), CHUNK_BLOCK_COUNT);
-	chunkData.Write((const char*)levelChunk->data.data, CHUNK_BLOCK_COUNT / 2);
+    RakNet::BitStream* chunkData = NULL;
+    if (!regionFile->readChunk(x, z, &chunkData)) {
+        return NULL;
+    }
 
-	chunkData.Write((const char*)levelChunk->skyLight.data, CHUNK_BLOCK_COUNT / 2);
-	chunkData.Write((const char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
+    chunkData->ResetReadPointer();
 
-	chunkData.Write((const char*)levelChunk->updateMap, CHUNK_COLUMNS);
+    unsigned char* blockIds = new unsigned char[CHUNK_BLOCK_COUNT];
+    chunkData->Read((char*)blockIds, CHUNK_BLOCK_COUNT);
 
-	regionFile->writeChunk(levelChunk->x, levelChunk->z, chunkData);
+    LevelChunk* levelChunk = new LevelChunk(level, blockIds, (int)x, (int)z);
+    chunkData->Read((char*)levelChunk->data.data, CHUNK_BLOCK_COUNT / 2);
+    if (loadedStorageVersion >= ChunkVersion_Light) {
+        chunkData->Read((char*)levelChunk->skyLight.data, CHUNK_BLOCK_COUNT / 2);
+        chunkData->Read((char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
+    }
+    chunkData->Read((char*)levelChunk->updateMap, CHUNK_COLUMNS);
 
-	// Write entities
+    delete [] chunkData->GetData();
+    delete chunkData;
 
-	//LOGI("Saved chunk (%d, %d)\n", levelChunk->x, levelChunk->z);
+    bool changed = false;
+    if (loadedStorageVersion == 1)
+        changed |= LevelConverters::v1_ClothIdToClothData(levelChunk);
+    changed |= LevelConverters::ReplaceUnavailableBlocks(levelChunk);
 
+    levelChunk->recalcHeightmap();
+    levelChunk->unsaved = changed;
+    levelChunk->terrainPopulated = true;
+    levelChunk->createdFromSave = true;
+
+    return levelChunk;
 }
 
-LevelChunk* ExternalFileLevelStorage::load(Level* level, int x, int z)
-{
-	if (!regionFile)
-	{
-		regionFile = new RegionFile(levelPath);
-		if (!regionFile->open())
-		{
-			delete regionFile;
-			regionFile = NULL;
-			return NULL;
-		}
-	}
+// 修改 save 函数（参数不变，但内部调用的 regionFile->writeChunk 已改为 int64_t）
+void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk) {
+    if (!regionFile) {
+        regionFile = new RegionFile(levelPath);
+        if (!regionFile->open()) {
+            delete regionFile;
+            regionFile = NULL;
+            return;
+        }
+    }
 
-	RakNet::BitStream* chunkData = NULL;
-	if (!regionFile->readChunk(x, z, &chunkData))
-	{
-		//LOGI("Failed to read data for %d, %d\n", x, z);
-		return NULL;
-	}
+    RakNet::BitStream chunkData;
+    chunkData.Write((const char*)levelChunk->getBlockData(), CHUNK_BLOCK_COUNT);
+    chunkData.Write((const char*)levelChunk->data.data, CHUNK_BLOCK_COUNT / 2);
+    chunkData.Write((const char*)levelChunk->skyLight.data, CHUNK_BLOCK_COUNT / 2);
+    chunkData.Write((const char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
+    chunkData.Write((const char*)levelChunk->updateMap, CHUNK_COLUMNS);
 
-	chunkData->ResetReadPointer();
-
-	unsigned char* blockIds = new unsigned char[CHUNK_BLOCK_COUNT];
-	chunkData->Read((char*)blockIds, CHUNK_BLOCK_COUNT);
-
-	LevelChunk* levelChunk = new LevelChunk(level, blockIds, x, z);
-	chunkData->Read((char*)levelChunk->data.data, CHUNK_BLOCK_COUNT / 2);
-	if (loadedStorageVersion >= ChunkVersion_Light) {
-		chunkData->Read((char*)levelChunk->skyLight.data, CHUNK_BLOCK_COUNT / 2);
-		chunkData->Read((char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
-	}
-	chunkData->Read((char*)levelChunk->updateMap, CHUNK_COLUMNS);
-	// This will be difficult to maintain.. Storage version could be per chunk
-	// too (but probably better to just read all -> write all, so that all
-	// chunks got same version anyway)
-	//if (loadedStorageVersion >= ChunkVersion_Entity) {
-	//	int dictSize;
-	//	chunkData->Read(dictSize);
-
-	//	RakDataInput dis(*chunkData);
-	//	Tag* tmp = Tag::readNamedTag(&dis);
-	//	if (tmp && tmp->getId() == Tag::TAG_Compound) {
-	//		CompoundTag* tag = (CompoundTag*) tmp;
-
-	//		delete tmp;
-	//	}
-	//}
-
-	delete [] chunkData->GetData();
-	delete chunkData;
-
-	//bool dbg = (x == 7 && z == 9);
-
-	//int t = 0;
-	//for (int i = 0; i < CHUNK_COLUMNS; ++i) {
-	//	char bits = levelChunk->updateMap[i];
-	//	t += (bits != 0);
-	//	int xx = x * 16 + i%16;
-	//	int zz = z * 16 + i/16;
-	//	if (dbg && xx == 125 && zz == 152) {
-	//		LOGI("xz: %d, %d: %d\n", xx, zz, bits);
-	//		for (int j = 0; j < 8; ++j) {
-	//			if (bits & (1 << j)) {
-	//				LOGI("%d - %d\n", j << 4, ((j+1) << 4) - 1);
-	//			}
-	//		}
-	//	}
-	//}
-
-	//
-	// Convert LevelChunks here if necessary
-	//
-	//LOGI("level version: %d: upd: %d - (%d, %d)\n", loadedStorageVersion, t, x, z);
-	bool changed = false;
-
-	// Loaded level has old Cloth types (one Tile* per color)
-	if (loadedStorageVersion == 1)
-		changed |= LevelConverters::v1_ClothIdToClothData(levelChunk);
-
-	// Loaded level is newer than our level - replace all unavailable block types
-	//if (loadedStorageVersion > SharedConstants::StorageVersion)
-		changed |= LevelConverters::ReplaceUnavailableBlocks(levelChunk);
-
-	levelChunk->recalcHeightmap();
-	levelChunk->unsaved = changed;
-	levelChunk->terrainPopulated = true;
-	levelChunk->createdFromSave = true;
-
-	return levelChunk;
+    regionFile->writeChunk(levelChunk->x, levelChunk->z, chunkData);
 }
 
 void ExternalFileLevelStorage::saveEntities( Level* level, LevelChunk* levelChunk )
