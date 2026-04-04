@@ -94,7 +94,7 @@ void ExternalFileLevelStorage::saveLevelData(LevelData& levelData, std::vector<P
     ExternalFileLevelStorage::saveLevelData(levelPath, levelData, players);
 }
 
-void ExternalFileLevelStorage::saveLevelData( const std::string& levelPath, LevelData& levelData, std::vector<Player*>* players )
+void ExternalFileLevelStorage::saveLevelData(const std::string& levelPath, LevelData& levelData, std::vector<Player*>* players)
 {
     std::string directory = levelPath + "/";
     std::string tmpFile = directory + fnLevelDatNew;
