@@ -11,7 +11,8 @@
 #include "../tile/Tile.h"
 #include "../tile/HeavyTile.h"
 #include "../../../util/Random.h"
-#include "../../../client/Minecraft.h"   // <-- 添加此行
+#include "../../../client/Minecraft.h"
+
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
 const float RandomLevelSource::SNOW_SCALE = 0.3f;
 static const int MAX_BUFFER_SIZE = 1024;
@@ -29,7 +30,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     forestNoise(&random, 8),
     spawnMobs(spawnMobs),
     pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-    offsetX(0), offsetZ(0)
+    m_worldOffsetX(0), m_worldOffsetZ(0)
 {
     for (int i=0; i<32; ++i)
         for (int j=0; j<32; ++j)
@@ -40,26 +41,19 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
 
+    // 从 Options 读取精确世界偏移（单位：世界方块）
     if (Minecraft::instance) {
         std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
         std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
         if (!xStr.empty()) {
-            int64_t rawX = atoll(xStr.c_str());
-            int64_t alignedXBlocks = (rawX / 16) * 16;
-            offsetX = alignedXBlocks / 16;
-            if (rawX != alignedXBlocks) {
-                LOGI("World Offset X adjusted from %lld blocks to %lld blocks (chunks: %lld)\n", rawX, alignedXBlocks, offsetX);
-            }
+            m_worldOffsetX = atoll(xStr.c_str());
         }
         if (!zStr.empty()) {
-            int64_t rawZ = atoll(zStr.c_str());
-            int64_t alignedZBlocks = (rawZ / 16) * 16;
-            offsetZ = alignedZBlocks / 16;
-            if (rawZ != alignedZBlocks) {
-                LOGI("World Offset Z adjusted from %lld blocks to %lld blocks (chunks: %lld)\n", rawZ, alignedZBlocks, offsetZ);
-            }
+            m_worldOffsetZ = atoll(zStr.c_str());
         }
+        LOGI("RandomLevelSource: world offset = (%lld, %lld)\n", (long long)m_worldOffsetX, (long long)m_worldOffsetZ);
     }
+
     customSeaLevel = 63;
     if (Minecraft::instance) {
         std::string seaStr = Minecraft::instance->options.getStringValue(OPTIONS_SEA_LEVEL);
@@ -72,26 +66,16 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 }
 
 RandomLevelSource::~RandomLevelSource() {
-
-	// chunks are deleted in the chunk cache instead
-	//ChunkMap::iterator it = chunkMap.begin();
-	//while (it != chunkMap.end()) {
-	//	it->second->deleteBlockData(); //@attn: we delete the block data here, for now
-	//	delete it->second;
-	//	++it;
-	//}
-
-	delete[] buffer;
-	delete[] pnr;
-	delete[] ar;
-	delete[] br;
-	delete[] sr;
-	delete[] dr;
-	delete[] fi;
-	delete[] fis;
+    delete[] buffer;
+    delete[] pnr;
+    delete[] ar;
+    delete[] br;
+    delete[] sr;
+    delete[] dr;
+    delete[] fi;
+    delete[] fis;
 }
 
-/*public*/
 void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned char* blocks, void* biomes, float* temperatures) {
     int waterHeight = customSeaLevel + 1;
     if (waterHeight < 0) waterHeight = 0;
@@ -101,7 +85,7 @@ void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned ch
     int xSize = xChunks + 1;
     int ySize = 128 / CHUNK_HEIGHT + 1;
     int zSize = xChunks + 1;
-    buffer = getHeights(buffer, xOffs * xChunks, 0, zOffs * xChunks, xSize, ySize, zSize);
+    buffer = getHeights(buffer, xOffs, 0, zOffs, xSize, ySize, zSize);
 
     for (int xc = 0; xc < xChunks; xc++) {
         for (int zc = 0; zc < xChunks; zc++) {
@@ -166,8 +150,8 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     if (waterHeight > 127) waterHeight = 127;
 
     float s = 1 / 32.0f;
-    float xf = (float)(xOffs * 16);
-    float zf = (float)(zOffs * 16);
+    float xf = (float)(xOffs);
+    float zf = (float)(zOffs);
     perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, s, s, 1);
     perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, s, 1, s);
     perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, s * 2, s * 2, s * 2);
@@ -231,21 +215,20 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     }
 }
 
-
-/*public*/
-
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
-    int64_t realXt = xt + offsetX;
-    int64_t realZt = zt + offsetZ;
-    if (!level->hasChunk(realXt-1, realZt-1) || !level->hasChunk(realXt, realZt-1) ||
-        !level->hasChunk(realXt-1, realZt) || !level->hasChunk(realXt, realZt)) {
+    // 使用新的精确世界偏移（直接基于区块索引和偏移）
+    int64_t worldBlockX = xt * 16 + m_worldOffsetX;
+    int64_t worldBlockZ = zt * 16 + m_worldOffsetZ;
+    int xo = (int)worldBlockX;
+    int zo = (int)worldBlockZ;
+
+    if (!level->hasChunk(xt-1, zt-1) || !level->hasChunk(xt, zt-1) ||
+        !level->hasChunk(xt-1, zt) || !level->hasChunk(xt, zt)) {
         return;
     }
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
-    int xo = (int)(realXt * 16);
-    int zo = (int)(realZt * 16);
     Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
@@ -508,34 +491,36 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
-    int64_t realX = xOffs + offsetX;
-    int64_t realZ = zOffs + offsetZ;
-    int64_t hashedPos = (realX << 32) | (realZ & 0xffffffff);
+    // 使用 pair 作为键避免移位混淆，但为保持与原代码一致，仍用移位
+    // 注意：此处 xOffs, zOffs 是区块索引，直接用于 map 键
+    int64_t hashedPos = (xOffs << 32) | (zOffs & 0xffffffff);
     ChunkMap::iterator it = chunkMap.find(hashedPos);
     if (it != chunkMap.end())
         return it->second;
 
-    random.setSeed((long)(realX * 341872712l + realZ * 132899541l));
+    random.setSeed((long)(xOffs * 341872712l + zOffs * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    // 注意：getBiomeBlock 和 getTemperatureBlock 等函数仍使用 int，因为它们的参数是方块坐标，而 realX 可能超过 int 范围，但转换后精度丢失，可以接受。
-    Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)(realX * 16), (int)(realZ * 16), 16, 16);
-    float* temperatures = level->getBiomeSource()->temperatures;
-    prepareHeights(realX, realZ, blocks, 0, temperatures);
-    buildSurfaces(realX, realZ, blocks, biomes);
+    // 计算世界方块坐标（区块基准 + 精确偏移）
+    int64_t worldBlockX = xOffs * 16 + m_worldOffsetX;
+    int64_t worldBlockZ = zOffs * 16 + m_worldOffsetZ;
 
-    caveFeature.apply(this, level, (int)realX, (int)realZ, blocks, LevelChunk::ChunkBlockCount);
+    Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
+    float* temperatures = level->getBiomeSource()->temperatures;
+    prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
+    buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
+
+    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
 }
 
-/*private*/
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
-    float farlandsScale = 1.0f;  // 固定为 1.0，不读取选项
+    float farlandsScale = 1.0f;
     float s = 684.412f * farlandsScale;
     float hs = 684.412f * farlandsScale;
 
@@ -549,8 +534,12 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     sr = scaleNoise.getRegion(sr, (int)x, (int)z, xSize, zSize, 1.121f, 1.121f, 0.5f);
     dr = depthNoise.getRegion(dr, (int)x, (int)z, xSize, zSize, 200.0f, 200.0f, 0.5f);
 
-    float xf = (float)x;
-    float zf = (float)z;
+    // 精确偏移 + 边境之地修正 130 格（世界单位）
+    const double FARLANDS_CORRECTION = 0;
+    double worldX = (double)x + (double)m_worldOffsetX + FARLANDS_CORRECTION;
+    double worldZ = (double)z + (double)m_worldOffsetZ;
+    float xf = (float)worldX;
+    float zf = (float)worldZ;
     float yf = (float)y;
 
     pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
