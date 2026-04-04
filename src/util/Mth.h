@@ -46,21 +46,21 @@ inline double absMaxSigned(double a, double b) {
 
 	void initMth();
 
-	float sqrt(float x);
+	//float sqrt(float x);
 	float invSqrt(float x);
 
-	int floor(float x);
+	//int floor(float x);
 
-	float sin(float x);
-	float cos(float x);
+	//float sin(float x);
+	//float cos(float x);
 
-	float atan(float x);
-	float atan2(float dy, float dx);
+	//float atan(float x);
+	//float atan2(float dy, float dx);
 
 	float random();
 	int random(int n);
 
-	float abs(float a);
+	//float abs(float a);
 	//float Min(float a, float b);
 	//float Max(float a, float b);
 	int abs(int a);
@@ -68,8 +68,8 @@ inline double absMaxSigned(double a, double b) {
 	int Max(int a, int b);
 
 	int   clamp(int v, int low, int high);
-	float clamp(float v, float low, float high);
-	float lerp(float src, float dst, float alpha);
+	//float clamp(float v, float low, float high);
+	//float lerp(float src, float dst, float alpha);
 	int   lerp(int src, int dst, float alpha);
 
 	///@param value The original signed value
