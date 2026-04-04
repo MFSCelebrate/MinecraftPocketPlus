@@ -3,6 +3,7 @@
 
 #include <set>
 #include <string>
+#include <cstdint>
 
 #include "LevelSettings.h"
 #include "LevelConstants.h"
@@ -78,48 +79,48 @@ public:
 
     void _init(const std::string& levelName, const LevelSettings& settings, int levelVersion, Dimension* fixedDimension);
     void validateSpawn();
-    int getTopTile(int x, int z);
-    int getTopTileY(int x, int z);
-    int getTopSolidBlock(int x, int z);
-    bool isEmptyTile(int x, int y, int z);
-    bool isSolidRenderTile(int x, int y, int z);
-    bool isSolidBlockingTile(int x, int y, int z);
-    int getTile(int x, int y, int z);
-    bool setTile(int x, int y, int z, int tile);
+    int getTopTile(int64_t x, int64_t z);
+    int getTopTileY(int64_t x, int64_t z);
+    int getTopSolidBlock(int64_t x, int64_t z);
+    bool isEmptyTile(int64_t x, int y, int64_t z);
+    bool isSolidRenderTile(int64_t x, int y, int64_t z);
+    bool isSolidBlockingTile(int64_t x, int y, int64_t z);
+    int getTile(int64_t x, int y, int64_t z);
+    bool setTile(int64_t x, int y, int64_t z, int tile);
     bool hasChunkAt(int64_t x, int64_t y, int64_t z);
-    bool hasChunksAt(int x, int y, int z, int r);
+    bool hasChunksAt(int x, int y, int z, int r);  // 保留局部坐标版本
     bool hasChunksAt(int64_t x0, int64_t y0, int64_t z0, int64_t x1, int64_t y1, int64_t z1);
     bool hasChunk(int64_t x, int64_t z);
     LevelChunk* getChunkAt(int64_t x, int64_t z);
     LevelChunk* getChunk(int64_t x, int64_t z);
-    bool setTileAndDataNoUpdate(int x, int y, int z, int tile, int data);
-    bool setTileNoUpdate(int x, int y, int z, int tile);
-    int getData(int x, int y, int z);
-    void setData(int x, int y, int z, int data);
-    bool setDataNoUpdate(int x, int y, int z, int data);
-    bool setTileAndData(int x, int y, int z, int tile, int data);
-    void sendTileUpdated(int x, int y, int z);
-    void lightColumnChanged(int x, int z, int y0, int y1);
-    void setTileDirty(int x, int y, int z);
-    void setTilesDirty(int x0, int y0, int z0, int x1, int y1, int z1);
-    const Material* getMaterial(int x, int y, int z);
+    bool setTileAndDataNoUpdate(int64_t x, int y, int64_t z, int tile, int data);
+    bool setTileNoUpdate(int64_t x, int y, int64_t z, int tile);
+    int getData(int64_t x, int y, int64_t z);
+    void setData(int64_t x, int y, int64_t z, int data);
+    bool setDataNoUpdate(int64_t x, int y, int64_t z, int data);
+    bool setTileAndData(int64_t x, int y, int64_t z, int tile, int data);
+    void sendTileUpdated(int64_t x, int y, int64_t z);
+    void lightColumnChanged(int64_t x, int64_t z, int y0, int y1);
+    void setTileDirty(int64_t x, int y, int64_t z);
+    void setTilesDirty(int64_t x0, int y0, int64_t z0, int64_t x1, int y1, int64_t z1);
+    const Material* getMaterial(int64_t x, int y, int64_t z);
     void loadPlayer(Player* player, bool doAddPlayer);
-    void swap(int x1, int y1, int z1, int x2, int y2, int z2);
-    void updateNeighborsAt(int x, int y, int z, int tile);
-    int getHeightmap(int x, int z);
+    void swap(int64_t x1, int y1, int64_t z1, int64_t x2, int y2, int64_t z2);
+    void updateNeighborsAt(int64_t x, int y, int64_t z, int tile);
+    int getHeightmap(int64_t x, int64_t z);
     BiomeSource* getBiomeSource();
-    Biome* getBiome(int x, int z);
-    int getRawBrightness(int x, int y, int z);
-    int getRawBrightness(int x, int y, int z, bool propagate);
-    float getBrightness(int x, int y, int z);
-    int getBrightness(const LightLayer& layer, int x, int y, int z);
-    void setBrightness(const LightLayer& layer, int x, int y, int z, int brightness);
-    void updateLightIfOtherThan(const LightLayer& layer, int x, int y, int z, int expected);
+    Biome* getBiome(int64_t x, int64_t z);
+    int getRawBrightness(int64_t x, int y, int64_t z);
+    int getRawBrightness(int64_t x, int y, int64_t z, bool propagate);
+    float getBrightness(int64_t x, int y, int64_t z);
+    int getBrightness(const LightLayer& layer, int64_t x, int y, int64_t z);
+    void setBrightness(const LightLayer& layer, int64_t x, int y, int64_t z, int brightness);
+    void updateLightIfOtherThan(const LightLayer& layer, int64_t x, int y, int64_t z, int expected);
     int getLightsToUpdate();
     bool updateLights();
     void setUpdateLights(bool doUpdate);
-    void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1);
-    void updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1, bool join);
+    void updateLight(const LightLayer& layer, int64_t x0, int y0, int64_t z0, int64_t x1, int y1, int64_t z1);
+    void updateLight(const LightLayer& layer, int64_t x0, int y0, int64_t z0, int64_t x1, int y1, int64_t z1, bool join);
     HitResult clip(const Vec3& a, const Vec3& b, bool liquid = false, bool solidOnly = false);
     bool addEntity(Entity* e);
     void removeEntity(Entity* e);
@@ -139,18 +140,18 @@ public:
     Vec3 getFogColor(float a);
     Vec3 getCloudColor(float a);
     Vec3 getSkyColor(Entity* source, float a);
-    bool canSeeSky(int x, int y, int z);
-    int getLightDepth(int x, int z);
+    bool canSeeSky(int64_t x, int y, int64_t z);
+    int getLightDepth(int64_t x, int64_t z);
     float getStarBrightness(float a);
     bool updateSkyBrightness();
-    bool isSkyLit(int x, int y, int z);
+    bool isSkyLit(int64_t x, int y, int64_t z);
     void tickEntities();
     virtual void tick();
     void tick(Entity* e);
     void tick(Entity* e, bool actual);
     bool tickPendingTicks(bool force);
-    void animateTick(int xt, int yt, int zt);
-    void addToTickNextTick(int x, int y, int z, int tileId, int tickDelay);
+    void animateTick(int64_t xt, int yt, int64_t zt);
+    void addToTickNextTick(int64_t x, int y, int64_t z, int tileId, int tickDelay);
     bool isUnobstructed(const AABB& aabb);
     float getSeenPercent(const Vec3& center, const AABB& bb);
     void explode(Entity* source, float x, float y, float z, float r);
@@ -160,24 +161,24 @@ public:
     bool containsMaterial(const AABB& box, const Material* material);
     bool containsLiquid(const AABB& box, const Material* material);
     bool checkAndHandleWater(const AABB& box, const Material* material, Entity* e);
-    void extinguishFire(int x, int y, int z, int face);
+    void extinguishFire(int64_t x, int y, int64_t z, int face);
     EntityList& getEntities(Entity* except, const AABB& bb);
     const EntityList& getAllEntities();
-    TileEntity* getTileEntity(int x, int y, int z);
-    void setTileEntity(int x, int y, int z, TileEntity* tileEntity);
-    void removeTileEntity(int x, int y, int z);
-    void tileEntityChanged(int x, int y, int z, TileEntity* te);
+    TileEntity* getTileEntity(int64_t x, int y, int64_t z);
+    void setTileEntity(int64_t x, int y, int64_t z, TileEntity* tileEntity);
+    void removeTileEntity(int64_t x, int y, int64_t z);
+    void tileEntityChanged(int64_t x, int y, int64_t z, TileEntity* te);
     void prepare();
     bool isNew() { return _isNew; }
     int getSeaLevel();
-    bool mayPlace(int tileId, int x, int y, int z, bool ignoreEntities, unsigned char face);
-    bool mayInteract(Player* player, int xt, int yt, int zt);
+    bool mayPlace(int tileId, int64_t x, int y, int64_t z, bool ignoreEntities, unsigned char face);
+    bool mayInteract(Player* player, int64_t xt, int yt, int64_t zt);
     bool findPath(Path* path, Entity* from, Entity* to, float maxDist, bool canOpenDoors, bool avoidWater);
     bool findPath(Path* path, Entity* from, int xBest, int yBest, int zBest, float maxDist, bool canOpenDoors, bool avoidWater);
-    bool getDirectSignal(int x, int y, int z, int dir);
-    bool hasDirectSignal(int x, int y, int z);
-    bool getSignal(int x, int y, int z, int dir);
-    bool hasNeighborSignal(int x, int y, int z);
+    bool getDirectSignal(int64_t x, int y, int64_t z, int dir);
+    bool hasDirectSignal(int64_t x, int y, int64_t z);
+    bool getSignal(int64_t x, int y, int64_t z, int dir);
+    bool hasNeighborSignal(int64_t x, int y, int64_t z);
     Player* getNearestPlayer(Entity* source, float maxDist);
     Player* getNearestPlayer(float x, float y, float z, float maxDist);
     int getEntitiesOfType(int entityType, const AABB& bb, EntityList& list);
@@ -201,24 +202,24 @@ public:
     void addParticle(ParticleType::Id id, float x, float y, float z, float xd, float yd, float zd, int data = 0);
     void playSound(Entity* entity, const std::string& name, float volume, float pitch);
     void playSound(float x, float y, float z, const std::string& name, float volume, float pitch);
-    void levelEvent(Player* source, int type, int x, int y, int z, int data);
-    void tileEvent(int x, int y, int z, int b0, int b1);
+    void levelEvent(Player* source, int type, int64_t x, int y, int64_t z, int data);
+    void tileEvent(int64_t x, int y, int64_t z, int b0, int b1);
     void broadcastEntityEvent(Entity* e, char eventId);
     void awakenAllPlayers();
     void takePicture(TripodCamera* cam, Entity* e);
     virtual void setInitialSpawn();
-    bool inRange(int x, int y, int z);
+    bool inRange(int64_t x, int y, int64_t z);
 
 protected:
     void setZombieAi(std::vector<Zombie*>& zombies);
     virtual void entityAdded(Entity* e);
     virtual void entityRemoved(Entity* e);
-    virtual void tileUpdated(int x, int y, int z, int tile);
+    virtual void tileUpdated(int64_t x, int y, int64_t z, int tile);
     void updateSkyDarken();
     virtual ChunkSource* createChunkSource();
 
 private:
-    void neighborChanged(int x, int y, int z, int type);
+    void neighborChanged(int64_t x, int y, int64_t z, int type);
     void tickTiles();
 
 public:
