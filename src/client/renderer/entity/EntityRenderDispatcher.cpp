@@ -31,9 +31,9 @@
 EntityRenderDispatcher* EntityRenderDispatcher::instance = NULL;
 
 /*static*/
-float	EntityRenderDispatcher::xOff = 0,
-		EntityRenderDispatcher::yOff = 0,
-		EntityRenderDispatcher::zOff = 0;
+double EntityRenderDispatcher::xOff = 0,
+       EntityRenderDispatcher::yOff = 0,
+       EntityRenderDispatcher::zOff = 0;
 
 EntityRenderDispatcher::EntityRenderDispatcher()
 :	itemInHandRenderer(NULL)
@@ -110,6 +110,7 @@ void EntityRenderDispatcher::prepare( Level* level, Font* font, Mob* player, Opt
 		playerRotX = player->xRotO + (player->xRot - player->xRotO) * a;
 	}
 	
+	// 相机观察点使用 double 精度
 	xPlayer = player->xOld + (player->x - player->xOld) * a;
 	yPlayer = player->yOld + (player->y - player->yOld) * a;
 	zPlayer = player->zOld + (player->z - player->zOld) * a;
@@ -117,15 +118,20 @@ void EntityRenderDispatcher::prepare( Level* level, Font* font, Mob* player, Opt
 
 void EntityRenderDispatcher::render( Entity* entity, float a )
 {
-	float x = entity->xOld + (entity->x - entity->xOld) * a;
-	float y = entity->yOld + (entity->y - entity->yOld) * a;
-	float z = entity->zOld + (entity->z - entity->zOld) * a;
+	// 使用 double 精度的插值坐标
+	double x = entity->xOld + (entity->x - entity->xOld) * a;
+	double y = entity->yOld + (entity->y - entity->yOld) * a;
+	double z = entity->zOld + (entity->z - entity->zOld) * a;
 	float r = entity->yRotO + (entity->yRot - entity->yRotO) * a;
 
 	float br = entity->getBrightness(a);
 	glColor4f2(br, br, br, 1);
 
-	render(entity, x - xOff, y - yOff, z - zOff, r, a);
+	// 计算相对坐标（减去相机偏移），然后转换为 float 传递给渲染器
+	float rx = (float)(x - xOff);
+	float ry = (float)(y - yOff);
+	float rz = (float)(z - zOff);
+	render(entity, rx, ry, rz, r, a);
 }
 
 void EntityRenderDispatcher::render( Entity* entity, float x, float y, float z, float rot, float a )
@@ -170,9 +176,9 @@ void EntityRenderDispatcher::setMinecraft( Minecraft* minecraft )
 
 float EntityRenderDispatcher::distanceToSqr( float x, float y, float z )
 {
-	float xd = x - xPlayer;
-	float yd = y - yPlayer;
-	float zd = z - zPlayer;
+	float xd = x - (float)xPlayer;
+	float yd = y - (float)yPlayer;
+	float zd = z - (float)zPlayer;
 	return xd * xd + yd * yd + zd * zd;
 }
 
