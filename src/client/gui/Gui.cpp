@@ -753,15 +753,21 @@ void Gui::renderDebugInfo() {
         if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
     }
 
-    // 原始玩家坐标（已经经过世界偏移修正）
-    float px = p->x, py = p->y - p->heightOffset, pz = p->z;
-    posTranslator.to(px, py, pz);
-    int bx = (int)floorf(px), by = (int)floorf(py), bz = (int)floorf(pz);
+    // 原始玩家坐标（double 精度）
+    double px = p->x;
+    double py = p->y - p->heightOffset;
+    double pz = p->z;
+    // 应用世界偏移（如果 OffsetPosTranslator 支持 double 则直接使用，否则临时转换）
+    float fx = (float)px, fy = (float)py, fz = (float)pz;
+    posTranslator.to(fx, fy, fz);
+    px = fx; py = fy; pz = fz;
+
+    int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
     int cx = bx >> 4, cz = bz >> 4;
 
     // 偏移后的坐标（原始坐标 + 偏移量 * 16）
-    float pxo = px + (float)(terrainOffsetX * 16);
-    float pzo = pz + (float)(terrainOffsetZ * 16);
+    double pxo = px + (double)(terrainOffsetX * 16);
+    double pzo = pz + (double)(terrainOffsetZ * 16);
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
@@ -804,8 +810,8 @@ void Gui::renderDebugInfo() {
     // --- 噪声值计算 ---
     double noiseVals[8] = {0.0};
     if (rls) {
-        float worldX = p->x;
-        float worldZ = p->z;
+        float worldX = (float)p->x;
+        float worldZ = (float)p->z;
 
         const float s = 684.412f;
         const float scale_large = s / 80.0f;
@@ -826,14 +832,14 @@ void Gui::renderDebugInfo() {
     }
 
     // 构建显示行（共 20 行，索引 0-19）
-    static char ln[20][96];
+    static char ln[20][128];
     sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0'; // 空行
     sprintf(ln[3], "--- Local Server Position ---");
     sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
     sprintf(ln[5], "X(Float Offset): %.15f", pxo);
-    sprintf(ln[6], "Y(Float Offset): %.10f", py);
+    sprintf(ln[6], "Y(Float Offset): %.12f", py);
     sprintf(ln[7], "Z(Float Offset): %.15f", pzo);
     sprintf(ln[8], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
     ln[9][0] = '\0'; // 空行
@@ -854,17 +860,16 @@ void Gui::renderDebugInfo() {
     sprintf(ln[19], "Day %ld  Time: %ld  Seed: %ld",
             day, dayTime, seed);
 
-    const int N = 20;   // 行数
-    const float LH  = (float)Font::DefaultLineHeight; // 10 font-pixels
-    const float MGN = 2.0f;  // left/top margin in font-pixels
-    const float PAD = 2.0f;  // horizontal padding for background
+    const int N = 20;
+    const float LH  = (float)Font::DefaultLineHeight;
+    const float MGN = 2.0f;
+    const float PAD = 2.0f;
     Font* font = minecraft->font;
 
-    // 应用缩放变换
     glPushMatrix();
     glScalef(debugScale, debugScale, 1.0f);
 
-    // 1) 绘制半透明背景框
+    // 背景框
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float w  = (float)font->width(ln[i]);
@@ -875,21 +880,21 @@ void Gui::renderDebugInfo() {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 2) 绘制文本（为特定行设置颜色）
+    // 文本
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
-        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff; // 标题黄色
-        if (i == 11) { // 64Bit Farlands 行
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // True绿色，False红色
+        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff;
+        if (i == 11) {
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;
         }
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
 
-    glPopMatrix(); // 恢复变换
+    glPopMatrix();
 }
 
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
