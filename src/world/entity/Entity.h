@@ -204,11 +204,12 @@ protected:
     bool makeStepSound;
     bool wasInWater;
     bool fireImmune;
+    static const int DATA_AIR_SUPPLY_ID = 1;
 
 private:
     bool firstTick;
     int nextStep;
-    static const int DATA_AIR_SUPPLY_ID = 1;
+    
     bool isStuckInWeb;
 };
 
