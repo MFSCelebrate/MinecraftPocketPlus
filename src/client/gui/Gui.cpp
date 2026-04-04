@@ -732,16 +732,16 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p   = minecraft->player;
     Level*       lvl = minecraft->level;
 
-    // 获取地形偏移量（区块为单位）及噪声源
-    int terrainOffsetX = 0, terrainOffsetZ = 0;
+    // 获取精确世界偏移（单位：世界方块）
+    int64_t terrainOffsetX = 0, terrainOffsetZ = 0;
     RandomLevelSource* rls = nullptr;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
         if (cache) {
             rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
             if (rls) {
-                terrainOffsetX = rls->getOffsetX();
-                terrainOffsetZ = rls->getOffsetZ();
+                terrainOffsetX = rls->getWorldOffsetX();
+                terrainOffsetZ = rls->getWorldOffsetZ();
             }
         }
     }
@@ -765,9 +765,9 @@ void Gui::renderDebugInfo() {
     int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
     int cx = bx >> 4, cz = bz >> 4;
 
-    // 偏移后的坐标（原始坐标 + 偏移量 * 16）
-    double pxo = px + (double)(terrainOffsetX * 16);
-    double pzo = pz + (double)(terrainOffsetZ * 16);
+    // 偏移后的坐标（原始坐标 + 世界偏移）
+    double pxo = px + (double)terrainOffsetX;
+    double pzo = pz + (double)terrainOffsetZ;
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
@@ -838,10 +838,10 @@ void Gui::renderDebugInfo() {
     ln[2][0] = '\0'; // 空行
     sprintf(ln[3], "--- Local Server Position ---");
     sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-    sprintf(ln[5], "X(Float Offset): %.15f", pxo);
+    sprintf(ln[5], "X(World Offset): %.15f", pxo);
     sprintf(ln[6], "Y(Float Offset): %.12f", py);
-    sprintf(ln[7], "Z(Float Offset): %.15f", pzo);
-    sprintf(ln[8], "Terrain Offset (Chunks): %d / %d", terrainOffsetX, terrainOffsetZ);
+    sprintf(ln[7], "Z(World Offset): %.15f", pzo);
+    sprintf(ln[8], "World Offset (Blocks): %lld / %lld", (long long)terrainOffsetX, (long long)terrainOffsetZ);
     ln[9][0] = '\0'; // 空行
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
