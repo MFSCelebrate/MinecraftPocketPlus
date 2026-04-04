@@ -126,25 +126,21 @@ void RegionFile::close()
     }
 }
 
-bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
-{
-    std::pair<int64_t, int64_t> key((int64_t)x, (int64_t)z);
+bool RegionFile::readChunk(int64_t x, int64_t z, RakNet::BitStream** destChunkData) {
+    std::pair<int64_t, int64_t> key(x, z);
     auto it = chunkToSector.find(key);
     if (it == chunkToSector.end() && useOldFormat) {
-        // 旧格式：使用数组索引
-        int cx = x & (SECTOR_COLS - 1);
-        int cz = z & (SECTOR_COLS - 1);
+        int cx = (int)(x & (SECTOR_COLS - 1));
+        int cz = (int)(z & (SECTOR_COLS - 1));
         int idx = cx + cz * SECTOR_COLS;
         int offset = offsets[idx];
         if (offset == 0) return false;
         int sectorNum = offset >> 8;
-        // 读取数据...
         fseek(file, sectorNum * SECTOR_BYTES, SEEK_SET);
         int length = 0;
         fread(&length, sizeof(int), 1, file);
-        assert(length < ((offset & 0xff) * SECTOR_BYTES));
-        length -= sizeof(int);
         if (length <= 0) return false;
+        length -= sizeof(int);
         unsigned char* data = new unsigned char[length];
         logAssert(fread(data, 1, length, file), length);
         *destChunkData = new RakNet::BitStream(data, length, false);
@@ -164,8 +160,7 @@ bool RegionFile::readChunk(int x, int z, RakNet::BitStream** destChunkData)
     return false;
 }
 
-bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
-{
+bool RegionFile::writeChunk(int64_t x, int64_t z, RakNet::BitStream& chunkData) {
     int size = chunkData.GetNumberOfBytesUsed() + sizeof(int);
     int sectorsNeeded = (size / SECTOR_BYTES) + 1;
     if (sectorsNeeded > 256) {
@@ -173,15 +168,11 @@ bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
         return false;
     }
 
-    std::pair<int64_t, int64_t> key((int64_t)x, (int64_t)z);
+    std::pair<int64_t, int64_t> key(x, z);
     auto it = chunkToSector.find(key);
     int sectorNum = (it != chunkToSector.end()) ? it->second : 0;
 
     if (sectorNum != 0) {
-        // 检查现有扇区是否够用
-        // 简化：假设扇区大小固定，不够就重新分配（需要知道原长度，这里先假设重新分配）
-        // 为了简化，每次都重新分配（会浪费空间但避免复杂）
-        // 标记旧扇区为空闲
         sectorFree[sectorNum] = true;
         sectorNum = 0;
     }
@@ -192,12 +183,10 @@ bool RegionFile::writeChunk(int x, int z, RakNet::BitStream& chunkData)
         chunkToSector[key] = sectorNum;
     }
 
-    // 写入数据
     fseek(file, sectorNum * SECTOR_BYTES, SEEK_SET);
     int totalSize = chunkData.GetNumberOfBytesUsed() + sizeof(int);
     fwrite(&totalSize, sizeof(int), 1, file);
     fwrite(chunkData.GetData(), 1, chunkData.GetNumberOfBytesUsed(), file);
-
     return true;
 }
 
