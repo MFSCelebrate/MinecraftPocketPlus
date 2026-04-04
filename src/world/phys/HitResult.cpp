@@ -42,8 +42,6 @@ HitResult::HitResult(const HitResult& hr)
 
 
 float HitResult::distanceTo(Entity* entity) const {
-    float xd = pos.x - entity->x;
-    float yd = pos.y - entity->y;
-    float zd = pos.z - entity->z;
-    return xd * xd + yd * yd + zd * zd;
+    double dx = pos.x - entity->x, dy = pos.y - entity->y, dz = pos.z - entity->z;
+    return (float)(dx*dx + dy*dy + dz*dz);
 }
