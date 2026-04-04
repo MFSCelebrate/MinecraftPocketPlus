@@ -7,12 +7,10 @@
 #include "../../nbt/CompoundTag.h"
 #include "../../util/PerfTimer.h"
 
-int
-	Entity::entityCounter = 0;
-Random
-	Entity::sharedRandom(getEpochTimeS());
+int Entity::entityCounter = 0;
+Random Entity::sharedRandom(getEpochTimeS());
 
-Entity::Entity( Level* level )
+Entity::Entity(Level* level)
 :	level(level),
 	viewScale(1.0f),
 	blocksBuilding(false),
@@ -24,7 +22,7 @@ Entity::Entity( Level* level )
 	isStuckInWeb(false),
 	removed(false),
 	reallyRemoveIfPlayer(false),
-	canRemove(true), //@todo: remove
+	canRemove(true),
 	noPhysics(false),
 	firstTick(true),
 
@@ -41,11 +39,11 @@ Entity::Entity( Level* level )
 	airCapacity(TOTAL_AIR_SUPPLY),
 	airSupply(TOTAL_AIR_SUPPLY),
 
-	xOld(0),yOld(0),zOld(0),
+	xOld(0), yOld(0), zOld(0),
 	horizontalCollision(false), verticalCollision(false),
 
 	x(0), y(0), z(0),
-	xo(0),yo(0),zo(0),xd(0),yd(0),zd(0),
+	xo(0), yo(0), zo(0), xd(0), yd(0), zd(0),
 	xRot(0), yRot(0),
 	xRotO(0), yRotO(0),
 
@@ -63,25 +61,14 @@ Entity::Entity( Level* level )
 	invisible(false)
 {
 	_init();
-
 	entityId = ++entityCounter;
-
-	//ref = Ref<Entity>::create(this);
-
 	setPos(0, 0, 0);
 }
 
-Entity::~Entity() {
-	//if (ref->isUnique())
-	//	delete ref;
-}
+Entity::~Entity() {}
 
-SynchedEntityData* Entity::getEntityData() {
-	return NULL;
-}
-const SynchedEntityData* Entity::getEntityData() const {
-	return NULL;
-}
+SynchedEntityData* Entity::getEntityData() { return NULL; }
+const SynchedEntityData* Entity::getEntityData() const { return NULL; }
 
 bool Entity::isInWall() {
     int xt = Mth::floor(x);
@@ -97,7 +84,6 @@ void Entity::resetPos(bool clearMore) {
         if (level->getCubes(this, bb).size() == 0) break;
         y += 1;
     }
-
     xd = yd = zd = 0;
     xRot = 0;
 }
@@ -126,45 +112,34 @@ bool Entity::isFree(float xa, float ya, float za) {
     return true;
 }
 
-//static void __attribute__((noinline)) setPositionFromBbox(Entity* e) { // @RPI
-//    const AABB& bb = e->bb;
-//    e->x = (e->bb.x0 + e->bb.x1) / 2.0f;
-//    e->y = bb.y0 + e->heightOffset - e->ySlideOffset;
-//    e->z = (bb.z0 + bb.z1) / 2.0f;
-//}
-
-/*public*/
-void Entity::move(float xa, float ya, float za) {
-	//if (std::abs(xa) + std::abs(ya) + std::abs(za) < 0.00001f) //@RPI
-	//	return;
-
+// 双精度移动
+void Entity::move(double xa, double ya, double za) {
 	if (noPhysics) {
-        bb.move(xa, ya, za);
-        x = (bb.x0 + bb.x1) / 2.0f;
+        bb.move((float)xa, (float)ya, (float)za);
+        x = (bb.x0 + bb.x1) / 2.0;
         y = bb.y0 + heightOffset - ySlideOffset;
-        z = (bb.z0 + bb.z1) / 2.0f;
+        z = (bb.z0 + bb.z1) / 2.0;
         return;
     }
 
 	TIMER_PUSH("move");
 
-    float xo = x;
-    float zo = z;
+    double xo = x;
+    double zo = z;
 
 	if (isStuckInWeb) {
 		isStuckInWeb = false;
-
-		xa *= .25f;
-		ya *= .05f;
-		za *= .25f;
-		xd = .0f;
-		yd = .0f;
-		zd = .0f;
+		xa *= .25;
+		ya *= .05;
+		za *= .25;
+		xd = 0.0;
+		yd = 0.0;
+		zd = 0.0;
 	}
 
-    float xaOrg = xa;
-    float yaOrg = ya;
-    float zaOrg = za;
+    double xaOrg = xa;
+    double yaOrg = ya;
+    double zaOrg = za;
 
     AABB bbOrg = bb;
 
@@ -172,20 +147,19 @@ void Entity::move(float xa, float ya, float za) {
 
     if (sneaking) {
         float d = 0.05f;
-        while (xa != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, 0)).empty()) {
+        while (xa != 0 && level->getCubes(this, bb.cloneMove((float)xa, -1.0f, 0)).empty()) {
             if (xa < d && xa >= -d) xa = 0;
             else if (xa > 0) xa -= d;
             else xa += d;
             xaOrg = xa;
         }
-        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0, za)).empty()) {
+        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0f, (float)za)).empty()) {
             if (za < d && za >= -d) za = 0;
             else if (za > 0) za -= d;
             else za += d;
             zaOrg = za;
         }
-
-		while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, za)).empty()) {
+		while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove((float)xa, -1.0f, (float)za)).empty()) {
 			if (xa < d && xa >= -d) xa = 0;
 			else if (xa > 0) xa -= d;
 			else xa += d;
@@ -195,15 +169,13 @@ void Entity::move(float xa, float ya, float za) {
 			xaOrg = xa;
 			zaOrg = za;
 		}
-
     }
 
-    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
+    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand((float)xa, (float)ya, (float)za));
 
-	// LAND FIRST, then x and z
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        ya = aABBs[i].clipYCollide(bb, ya);
-    bb.move(0, ya, 0);
+        ya = aABBs[i].clipYCollide(bb, (float)ya);
+    bb.move(0, (float)ya, 0);
 
 	if (!slide && yaOrg != ya) {
 		xa = ya = za = 0;
@@ -212,56 +184,51 @@ void Entity::move(float xa, float ya, float za) {
     bool og = onGround || (yaOrg != ya && yaOrg < 0);
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        xa = aABBs[i].clipXCollide(bb, xa);
-
-    bb.move(xa, 0, 0);
+        xa = aABBs[i].clipXCollide(bb, (float)xa);
+    bb.move((float)xa, 0, 0);
 
     if (!slide && xaOrg != xa) {
         xa = ya = za = 0;
     }
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        za = aABBs[i].clipZCollide(bb, za);
-    bb.move(0, 0, za);
+        za = aABBs[i].clipZCollide(bb, (float)za);
+    bb.move(0, 0, (float)za);
 
     if (!slide && zaOrg != za) {
         xa = ya = za = 0;
     }
 
     if (footSize > 0 && og && (ySlideOffset < 0.05f) && ((xaOrg != xa) || (zaOrg != za))) {
-
-		float xaN = xa;
-        float yaN = ya;
-        float zaN = za;
-
+		double xaN = xa;
+        double yaN = ya;
+        double zaN = za;
         xa = xaOrg;
         ya = footSize;
         za = zaOrg;
-
         AABB normal = bb;
         bb.set(bbOrg);
-        aABBs = level->getCubes(this, bb.expand(xa, ya, za));
+        aABBs = level->getCubes(this, bb.expand((float)xa, (float)ya, (float)za));
 
-        // LAND FIRST, then x and z
         for (unsigned int i = 0; i < aABBs.size(); i++)
-            ya = aABBs[i].clipYCollide(bb, ya);
-        bb.move(0, ya, 0);
+            ya = aABBs[i].clipYCollide(bb, (float)ya);
+        bb.move(0, (float)ya, 0);
 
         if (!slide && yaOrg != ya) {
             xa = ya = za = 0;
         }
 
 		for (unsigned int i = 0; i < aABBs.size(); i++)
-            xa = aABBs[i].clipXCollide(bb, xa);
-        bb.move(xa, 0, 0);
+            xa = aABBs[i].clipXCollide(bb, (float)xa);
+        bb.move((float)xa, 0, 0);
 
         if (!slide && xaOrg != xa) {
             xa = ya = za = 0;
         }
 
         for (unsigned int i = 0; i < aABBs.size(); i++)
-            za = aABBs[i].clipZCollide(bb, za);
-        bb.move(0, 0, za);
+            za = aABBs[i].clipZCollide(bb, (float)za);
+        bb.move(0, 0, (float)za);
 
         if (!slide && zaOrg != za) {
             xa = ya = za = 0;
@@ -279,41 +246,36 @@ void Entity::move(float xa, float ya, float za) {
 
 	TIMER_POP_PUSH("rest");
 
-	x = (bb.x0 + bb.x1) / 2.0f;
+	x = (bb.x0 + bb.x1) / 2.0;
     y = bb.y0 + heightOffset - ySlideOffset;
-    z = (bb.z0 + bb.z1) / 2.0f;
+    z = (bb.z0 + bb.z1) / 2.0;
 
     horizontalCollision = (xaOrg != xa) || (zaOrg != za);
     verticalCollision = (yaOrg != ya);
     onGround = yaOrg != ya && yaOrg < 0;
     collision = horizontalCollision || verticalCollision;
-    checkFallDamage(ya, onGround);
+    checkFallDamage((float)ya, onGround);
 
     if (xaOrg != xa) xd = 0;
     if (yaOrg != ya) yd = 0;
     if (zaOrg != za) zd = 0;
 
-    float xm = x - xo;
-    float zm = z - zo;
+    double xm = x - xo;
+    double zm = z - zo;
 
     if (makeStepSound && !sneaking) {
-        walkDist += Mth::sqrt(xm * xm + zm * zm) * 0.6f;
+        walkDist += (float)Mth::sqrt(xm * xm + zm * zm) * 0.6f;
         int xt = Mth::floor(x);
         int yt = Mth::floor(y - 0.2f - this->heightOffset);
         int zt = Mth::floor(z);
-
         int t = level->getTile(xt, yt, zt);
         if (t == 0) {
             int under = level->getTile(xt, yt-1, zt);
-            if (Tile::fence->id == under || Tile::fenceGate->id == under) {
-                t = under;
-            }
+            if (Tile::fence->id == under || Tile::fenceGate->id == under) t = under;
         }
-
         if (walkDist > nextStep && t > 0) {
-            nextStep = ((int) walkDist) + 1;
+            nextStep = ((int)walkDist) + 1;
             playStepSound(xt, yt, zt, t);
-            //Tile::tiles[t]->stepOn(level, xt, yt, zt, this); //@todo: step
         }
     }
 
@@ -329,9 +291,7 @@ void Entity::move(float xa, float ya, float za) {
             for (int y = y0; y <= y1; y++)
                 for (int z = z0; z <= z1; z++) {
                     int t = level->getTile(x, y, z);
-                    if (t > 0) {
-                        Tile::tiles[t]->entityInside(level, x, y, z, this);
-                    }
+                    if (t > 0) Tile::tiles[t]->entityInside(level, x, y, z, this);
                 }
     }
 
@@ -345,15 +305,10 @@ void Entity::move(float xa, float ya, float za) {
             if (onFire == 0) onFire = 20 * 15;
         }
     } else {
-        if (onFire <= 0) {
-            onFire = -flameTime;
-        }
+        if (onFire <= 0) onFire = -flameTime;
     }
 
-    if (water && onFire > 0) {
-        //level.playSound(this-> "random.fizz", 0.7f, 1.6f + (random.nextFloat() - random.nextFloat()) * 0.4f);
-        onFire = -flameTime;
-    }
+    if (water && onFire > 0) onFire = -flameTime;
 
 	TIMER_POP();
 }
@@ -363,11 +318,10 @@ void Entity::makeStuckInWeb() {
 	fallDistance = 0;
 }
 
-/*public virtual*/
 bool Entity::isUnderLiquid(const Material* material) {
-    float yp = y + getHeadHeight();
+    double yp = y + getHeadHeight();
     int xt = Mth::floor(x);
-    int yt = Mth::floor((float)Mth::floor(yp));
+    int yt = Mth::floor(yp);
     int zt = Mth::floor(z);
     int t = level->getTile(xt, yt, zt);
     if (t != 0 && Tile::tiles[t]->material == material) {
@@ -378,121 +332,77 @@ bool Entity::isUnderLiquid(const Material* material) {
     return false;
 }
 
-/*protected virtual*/
-void Entity::setPos(EntityPos* pos)
-{
+void Entity::setPos(EntityPos* pos) {
     if (pos->move) setPos(pos->x, pos->y, pos->z);
     else setPos(x, y, z);
-
     if (pos->rot) setRot(pos->yRot, pos->xRot);
     else setRot(yRot, xRot);
 }
 
-void Entity::setPos( float x, float y, float z )
-{
-	this->x = x;
-	this->y = y;
-	this->z = z;
+// 双精度 setPos
+void Entity::setPos(double x, double y, double z) {
+	this->x = x; this->y = y; this->z = z;
 	float w = bbWidth / 2;
 	float h = bbHeight;
-	bb.set(x - w, y - heightOffset + ySlideOffset, z - w, x + w, y - heightOffset + ySlideOffset + h, z + w);
+	bb.set((float)(x - w), (float)(y - heightOffset + ySlideOffset), (float)(z - w),
+	       (float)(x + w), (float)(y - heightOffset + ySlideOffset + h), (float)(z + w));
 }
 
-/*virtual*/
 float Entity::getBrightness(float a) {
     int xTile = Mth::floor(x);
-
     float hh = (bb.y1 - bb.y0) * 0.66f;
     int yTile = Mth::floor(y - this->heightOffset + hh);
     int zTile = Mth::floor(z);
-    if (level->hasChunksAt(Mth::floor(bb.x0), Mth::floor(bb.y0), Mth::floor(bb.z0), Mth::floor(bb.x1), Mth::floor(bb.y1), Mth::floor(bb.z1))) {
+    if (level->hasChunksAt(Mth::floor(bb.x0), Mth::floor(bb.y0), Mth::floor(bb.z0),
+                           Mth::floor(bb.x1), Mth::floor(bb.y1), Mth::floor(bb.z1))) {
         return level->getBrightness(xTile, yTile, zTile);
     }
     return 0;
 }
 
-bool Entity::operator==( Entity& rhs )
-{
-	return entityId == rhs.entityId;
-}
+bool Entity::operator==(Entity& rhs) { return entityId == rhs.entityId; }
+int Entity::hashCode() { return entityId; }
+void Entity::remove() { removed = true; }
+void Entity::setSize(float w, float h) { bbWidth = w; bbHeight = h; }
+void Entity::setRot(float yRot, float xRot) { this->yRot = yRotO = yRot; this->xRot = xRotO = xRot; }
 
-int Entity::hashCode()
-{
-	return entityId;
-}
-
-void Entity::remove()
-{
-	removed = true;
-}
-
-void Entity::setSize( float w, float h )
-{
-	bbWidth = w;
-	bbHeight = h;
-}
-
-void Entity::setRot( float yRot, float xRot )
-{
-	this->yRot = yRotO = yRot;
-	this->xRot = xRotO = xRot;
-}
-
-void Entity::turn( float xo, float yo )
-{
-	float xRotOld = xRot;
-	float yRotOld = yRot;
-
+void Entity::turn(float xo, float yo) {
+	float xRotOld = xRot, yRotOld = yRot;
 	yRot += xo * 0.15f;
 	xRot -= yo * 0.15f;
 	if (xRot < -90) xRot = -90;
 	if (xRot > 90) xRot = 90;
-
 	xRotO += xRot - xRotOld;
 	yRotO += yRot - yRotOld;
 }
 
-void Entity::interpolateTurn( float xo, float yo )
-{
+void Entity::interpolateTurn(float xo, float yo) {
 	yRot += xo * 0.15f;
 	xRot -= yo * 0.15f;
 	if (xRot < -90) xRot = -90;
 	if (xRot > 90) xRot = 90;
 }
 
-void Entity::tick()
-{
-	baseTick();
-}
+void Entity::tick() { baseTick(); }
 
-void Entity::baseTick()
-{
+void Entity::baseTick() {
 	TIMER_PUSH("entityBaseTick");
-
 	tickCount++;
 	walkDistO = walkDist;
-	xo = x;
-	yo = y;
-	zo = z;
-	xRotO = xRot;
-	yRotO = yRot;
-
+	xo = x; yo = y; zo = z;
+	xRotO = xRot; yRotO = yRot;
 	if (isInWater()) {
 		if (!wasInWater && !firstTick) {
-		    float speed = sqrt(xd * xd * 0.2f + yd * yd + zd * zd * 0.2f) * 0.2f;
+		    float speed = (float)sqrt(xd * xd * 0.2 + yd * yd + zd * zd * 0.2) * 0.2f;
 		    if (speed > 1) speed = 1;
 		    level->playSound(this, "random.splash", speed, 1 + (sharedRandom.nextFloat() - sharedRandom.nextFloat()) * 0.4f);
 		    float yt = floorf(bb.y0);
 		    for (int i = 0; i < 1 + bbWidth * 20; i++) {
 		        float xo = (sharedRandom.nextFloat() * 2 - 1) * bbWidth;
 		        float zo = (sharedRandom.nextFloat() * 2 - 1) * bbWidth;
-		        level->addParticle(PARTICLETYPE(bubble), x + xo, yt + 1, z + zo, xd, yd - sharedRandom.nextFloat() * 0.2f, zd);
+		        level->addParticle(PARTICLETYPE(bubble), (float)x + xo, yt + 1, (float)z + zo,
+		                           (float)xd, (float)yd - sharedRandom.nextFloat() * 0.2f, (float)zd);
 		    }
-		    //for (int i = 0; i < 1 + bbWidth * 20; i++) {
-		    //    float xo = (sharedRandom.nextFloat() * 2 - 1) * bbWidth;
-		    //    float zo = (sharedRandom.nextFloat() * 2 - 1) * bbWidth;
-		    //    level->addParticle(PARTICLETYPE(splash), x + xo, yt + 1, z + zo, xd, yd, zd);
-		    //}
 		}
 		fallDistance = 0;
 		wasInWater = true;
@@ -500,7 +410,6 @@ void Entity::baseTick()
 	} else {
 		wasInWater = false;
 	}
-
 	if (level->isClientSide) {
 	    onFire = 0;
 	} else {
@@ -509,37 +418,20 @@ void Entity::baseTick()
 	            onFire -= 4;
 	            if (onFire < 0) onFire = 0;
 	        } else {
-	            if (onFire % 20 == 0) {
-	                hurt(NULL, 1);
-	            }
+	            if (onFire % 20 == 0) hurt(NULL, 1);
 	            onFire--;
 	        }
 	    }
 	}
-
-	if (isInLava()) {
-	    lavaHurt();
-	}
-
-	if (y < -64) {
-		outOfWorld();
-	}
-
-	//if (!level->isOnline) {
-	//    setSharedFlag(FLAG_ONFIRE, onFire > 0);
-	//}
-
+	if (isInLava()) lavaHurt();
+	if (y < -64) outOfWorld();
 	firstTick = false;
 	TIMER_POP();
 }
 
-void Entity::outOfWorld()
-{
-	remove();
-}
+void Entity::outOfWorld() { remove(); }
 
-void Entity::checkFallDamage( float ya, bool onGround )
-{
+void Entity::checkFallDamage(float ya, bool onGround) {
 	if (onGround) {
 		if (fallDistance > 0) {
 			if(isMob()) {
@@ -547,13 +439,8 @@ void Entity::checkFallDamage( float ya, bool onGround )
 				int yt = Mth::floor(y - 0.2f - heightOffset);
 				int zt = Mth::floor(z);
 				int t = level->getTile(xt, yt, zt);
-				if (t == 0 && level->getTile(xt, yt - 1, zt) == Tile::fence->id) {
-					t = level->getTile(xt, yt - 1, zt);
-				}
-
-				if (t > 0) {
-					Tile::tiles[t]->fallOn(level, xt, yt, zt, this, fallDistance);
-				}
+				if (t == 0 && level->getTile(xt, yt-1, zt) == Tile::fence->id) t = level->getTile(xt, yt-1, zt);
+				if (t > 0) Tile::tiles[t]->fallOn(level, xt, yt, zt, this, fallDistance);
 			}
 			causeFallDamage(fallDistance);
 			fallDistance = 0;
@@ -563,39 +450,24 @@ void Entity::checkFallDamage( float ya, bool onGround )
 	}
 }
 
-void Entity::causeFallDamage( float fallDamage2 )
-{
-}
+void Entity::causeFallDamage(float fallDamage2) {}
+float Entity::getHeadHeight() { return 0; }
 
-float Entity::getHeadHeight()
-{
-	return 0;
-}
-
-void Entity::moveRelative( float xa, float za, float speed )
-{
-	float dist = sqrt(xa * xa + za * za);
+void Entity::moveRelative(float xa, float za, float speed) {
+	float dist = sqrt(xa*xa + za*za);
 	if (dist < 0.01f) return;
-
 	if (dist < 1) dist = 1;
 	dist = speed / dist;
-	xa *= dist;
-	za *= dist;
-
-	float sin_ = (float) sin(yRot * Mth::PI / 180);
-	float cos_ = (float) cos(yRot * Mth::PI / 180);
-
+	xa *= dist; za *= dist;
+	float sin_ = (float)sin(yRot * Mth::PI / 180);
+	float cos_ = (float)cos(yRot * Mth::PI / 180);
 	xd += xa * cos_ - za * sin_;
 	zd += za * cos_ + xa * sin_;
 }
 
-void Entity::setLevel( Level* level )
-{
-	this->level = level;
-}
+void Entity::setLevel(Level* level) { this->level = level; }
 
-void Entity::moveTo( float x, float y, float z, float yRot, float xRot )
-{
+void Entity::moveTo(double x, double y, double z, float yRot, float xRot) {
 	this->xOld = this->xo = this->x = x;
 	this->yOld = this->yo = this->y = y + heightOffset;
 	this->zOld = this->zo = this->z = z;
@@ -604,359 +476,180 @@ void Entity::moveTo( float x, float y, float z, float yRot, float xRot )
 	this->setPos(this->x, this->y, this->z);
 }
 
-float Entity::distanceTo( Entity* e )
-{
-	float xd = (float) (x - e->x);
-	float yd = (float) (y - e->y);
-	float zd = (float) (z - e->z);
-	return sqrt(xd * xd + yd * yd + zd * zd);
+float Entity::distanceTo(Entity* e) {
+	double dx = x - e->x, dy = y - e->y, dz = z - e->z;
+	return (float)sqrt(dx*dx + dy*dy + dz*dz);
+}
+float Entity::distanceTo(float x2, float y2, float z2) {
+	double dx = x - x2, dy = y - y2, dz = z - z2;
+	return (float)sqrt(dx*dx + dy*dy + dz*dz);
+}
+float Entity::distanceToSqr(float x2, float y2, float z2) {
+	double dx = x - x2, dy = y - y2, dz = z - z2;
+	return (float)(dx*dx + dy*dy + dz*dz);
+}
+float Entity::distanceToSqr(Entity* e) {
+	double dx = x - e->x, dy = y - e->y, dz = z - e->z;
+	return (float)(dx*dx + dy*dy + dz*dz);
 }
 
-float Entity::distanceTo( float x2, float y2, float z2 )
-{
-	float xd = (x - x2);
-	float yd = (y - y2);
-	float zd = (z - z2);
-	return sqrt(xd * xd + yd * yd + zd * zd);
-}
+void Entity::playerTouch(Player* player) {}
 
-float Entity::distanceToSqr( float x2, float y2, float z2 )
-{
-	float xd = (x - x2);
-	float yd = (y - y2);
-	float zd = (z - z2);
-	return xd * xd + yd * yd + zd * zd;
-}
-
-float Entity::distanceToSqr( Entity* e )
-{
-	float xd = x - e->x;
-	float yd = y - e->y;
-	float zd = z - e->z;
-	return xd * xd + yd * yd + zd * zd;
-}
-
-void Entity::playerTouch( Player* player )
-{
-}
-
-void Entity::push( Entity* e )
-{
-	float xa = e->x - x;
-	float za = e->z - z;
-
-	float dd = Mth::absMax(xa, za);
-
+void Entity::push(Entity* e) {
+	double xa = e->x - x;
+	double za = e->z - z;
+	double dd = Mth::absMax((float)xa, (float)za);
 	if (dd >= 0.01f) {
 		dd = sqrt(dd);
-		xa /= dd;
-		za /= dd;
-
-		float pow = 1 / dd;
+		xa /= dd; za /= dd;
+		double pow = 1.0 / dd;
 		if (pow > 1) pow = 1;
-		xa *= pow;
-		za *= pow;
-
-		xa *= 0.05f;
-		za *= 0.05f;
-
-		xa *= 1 - pushthrough;
-		za *= 1 - pushthrough;
-
-		this->push(-xa, 0, -za);
-		e->push(xa, 0, za);
+		xa *= pow; za *= pow;
+		xa *= 0.05; za *= 0.05;
+		xa *= 1 - pushthrough; za *= 1 - pushthrough;
+		this->push((float)-xa, 0, (float)-za);
+		e->push((float)xa, 0, (float)za);
 	}
 }
-
-void Entity::push( float xa, float ya, float za )
-{
-	xd += xa;
-	yd += ya;
-	zd += za;
+void Entity::push(float xa, float ya, float za) {
+	xd += xa; yd += ya; zd += za;
 }
 
-void Entity::markHurt()
-{
-	this->hurtMarked = true;
-}
-
-bool Entity::hurt( Entity* source, int damage )
-{
-	markHurt();
-	return false;
-}
-
-void Entity::reset() {
-	this->_init();
-}
+void Entity::markHurt() { hurtMarked = true; }
+bool Entity::hurt(Entity* source, int damage) { markHurt(); return false; }
+void Entity::reset() { _init(); }
 void Entity::_init() {
 	xo = xOld = x;
 	yo = yOld = y;
 	zo = zOld = z;
-	xRotO	= xRot;
-	yRotO	= yRot;
-	onFire  = 0;
-	removed = false;
-	fallDistance = 0;
+	xRotO = xRot; yRotO = yRot;
+	onFire = 0; removed = false; fallDistance = 0;
 }
-
-bool Entity::intersects( float x0, float y0, float z0, float x1, float y1, float z1 )
-{
+bool Entity::intersects(float x0, float y0, float z0, float x1, float y1, float z1) {
 	return bb.intersects(x0, y0, z0, x1, y1, z1);
 }
-
-bool Entity::isPickable()
-{
-	return false;
-}
-
-bool Entity::isPushable()
-{
-	return false;
-}
-
-bool Entity::isShootable()
-{
-	return false;
-}
-
-void Entity::awardKillScore( Entity* victim, int score )
-{
-}
-
-bool Entity::shouldRender( Vec3& c )
-{
+bool Entity::isPickable() { return false; }
+bool Entity::isPushable() { return false; }
+bool Entity::isShootable() { return false; }
+void Entity::awardKillScore(Entity* victim, int score) {}
+bool Entity::shouldRender(Vec3& c) {
 	if (invisible) return false;
-	float xd = x - c.x;
-	float yd = y - c.y;
-	float zd = z - c.z;
-	float distance = xd * xd + yd * yd + zd * zd;
-	return shouldRenderAtSqrDistance(distance);
+	double dx = x - c.x, dy = y - c.y, dz = z - c.z;
+	double dist = dx*dx + dy*dy + dz*dz;
+	return shouldRenderAtSqrDistance((float)dist);
 }
-
-bool Entity::shouldRenderAtSqrDistance( float distance )
-{
+bool Entity::shouldRenderAtSqrDistance(float distance) {
 	float size = bb.getSize();
 	size *= 64.0f * viewScale;
 	return distance < size * size;
 }
-
-bool Entity::isCreativeModeAllowed()
-{
-	return false;
-}
-
-float Entity::getShadowHeightOffs()
-{
-	return bbHeight / 2;
-}
-
-bool Entity::isAlive()
-{
-	return !removed;
-}
-
-bool Entity::interact( Player* player )
-{
-	return false;
-}
-
-void Entity::lerpTo( float x, float y, float z, float yRot, float xRot, int steps )
-{
+bool Entity::isCreativeModeAllowed() { return false; }
+float Entity::getShadowHeightOffs() { return bbHeight / 2; }
+bool Entity::isAlive() { return !removed; }
+bool Entity::interact(Player* player) { return false; }
+void Entity::lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
 	setPos(x, y, z);
 	setRot(yRot, xRot);
 }
-
-float Entity::getPickRadius()
-{
-	return 0.1f;
+float Entity::getPickRadius() { return 0.1f; }
+void Entity::lerpMotion(double xd, double yd, double zd) {
+	this->xd = xd; this->yd = yd; this->zd = zd;
 }
-
-void Entity::lerpMotion( float xd, float yd, float zd )
-{
-	this->xd = xd;
-	this->yd = yd;
-	this->zd = zd;
-}
-
-void Entity::animateHurt()
-{
-}
-
-void Entity::setEquippedSlot( int slot, int item, int auxValue )
-{
-}
-
-bool Entity::isSneaking()
-{
-	return false;
-}
-
-bool Entity::isPlayer()
-{
-	return false;
-}
-
-
+void Entity::animateHurt() {}
+void Entity::setEquippedSlot(int slot, int item, int auxValue) {}
+bool Entity::isSneaking() { return false; }
+bool Entity::isPlayer() { return false; }
 void Entity::lavaHurt() {
-    if (fireImmune) {
-    } else {
-        hurt(NULL, 4);
-        onFire = 30 * SharedConstants::TicksPerSecond;
-    }
+    if (!fireImmune) { hurt(NULL, 4); onFire = 30 * SharedConstants::TicksPerSecond; }
 }
-
-//   AABB getCollideBox() {
-//       return NULL;
-//   }
-
-void Entity::burn(int dmg) {
-    if (!fireImmune) {
-        hurt(NULL, dmg);
-    }
-}
-
-//   std::string getTexture() {
-//       return NULL;
-//   }
+void Entity::burn(int dmg) { if (!fireImmune) hurt(NULL, dmg); }
 
 bool Entity::save(CompoundTag* entityTag) {
 	int id = getEntityTypeId();
-
-    if (removed || id == 0) {
-        return false;
-    }
+    if (removed || id == 0) return false;
     entityTag->putInt("id", id);
     saveWithoutId(entityTag);
     return true;
 }
 
 void Entity::saveWithoutId(CompoundTag* entityTag) {
-	entityTag->put("Pos", ListTagFloatAdder (x) (y) (z).tag);
-    entityTag->put("Motion", ListTagFloatAdder (xd) (yd) (zd).tag);
-    entityTag->put("Rotation", ListTagFloatAdder (yRot) (xRot).tag);
+    ListTag* posList = new ListTag();
+    posList->addDouble(x);
+    posList->addDouble(y);
+    posList->addDouble(z);
+    entityTag->put("Pos", posList);
 
+    ListTag* motionList = new ListTag();
+    motionList->addDouble(xd);
+    motionList->addDouble(yd);
+    motionList->addDouble(zd);
+    entityTag->put("Motion", motionList);
+
+    entityTag->put("Rotation", ListTagFloatAdder(yRot)(xRot).tag);
     entityTag->putFloat("FallDistance", fallDistance);
-    entityTag->putShort("Fire", (short) onFire);
-    entityTag->putShort("Air", (short) airSupply);
+    entityTag->putShort("Fire", (short)onFire);
+    entityTag->putShort("Air", (short)airSupply);
     entityTag->putBoolean("OnGround", onGround);
-
     addAdditonalSaveData(entityTag);
 }
 
-bool Entity::load( CompoundTag* tag )
-{
+bool Entity::load(CompoundTag* tag) {
     ListTag* pos = tag->getList("Pos");
     ListTag* motion = tag->getList("Motion");
     ListTag* rotation = tag->getList("Rotation");
     setPos(0, 0, 0);
 
-    xd = motion->getFloat(0);
-    yd = motion->getFloat(1);
-    zd = motion->getFloat(2);
+    xd = motion->getDouble(0);
+    yd = motion->getDouble(1);
+    zd = motion->getDouble(2);
+    if (Mth::abs(xd) > 10.0) xd = 0;
+    if (Mth::abs(yd) > 10.0) yd = 0;
+    if (Mth::abs(zd) > 10.0) zd = 0;
 
-    if (Mth::abs(xd) > 10.0) {
-        xd = 0;
-    }
-    if (Mth::abs(yd) > 10.0) {
-        yd = 0;
-    }
-    if (Mth::abs(zd) > 10.0) {
-        zd = 0;
-    }
-
-    float xx = pos->getFloat(0);
-    float yy = pos->getFloat(1);
-    float zz = pos->getFloat(2);
-
-    // 删除以下两行：
-    // const float padding = bbWidth * 0.5f + 0.001f;
-    // xx = Mth::clamp(xx, padding, (float)LEVEL_WIDTH - padding);
-    // zz = Mth::clamp(zz, padding, (float)LEVEL_DEPTH - padding);
+    double xx = pos->getDouble(0);
+    double yy = pos->getDouble(1);
+    double zz = pos->getDouble(2);
 
     xo = xOld = x = xx;
     yo = yOld = y = yy;
     zo = zOld = z = zz;
 
-    yRotO = yRot = fmod( rotation->getFloat(0), 360.0f);
-    xRotO = xRot = fmod( rotation->getFloat(1), 360.0f);
+    yRotO = yRot = fmod(rotation->getFloat(0), 360.0f);
+    xRotO = xRot = fmod(rotation->getFloat(1), 360.0f);
 
-    fallDistance= tag->getFloat("FallDistance");
-    onFire		= tag->getShort("Fire");
-    airSupply	= tag->getShort("Air");
-    onGround	= tag->getBoolean("OnGround");
+    fallDistance = tag->getFloat("FallDistance");
+    onFire = tag->getShort("Fire");
+    airSupply = tag->getShort("Air");
+    onGround = tag->getBoolean("OnGround");
 
     setPos(x, y, z);
-
     readAdditionalSaveData(tag);
     return (tag->errorState == 0);
 }
 
-//   /*protected*/ const String getEncodeId() {
-//       return EntityIO.getEncodeId(this->;
-//   }
-
 ItemEntity* Entity::spawnAtLocation(int resource, int count) {
 	return spawnAtLocation(resource, count, 0);
 }
-
 ItemEntity* Entity::spawnAtLocation(int resource, int count, float yOffs) {
 	return spawnAtLocation(new ItemInstance(resource, count, 0), yOffs);
 }
-
 ItemEntity* Entity::spawnAtLocation(ItemInstance* itemInstance, float yOffs) {
-	ItemEntity* ie = new ItemEntity(level, x, y + yOffs, z, *itemInstance);
-
-	{ //@todo:itementity
-		delete itemInstance;
-		itemInstance = NULL;
-	}
-
+	ItemEntity* ie = new ItemEntity(level, (float)x, (float)(y + yOffs), (float)z, *itemInstance);
+	delete itemInstance;
 	ie->throwTime = 10;
 	level->addEntity(ie);
 	return ie;
 }
-
-bool Entity::isOnFire() {
-	return onFire > 0;// || getSharedFlag(FLAG_ONFIRE);
-}
-
-bool Entity::interactPreventDefault() {
-	return false;
-}
-
-//   AABB getCollideAgainstBox(Entity entity) {
-//       return NULL;
-//   }
-
-//   Vec3 getLookAngle() {
-//       return NULL;
-//   }
-
-//   void prepareCustomTextures() {
-//   }
-
-//   ItemInstance[] getEquipmentSlots() {
-//       return NULL;
-//   }
-
-bool Entity::isItemEntity() {
-	return false;
-}
-
-bool Entity::isHangingEntity() {
-	return false;
-}
-
-int Entity::getAuxData() {
-	return 0;
-}
-
-void Entity::playStepSound( int xt, int yt, int zt, int t ) {
+bool Entity::isOnFire() { return onFire > 0; }
+bool Entity::interactPreventDefault() { return false; }
+bool Entity::isItemEntity() { return false; }
+bool Entity::isHangingEntity() { return false; }
+int Entity::getAuxData() { return 0; }
+void Entity::playStepSound(int xt, int yt, int zt, int t) {
     const Tile::SoundType* soundType = Tile::tiles[t]->soundType;
-    if (level->getTile(xt, yt + 1, zt) == Tile::topSnow->id) {
+    if (level->getTile(xt, yt+1, zt) == Tile::topSnow->id) {
         soundType = Tile::topSnow->soundType;
-        level->playSound(this, soundType->getStepSound(), soundType->getVolume() * 0.25f, soundType->getPitch()); // was * 0.15f
+        level->playSound(this, soundType->getStepSound(), soundType->getVolume() * 0.25f, soundType->getPitch());
     } else if (!Tile::tiles[t]->material->isLiquid()) {
         level->playSound(this, soundType->getStepSound(), soundType->getVolume() * 0.25f, soundType->getPitch());
     }
