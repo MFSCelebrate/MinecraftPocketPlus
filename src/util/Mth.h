@@ -11,6 +11,39 @@ namespace Mth {
 	constexpr float DEGRAD = PI / 180.0f;
 	const float RADDEG = 180.0f / PI;
 
+   // ========== double 版本 ==========
+inline double sqrt(double x) { return std::sqrt(x); }
+inline int floor(double x) { return (int)std::floor(x); }
+inline double sin(double x) { return std::sin(x); }
+inline double cos(double x) { return std::cos(x); }
+inline double atan(double x) { return std::atan(x); }
+inline double atan2(double dy, double dx) { return std::atan2(dy, dx); }
+inline double abs(double a) { return a < 0 ? -a : a; }
+inline double Min(double a, double b) { return a < b ? a : b; }
+inline double Max(double a, double b) { return a > b ? a : b; }
+inline double clamp(double v, double low, double high) {
+    if (v < low) return low;
+    if (v > high) return high;
+    return v;
+}
+inline double lerp(double src, double dst, double alpha) {
+    return src + (dst - src) * alpha;
+}
+inline double absDecrease(double value, double with, double min) {
+    double absVal = abs(value);
+    double absWith = abs(with);
+    if (absVal < min) return value;
+    double newVal = absVal - absWith;
+    if (newVal < min) newVal = min;
+    return (value < 0) ? -newVal : newVal;
+}
+inline double absMax(double a, double b) {
+    return abs(a) > abs(b) ? a : b;
+}
+inline double absMaxSigned(double a, double b) {
+    return (abs(a) > abs(b)) ? a : b;
+}
+
 	void initMth();
 
 	float sqrt(float x);
