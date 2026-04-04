@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <list>
+
 #include "LevelStorage.h"
 #include "../chunk/storage/ChunkStorage.h"
 
@@ -12,33 +13,39 @@ class Player;
 class Dimension;
 class RegionFile;
 
-typedef struct UnsavedLevelChunk {
-    int pos;
-    RakNet::TimeMS addedToList;
-    LevelChunk* chunk;
+typedef struct UnsavedLevelChunk
+{
+    int             pos;
+    RakNet::TimeMS  addedToList;
+    LevelChunk*     chunk;
 } UnsavedLevelChunk;
 
 typedef std::list<UnsavedLevelChunk> UnsavedChunkList;
 
-class ExternalFileLevelStorage : public LevelStorage, public ChunkStorage {
+class ExternalFileLevelStorage:
+        public LevelStorage,
+        public ChunkStorage
+{
 public:
     ExternalFileLevelStorage(const std::string& levelId, const std::string& fullPath);
     virtual ~ExternalFileLevelStorage();
 
     LevelData* prepareLevel(Level* level);
     void checkSession() {}
+
     ChunkStorage* createChunkStorage(Dimension* dimension) { return this; }
+
     void saveLevelData(LevelData& levelData, std::vector<Player*>* players);
     void closeAll() {}
 
     static bool readLevelData(const std::string& directory, LevelData& dest);
     static bool readPlayerData(const std::string& filename, LevelData& dest);
-    static bool writeLevelData(const std::string& datFileName, LevelData& dest, const std::vector<Player*>* players);
+    static void writeLevelData(const std::string& datFileName, LevelData& dest, const std::vector<Player*>* players);
     static void saveLevelData(const std::string& directory, LevelData& levelData, std::vector<Player*>* players);
 
     int savePendingUnsavedChunks(int maxCount);
 
-    // ChunkStorage methods (坐标改为 int64_t)
+    // ChunkStorage 方法（参数改为 int64_t）
     virtual LevelChunk* load(Level* level, int64_t x, int64_t z) override;
     void save(Level* level, LevelChunk* levelChunk) override;
     void loadEntities(Level* level, LevelChunk* levelChunk) override;
@@ -55,6 +62,7 @@ private:
     LevelData* loadedLevelData;
     RegionFile* regionFile;
     RegionFile* entitiesFile;
+
     Level* level;
     int tickCount;
     int loadedStorageVersion;
