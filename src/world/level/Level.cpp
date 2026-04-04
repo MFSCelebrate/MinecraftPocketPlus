@@ -529,22 +529,19 @@ bool Level::hasChunksAt(int x, int y, int z, int r) {
     return hasChunksAt(x - r, y - r, z - r, x + r, y + r, z + r);
 }
 
-bool Level::hasChunksAt(int x0, int y0, int z0, int x1, int y1, int z1) {
+bool Level::hasChunksAt(int64_t x0, int64_t y0, int64_t z0, int64_t x1, int64_t y1, int64_t z1) {
     if (y1 < 0 || y0 >= Level::DEPTH) return false;
-
-    x0 >>= 4;
-    z0 >>= 4;
-    x1 >>= 4;
-    z1 >>= 4;
-
-    for (int x = x0; x <= x1; x++)
-        for (int z = z0; z <= z1; z++)
+    int64_t xc0 = x0 >> 4;
+    int64_t zc0 = z0 >> 4;
+    int64_t xc1 = x1 >> 4;
+    int64_t zc1 = z1 >> 4;
+    for (int64_t x = xc0; x <= xc1; x++)
+        for (int64_t z = zc0; z <= zc1; z++)
             if (!hasChunk(x, z)) return false;
-
     return true;
 }
 
-bool Level::hasChunk(int x, int z) {
+bool Level::hasChunk(int64_t x, int64_t z) {
     return _chunkSource->hasChunk(x, z);
 }
 
@@ -552,7 +549,7 @@ LevelChunk* Level::getChunkAt(int x, int z) {
     return getChunk(x >> 4, z >> 4);
 }
 
-LevelChunk* Level::getChunk(int x, int z) {
+LevelChunk* Level::getChunk(int64_t x, int64_t z) {
     return _chunkSource->getChunk(x, z);
 }
 
