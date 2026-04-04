@@ -39,13 +39,12 @@ public:
     
 	virtual void remove();
 
-    virtual void setPos(float x, float y, float z);
-	virtual void move(float xa, float ya, float za);
-	virtual void moveTo(float x, float y, float z, float yRot, float xRot);
-	virtual void moveRelative(float xa, float za, float speed);
-
-	virtual void lerpTo(float x, float y, float z, float yRot, float xRot, int steps);
-	virtual void lerpMotion(float xd, float yd, float zd);
+    virtual void setPos(double x, double y, double z);
+virtual void move(double xa, double ya, double za);
+virtual void moveTo(double x, double y, double z, float yRot, float xRot);
+virtual void lerpTo(double x, double y, double z, float yRot, float xRot, int steps);
+virtual void lerpMotion(double xd, double yd, double zd);
+virtual void moveRelative(float xa, float za, float speed);
 
     virtual void turn(float xo, float yo);
     virtual void interpolateTurn(float xo, float yo);
@@ -149,7 +148,7 @@ protected:
 
     virtual void playStepSound( int xt, int yt, int zt, int t );
 public:
-	float x, y, z;
+	double x, y, z;
 
 	int xChunk, yChunk, zChunk;
 
@@ -158,8 +157,8 @@ public:
 	float viewScale;
 
 	Level* level;
-	float xo, yo, zo;
-	float xd, yd, zd;
+	double xo, yo, zo;
+    double xd, yd, zd;
 	float yRot, xRot;
 	float yRotO, xRotO;
 
@@ -173,7 +172,7 @@ public:
 	float walkDistO;
 	float walkDist;
 
-	float xOld, yOld, zOld;
+	double xOld, yOld, zOld;
 	float ySlideOffset;
 	float footSize;
 	float pushthrough;
@@ -224,3 +223,4 @@ protected:
 };
 
 #endif /*NET_MINECRAFT_WORLD_ENTITY__Entity_H__*/
+
