@@ -8,7 +8,8 @@
 
 typedef std::map<int, bool> FreeSectorMap;
 
-class RegionFile {
+class RegionFile
+{
 public:
     RegionFile(const std::string& basePath);
     virtual ~RegionFile();
@@ -30,6 +31,8 @@ private:
     int* emptyChunk;
     FreeSectorMap sectorFree;
     bool useOldFormat;
+
+    // 使用 int64_t 键支持超大坐标
     std::map<std::pair<int64_t, int64_t>, int> chunkToSector;
 };
 
