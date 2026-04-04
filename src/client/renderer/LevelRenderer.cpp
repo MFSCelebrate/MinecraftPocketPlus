@@ -318,31 +318,17 @@ int LevelRenderer::render(Mob* player, int layer, float alpha)
         emptyChunks = 0;
     }
 
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-    double xOff_d = 0.0, yOff_d = 0.0, zOff_d = 0.0;
-    float xOff_f = 0.0f, yOff_f = 0.0f, zOff_f = 0.0f;
-	
-// 计算相机位置（用于 FrustumCuller 等，但不再设置 Tesselator 偏移）
-if (useRepair) {
-    double xOff = player->xOld + (player->x - player->xOld) * alpha;
-    double yOff = player->yOld + (player->y - player->yOld) * alpha;
-    double zOff = player->zOld + (player->z - player->zOld) * alpha;
-    // 不再调用 Tesselator::instance.offset
-} else {
-    float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
-    float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
-    float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
-}
-	
-    // 更新上一帧位置（使用 double 存储，即使传统模式也保留精度）
-    double xd = player->x - xOld;
-    double yd = player->y - yOld;
-    double zd = player->z - zOld;
+    float xOff = player->xOld + (player->x - player->xOld) * alpha;
+    float yOff = player->yOld + (player->y - player->yOld) * alpha;
+    float zOff = player->zOld + (player->z - player->zOld) * alpha;
+
+    float xd = player->x - xOld;
+    float yd = player->y - yOld;
+    float zd = player->z - zOld;
     if (xd * xd + yd * yd + zd * zd > 4 * 4) {
         xOld = player->x;
         yOld = player->y;
         zOld = player->z;
-
         resortChunks(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
         DistanceChunkSorter distanceSorter(player);
         std::sort(sortedChunks, sortedChunks + chunksLength, distanceSorter);
@@ -386,30 +372,20 @@ if (useRepair) {
                 if (sortedChunks[i]->visible && !sortedChunks[i]->occlusion_querying) {
                     float dist = Mth::sqrt(sortedChunks[i]->distanceToSqr(player));
                     int frequency = (int)(1 + dist / 128);
-
                     if (ticks % frequency == i % frequency) {
                         Chunk* chunk = sortedChunks[i];
-                        float xt, yt, zt;
-                        if (useRepair) {
-                            xt = (float)(chunk->x - xOff_d);
-                            yt = (float)(chunk->y - yOff_d);
-                            zt = (float)(chunk->z - zOff_d);
-                        } else {
-                            xt = (float)(chunk->x - xOff_f);
-                            yt = (float)(chunk->y - yOff_f);
-                            zt = (float)(chunk->z - zOff_f);
-                        }
+                        float xt = (float)(chunk->x - xOff);
+                        float yt = (float)(chunk->y - yOff);
+                        float zt = (float)(chunk->z - zOff);
                         float xdd = xt - xo;
                         float ydd = yt - yo;
                         float zdd = zt - zo;
-
                         if (xdd != 0 || ydd != 0 || zdd != 0) {
                             glTranslatef2(xdd, ydd, zdd);
                             xo += xdd;
                             yo += ydd;
                             zo += zdd;
                         }
-
                         sortedChunks[i]->renderBB();
                         sortedChunks[i]->occlusion_querying = true;
                     }
@@ -425,14 +401,10 @@ if (useRepair) {
             count += renderChunks(from, to, layer, alpha);
 
         } while (to < chunksLength);
-
     } else {
         TIMER_POP_PUSH("render");
         count += renderChunks(0, chunksLength, layer, alpha);
     }
-
-    // 重置 Tesselator 偏移，避免影响其他渲染
-    Tesselator::instance.offset(0.0, 0.0, 0.0);
 
     TIMER_POP();
     return count;
@@ -578,24 +550,14 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
         }
     }
 
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     Mob* player = mc->cameraTargetPlayer;
+    float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
+    float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
+    float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
 
-    if (useRepair) {
-        // 双精度偏移（条纹修复）
-        double xOff = player->xOld + (player->x - player->xOld) * alpha;
-        double yOff = player->yOld + (player->y - player->yOld) * alpha;
-        double zOff = player->zOld + (player->z - player->zOld) * alpha;
-        renderList.init(xOff, yOff, zOff);
-    } else {
-        // 单精度偏移（传统模式）
-        float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
-        float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
-        float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
-        renderList.init(xOff, yOff, zOff);
-    }
-
-    renderList.setUseRelativeTranslation(useRepair);
+    renderList.clear();
+    renderList.init(xOff, yOff, zOff);
+    renderList.setUseRelativeTranslation(mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR));
 
     for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
         Chunk* chunk = _renderChunks[i];
@@ -608,9 +570,9 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
     }
 
     renderSameAsLast(layer, alpha);
-
     return count;
 }
+
 void LevelRenderer::renderSameAsLast( int layer, float alpha )
 {
 	renderList.render();
@@ -957,7 +919,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
     if (useRepair) {
-        // 条纹修复：使用双精度相机偏移
         double xOff = player->xOld + (player->x - player->xOld) * a;
         double yOff = player->yOld + (player->y - player->yOld) * a;
         double zOff = player->zOld + (player->z - player->zOld) * a;
@@ -965,7 +926,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
         EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
     } else {
-        // 传统模式：不偏移（相机在绝对坐标）
         EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = 0.0;
         EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = 0.0;
         EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = 0.0;
@@ -981,22 +941,15 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         Entity** toRender = new Entity*[totalEntities];
         for (int i = 0; i < totalEntities; i++) {
             Entity* entity = entities[i];
-
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-
             if (entity->shouldRender(cam) && culler->isVisible(entity->bb))
             {
                 if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
-                if (entity == mc->cameraTargetPlayer && !thirdPerson)
-                    continue;
-                if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z)))
-                    continue;
-
+                if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+                if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
                 toRender[renderedEntities++] = entity;
-                //EntityRenderDispatcher::getInstance()->render(entity, a);
             }
         }
-
         if (renderedEntities > 0) {
             std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
             for (int i = 0; i < renderedEntities; ++i) {
@@ -1004,7 +957,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
                 disp->render(toRender[i], a);
             }
         }
-
         delete[] toRender;
     }
 
@@ -1015,7 +967,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     glDisableClientState2(GL_VERTEX_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
-
     TIMER_POP();
 }
 
