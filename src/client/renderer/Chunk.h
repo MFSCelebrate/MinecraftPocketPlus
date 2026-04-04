@@ -1,74 +1,74 @@
 #ifndef NET_MINECRAFT_CLIENT_RENDERER__Chunk_H__
 #define NET_MINECRAFT_CLIENT_RENDERER__Chunk_H__
 
-//package net.minecraft.client.renderer;
-
 #include "RenderChunk.h"
 #include "../../world/phys/AABB.h"
+#include <cstdint>
 
 class Level;
 class Entity;
 class Culler;
 class Tesselator;
 
-// @note: TileEntity stuff is stripped away
 class Chunk
 {
     static const int NumLayers = 3;
 public:
-    Chunk(Level* level_, int x, int y, int z, int size, int lists_, GLuint* ptrBuf = NULL);
+    Chunk(Level* level_, int64_t x, int64_t y, int64_t z, int size, int lists_, GLuint* ptrBuf = NULL);
 
-    void setPos(int x, int y, int z);
+    void setPos(int64_t x, int64_t y, int64_t z);
 
-	void rebuild();
-	void setDirty();
-	void setClean();
-	bool isDirty();
-	void reset();
+    void rebuild();
+    void setDirty();
+    void setClean();
+    bool isDirty();
+    void reset();
 
     float distanceToSqr(const Entity* player) const;
     float squishedDistanceToSqr(const Entity* player) const;
 
-	//@todo @fix
     int getAllLists(int displayLists[], int p, int layer);
-	int getList(int layer);
+    int getList(int layer);
 
-	RenderChunk& getRenderChunk(int layer);
+    RenderChunk& getRenderChunk(int layer);
 
-	bool isEmpty();
+    bool isEmpty();
     void cull(Culler* culler);
-
     void renderBB();
-	static void resetUpdates();
+
+    static void resetUpdates();
 
 private:
-	void translateToPos();
+    void translateToPos();
+
 public:
-	Level* level;
+    Level* level;
 
-	static int updates;// = 0;
+    static int updates;
 
-	int x, y, z, xs, ys, zs;
-	bool empty[NumLayers];
-	int xm, ym, zm;
-	float radius;
-	AABB bb;
+    int64_t x, y, z;          // 世界方块坐标（改为 int64_t）
+    int xs, ys, zs;           // 尺寸（int 足够）
+    bool empty[NumLayers];
+    int64_t xm, ym, zm;       // 中心点坐标（int64_t）
+    float radius;
+    AABB bb;
 
-	int id;
-	bool visible;
-	bool occlusion_visible;
-	bool occlusion_querying;
-	int occlusion_id;
-	bool skyLit;
+    int id;
+    bool visible;
+    bool occlusion_visible;
+    bool occlusion_querying;
+    int occlusion_id;
+    bool skyLit;
 
-	RenderChunk renderChunk[NumLayers];
+    RenderChunk renderChunk[NumLayers];
+
 private:
-	Tesselator& t;
-	int lists;
-	GLuint* vboBuffers;
-	bool compiled;
-	bool dirty;
+    Tesselator& t;
+    int lists;
+    GLuint* vboBuffers;
+    bool compiled;
+    bool dirty;
     bool _empty;
 };
 
-#endif /*NET_MINECRAFT_CLIENT_RENDERER__Chunk_H__*/
+#endif
