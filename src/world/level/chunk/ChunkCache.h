@@ -150,14 +150,15 @@ public:
     }
 
 private:
-    LevelChunk* load(int64_t x, int64_t z) {
-        if (storage == NULL) return emptyChunk;
-        LevelChunk* levelChunk = storage->load(level, (int)x, (int)z);
-        if (levelChunk != NULL) {
-            levelChunk->lastSaveTime = level->getTime();
-        }
-        return levelChunk;
+    // 在 ChunkCache 类中修改 load 函数
+LevelChunk* load(int64_t x, int64_t z) {
+    if (storage == NULL) return emptyChunk;
+    LevelChunk* levelChunk = storage->load(level, x, z);   // 直接传递 int64_t
+    if (levelChunk != NULL) {
+        levelChunk->lastSaveTime = level->getTime();
     }
+    return levelChunk;
+}
 
     void saveEntities(LevelChunk* levelChunk) {
         if (storage == NULL) return;
