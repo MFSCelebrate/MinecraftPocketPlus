@@ -46,8 +46,10 @@ public:
     bool shouldSave() override;
     std::string gatherStats() override;
 
-    int64_t getOffsetX() const { return offsetX; }
-    int64_t getOffsetZ() const { return offsetZ; }
+    // 精确世界偏移（单位：世界方块）
+    void setWorldOffset(int64_t ox, int64_t oz) { m_worldOffsetX = ox; m_worldOffsetZ = oz; }
+    int64_t getWorldOffsetX() const { return m_worldOffsetX; }
+    int64_t getWorldOffsetZ() const { return m_worldOffsetZ; }
 
 private:
     float* getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize);
@@ -86,7 +88,9 @@ private:
     float* fis;
 
     int customSeaLevel;
-    int64_t offsetX, offsetZ;
+
+    // 新的精确偏移（单位：世界方块），废弃了旧的 offsetX/offsetZ
+    int64_t m_worldOffsetX, m_worldOffsetZ;
 };
 
 class PerformanceTestChunkSource : public ChunkSource
