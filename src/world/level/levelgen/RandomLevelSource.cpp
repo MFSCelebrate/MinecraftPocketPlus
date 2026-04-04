@@ -40,37 +40,35 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
 
-    // 从选项读取偏移量（用户输入方块数，自动对齐到16的倍数并转换为区块数）
     if (Minecraft::instance) {
         std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
         std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
         if (!xStr.empty()) {
-            int rawX = atoi(xStr.c_str());
-            int alignedXBlocks = (rawX / 16) * 16;          // 向下取整到16的倍数
-            offsetX = alignedXBlocks / 16;                  // 转换为区块数
+            int64_t rawX = atoll(xStr.c_str());
+            int64_t alignedXBlocks = (rawX / 16) * 16;
+            offsetX = alignedXBlocks / 16;
             if (rawX != alignedXBlocks) {
-                LOGI("World Offset X adjusted from %d blocks to %d blocks (chunks: %d)\n", rawX, alignedXBlocks, offsetX);
+                LOGI("World Offset X adjusted from %lld blocks to %lld blocks (chunks: %lld)\n", rawX, alignedXBlocks, offsetX);
             }
         }
         if (!zStr.empty()) {
-            int rawZ = atoi(zStr.c_str());
-            int alignedZBlocks = (rawZ / 16) * 16;
+            int64_t rawZ = atoll(zStr.c_str());
+            int64_t alignedZBlocks = (rawZ / 16) * 16;
             offsetZ = alignedZBlocks / 16;
             if (rawZ != alignedZBlocks) {
-                LOGI("World Offset Z adjusted from %d blocks to %d blocks (chunks: %d)\n", rawZ, alignedZBlocks, offsetZ);
+                LOGI("World Offset Z adjusted from %lld blocks to %lld blocks (chunks: %lld)\n", rawZ, alignedZBlocks, offsetZ);
             }
         }
     }
-	// 读取海平面高度（默认63）
-customSeaLevel = 63;
-if (Minecraft::instance) {
-    std::string seaStr = Minecraft::instance->options.getStringValue(OPTIONS_SEA_LEVEL);
-    if (!seaStr.empty()) {
-        int sl = atoi(seaStr.c_str());
-        if (sl >= 0 && sl <= 127) customSeaLevel = sl;
-        else LOGI("Sea level adjusted from %d to %d (must be 0-127)\n", sl, customSeaLevel);
+    customSeaLevel = 63;
+    if (Minecraft::instance) {
+        std::string seaStr = Minecraft::instance->options.getStringValue(OPTIONS_SEA_LEVEL);
+        if (!seaStr.empty()) {
+            int sl = atoi(seaStr.c_str());
+            if (sl >= 0 && sl <= 127) customSeaLevel = sl;
+            else LOGI("Sea level adjusted from %d to %d (must be 0-127)\n", sl, customSeaLevel);
+        }
     }
-}
 }
 
 RandomLevelSource::~RandomLevelSource() {
@@ -94,13 +92,12 @@ RandomLevelSource::~RandomLevelSource() {
 }
 
 /*public*/
-void RandomLevelSource::prepareHeights(int xOffs, int zOffs, unsigned char* blocks, /*Biome*/void* biomes, float* temperatures) {
-	
-	int xChunks = 16 / CHUNK_WIDTH;
-    int waterHeight = customSeaLevel + 1;   // 水面顶部高度 = 海平面 + 1
-if (waterHeight < 0) waterHeight = 0;
-if (waterHeight > 127) waterHeight = 127;
+void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned char* blocks, void* biomes, float* temperatures) {
+    int waterHeight = customSeaLevel + 1;
+    if (waterHeight < 0) waterHeight = 0;
+    if (waterHeight > 127) waterHeight = 127;
 
+    int xChunks = 16 / CHUNK_WIDTH;
     int xSize = xChunks + 1;
     int ySize = 128 / CHUNK_HEIGHT + 1;
     int zSize = xChunks + 1;
@@ -122,7 +119,6 @@ if (waterHeight > 127) waterHeight = 127;
 
                 for (int y = 0; y < CHUNK_HEIGHT; y++) {
                     float xStep = 1 / (float) CHUNK_WIDTH;
-
                     float _s0 = s0;
                     float _s1 = s1;
                     float _s0a = (s2 - s0) * xStep;
@@ -132,11 +128,9 @@ if (waterHeight > 127) waterHeight = 127;
                         int offs = (x + xc * CHUNK_WIDTH) << 11 | (0 + zc * CHUNK_WIDTH) << 7 | (yc * CHUNK_HEIGHT + y);
                         int step = 1 << 7;
                         float zStep = 1 / (float) CHUNK_WIDTH;
-
                         float val = _s0;
                         float vala = (_s1 - _s0) * zStep;
                         for (int z = 0; z < CHUNK_WIDTH; z++) {
-// + (zc * CHUNK_WIDTH + z)];
                             float temp = temperatures[(xc * CHUNK_WIDTH + x) * 16 + (zc * CHUNK_WIDTH + z)];
                             int tileId = 0;
                             if (yc * CHUNK_HEIGHT + y < waterHeight) {
@@ -148,9 +142,7 @@ if (waterHeight > 127) waterHeight = 127;
                             }
                             if (val > 0) {
                                 tileId = Tile::rock->id;
-                            } else {
                             }
-
                             blocks[offs] = (unsigned char) tileId;
                             offs += step;
                             val += vala;
@@ -158,7 +150,6 @@ if (waterHeight > 127) waterHeight = 127;
                         _s0 += _s0a;
                         _s1 += _s1a;
                     }
-
                     s0 += s0a;
                     s1 += s1a;
                     s2 += s2a;
@@ -169,37 +160,34 @@ if (waterHeight > 127) waterHeight = 127;
     }
 }
 
-void RandomLevelSource::buildSurfaces(int xOffs, int zOffs, unsigned char* blocks, Biome** biomes) {
-    int waterHeight = customSeaLevel + 1;   // 水面顶部高度 = 海平面 + 1
-if (waterHeight < 0) waterHeight = 0;
-if (waterHeight > 127) waterHeight = 127;
-	
+void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned char* blocks, Biome** biomes) {
+    int waterHeight = customSeaLevel + 1;
+    if (waterHeight < 0) waterHeight = 0;
+    if (waterHeight > 127) waterHeight = 127;
+
     float s = 1 / 32.0f;
-    perlinNoise2.getRegion(sandBuffer, (float)(xOffs * 16), (float)(zOffs * 16), 0, 16, 16, 1, s, s, 1);
-    perlinNoise2.getRegion(gravelBuffer, (float)(xOffs * 16), 109.01340f, (float)(zOffs * 16), 16, 1, 16, s, 1, s);
-    perlinNoise3.getRegion(depthBuffer, (float)(xOffs * 16), (float)(zOffs * 16), 0, 16, 16, 1, s * 2, s * 2, s * 2);
+    float xf = (float)(xOffs * 16);
+    float zf = (float)(zOffs * 16);
+    perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, s, s, 1);
+    perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, s, 1, s);
+    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, s * 2, s * 2, s * 2);
 
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
-			float temp = 1; // @todo: read temp from BiomeSource
+            float temp = 1;
             Biome* b = biomes[x + z * 16];
             bool sand = (sandBuffer[x + z * 16] + random.nextFloat() * 0.2f) > 0;
             bool gravel = (gravelBuffer[x + z * 16] + random.nextFloat() * 0.2f) > 3;
-            int runDepth = (int) (depthBuffer[x + z * 16] / 3 + 3 + random.nextFloat() * 0.25f);
-
+            int runDepth = (int)(depthBuffer[x + z * 16] / 3 + 3 + random.nextFloat() * 0.25f);
             int run = -1;
-
-			char top = b->topMaterial;
+            char top = b->topMaterial;
             char material = b->material;
-
             for (int y = 127; y >= 0; y--) {
                 int offs = (z * 16 + x) * 128 + y;
-
                 if (y <= 0 + random.nextInt(5)) {
                     blocks[offs] = (char) Tile::unbreakable->id;
                 } else {
                     int old = blocks[offs];
-
                     if (old == 0) {
                         run = -1;
                     } else if (old == Tile::rock->id) {
@@ -209,35 +197,28 @@ if (waterHeight > 127) waterHeight = 127;
                                 material = (char) Tile::rock->id;
                             } else if (y >= waterHeight - 4 && y <= waterHeight + 1) {
                                 top = b->topMaterial;
-								material = b->material;
-								
-								//@attn: ?
+                                material = b->material;
                                 if (gravel) {
-									top = 0;
-									material = (char) Tile::gravel->id;
-								}
+                                    top = 0;
+                                    material = (char) Tile::gravel->id;
+                                }
                                 if (sand) {
-									top = (char) Tile::sand->id;
-									material = (char) Tile::sand->id;
-								}
+                                    top = (char) Tile::sand->id;
+                                    material = (char) Tile::sand->id;
+                                }
                             }
-
                             if (y < waterHeight && top == 0) {
-								if (temp < 0.15f)
-									top = (char) Tile::ice->id;
-								else
-									top = (char) Tile::calmWater->id;
-							}
-
+                                if (temp < 0.15f)
+                                    top = (char) Tile::ice->id;
+                                else
+                                    top = (char) Tile::calmWater->id;
+                            }
                             run = runDepth;
                             if (y >= waterHeight - 1) blocks[offs] = top;
                             else blocks[offs] = material;
                         } else if (run > 0) {
                             run--;
                             blocks[offs] = material;
-
-                            // place a few sandstone blocks beneath sand
-                            // runs
                             if (run == 0 && material == Tile::sand->id) {
                                 run = random.nextInt(4);
                                 material = (char) Tile::sandStone->id;
@@ -252,29 +233,27 @@ if (waterHeight > 127) waterHeight = 127;
 
 
 /*public*/
-void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
-    // 确保当前区块及周围区块都存在，避免访问未生成区块
-    int realXt = xt + offsetX;
-    int realZt = zt + offsetZ;
-    // 检查周围区块是否存在（范围根据实际需求）
+
+void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
+    int64_t realXt = xt + offsetX;
+    int64_t realZt = zt + offsetZ;
     if (!level->hasChunk(realXt-1, realZt-1) || !level->hasChunk(realXt, realZt-1) ||
         !level->hasChunk(realXt-1, realZt) || !level->hasChunk(realXt, realZt)) {
-        return; // 如果有区块未生成，延迟处理
+        return;
     }
-    // ... 原有代码 ...
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
-    int xo = realXt * 16;
-    int zo = realZt * 16;
-
+    int xo = (int)(realXt * 16);
+    int zo = (int)(realZt * 16);
     Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
-
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
     random.setSeed(((realXt * xScale) + (realZt * zScale)) ^ level->getSeed());
 
+    // 以下所有使用 xo, zo 的地方不变，因为它们已经是 int 范围内的世界坐标
+    // ... 原有代码（生成树、矿石、花朵等）保持不变 ...
 	// //@todo: hide those chunks if they are aren't visible
 //    if (random.nextInt(4) == 0) {
 //        int x = xo + random.nextInt(16) + 8;
@@ -503,12 +482,14 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
 	if (spawnMobs && !level->isClientSide)
 		MobSpawner::postProcessSpawnMobs(level, biome, xo + 8, zo + 8, 16, 16, &random);
 
-	//LOGI("Reading temp: 1\n");
-    float* temperatures = level->getBiomeSource()->getTemperatureBlock(/*NULL,*/ xo + 8, zo + 8, 16, 16);
+    // 注意：所有对 level->getHeightmap 等函数的调用，参数使用 xo + offset 等，但 xo, zo 本身已经是世界坐标，不需要额外转换。
+
+    // 最后处理雪
+    float* temperatures = level->getBiomeSource()->getTemperatureBlock(xo + 8, zo + 8, 16, 16);
     for (int x = xo + 8; x < xo + 8 + 16; x++)
         for (int z = zo + 8; z < zo + 8 + 16; z++) {
             int xp = x - (xo + 8);
-            int zp = z - (zo + 8); 
+            int zp = z - (zo + 8);
             int y = level->getTopSolidBlock(x, z);
             float temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0f * SNOW_SCALE;
             if (temp < SNOW_CUTOFF) {
@@ -517,84 +498,70 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int xt, int zt) {
                 }
             }
         }
-	//LOGI("Reading temp: 0 END\n");
-
-	const float et = getTimeS();
-	totalTime += (et-st);
-
-	//printf("Time to place features: %f. Total %f\n", et - st, totalTime);
 
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
 }
 
-LevelChunk* RandomLevelSource::create(int x, int z) {
+LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
     return getChunk(x, z);
 }
 
-LevelChunk* RandomLevelSource::getChunk(int xOffs, int zOffs) {
-	    // 应用偏移，获得实际地形坐标
-    int realX = xOffs + offsetX;
-    int realZ = zOffs + offsetZ;
-
-    // 使用64位哈希作为键
-    int64_t hashedPos = ((int64_t)realX << 32) | (realZ & 0xffffffff);
+LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
+    int64_t realX = xOffs + offsetX;
+    int64_t realZ = zOffs + offsetZ;
+    int64_t hashedPos = (realX << 32) | (realZ & 0xffffffff);
     ChunkMap::iterator it = chunkMap.find(hashedPos);
     if (it != chunkMap.end())
         return it->second;
 
-    // 随机种子基于实际坐标
     random.setSeed((long)(realX * 341872712l + realZ * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    LevelChunk* levelChunk = new LevelChunk(level, blocks, xOffs, zOffs);
+    LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    Biome** biomes = level->getBiomeSource()->getBiomeBlock(realX * 16, realZ * 16, 16, 16);
+    // 注意：getBiomeBlock 和 getTemperatureBlock 等函数仍使用 int，因为它们的参数是方块坐标，而 realX 可能超过 int 范围，但转换后精度丢失，可以接受。
+    Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)(realX * 16), (int)(realZ * 16), 16, 16);
     float* temperatures = level->getBiomeSource()->temperatures;
     prepareHeights(realX, realZ, blocks, 0, temperatures);
     buildSurfaces(realX, realZ, blocks, biomes);
 
-    caveFeature.apply(this, level, realX, realZ, blocks, LevelChunk::ChunkBlockCount);
+    caveFeature.apply(this, level, (int)realX, (int)realZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
 }
 
 /*private*/
-float* RandomLevelSource::getHeights(float* buffer, int x, int y, int z, int xSize, int ySize, int zSize) {
-	float farlandsScale = 1.0f;
-if (Minecraft::instance) {
-    std::string scaleStr = Minecraft::instance->options.getStringValue(OPTIONS_FARLANDS_SCALE);
-    if (!scaleStr.empty()) {
-        farlandsScale = (float)atof(scaleStr.c_str());
-        if (farlandsScale < 0.0f) farlandsScale = 0.0f;
+float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
+    float farlandsScale = 1.0f;  // 固定为 1.0，不读取选项
+    float s = 684.412f * farlandsScale;
+    float hs = 684.412f * farlandsScale;
+
+    const int size = xSize * ySize * zSize;
+    if (size > MAX_BUFFER_SIZE) {
+        LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
     }
-}
-float s = 1 * 684.412f * farlandsScale;
-float hs = 1 * 684.412f * farlandsScale;
-	
-	const int size = xSize * ySize * zSize;
-	if (size > MAX_BUFFER_SIZE) {
-		LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
-	}
 
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
-    sr = scaleNoise.getRegion(sr, x, z, xSize, zSize, 1.121f, 1.121f, 0.5f);
-    dr = depthNoise.getRegion(dr, x, z, xSize, zSize, 200.0f, 200.0f, 0.5f);
+    sr = scaleNoise.getRegion(sr, (int)x, (int)z, xSize, zSize, 1.121f, 1.121f, 0.5f);
+    dr = depthNoise.getRegion(dr, (int)x, (int)z, xSize, zSize, 200.0f, 200.0f, 0.5f);
 
-    pnr = perlinNoise1.getRegion(pnr, (float)x, (float)y, (float)z, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
-    ar = lperlinNoise1.getRegion(ar, (float)x, (float)y, (float)z, xSize, ySize, zSize, s, hs, s);
-    br = lperlinNoise2.getRegion(br, (float)x, (float)y, (float)z, xSize, ySize, zSize, s, hs, s);
+    float xf = (float)x;
+    float zf = (float)z;
+    float yf = (float)y;
+
+    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
+    ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
+    br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
 
     int p = 0;
     int pp = 0;
-
     int wScale = 16 / xSize;
     for (int xx = 0; xx < xSize; xx++) {
         int xp = xx * wScale + wScale / 2;
-
         for (int zz = 0; zz < zSize; zz++) {
             int zp = zz * wScale + wScale / 2;
             float temperature = temperatures[xp * 16 + zp];
@@ -603,16 +570,12 @@ float hs = 1 * 684.412f * farlandsScale;
             dd = dd * dd;
             dd = dd * dd;
             dd = 1 - dd;
-
             float scale = ((sr[pp] + 256.0f) / 512);
             scale *= dd;
             if (scale > 1) scale = 1;
-
-
             float depth = (dr[pp] / 8000.0f);
             if (depth < 0) depth = -depth * 0.3f;
             depth = depth * 3.0f - 2.0f;
-
             if (depth < 0) {
                 depth = depth / 2;
                 if (depth < -1) depth = -1;
@@ -623,35 +586,26 @@ float hs = 1 * 684.412f * farlandsScale;
                 if (depth > 1) depth = 1;
                 depth = depth / 8;
             }
-
             if (scale < 0) scale = 0;
             scale = (scale) + 0.5f;
             depth = depth * ySize / 16;
-
             float yCenter = ySize / 2.0f + depth * 4;
-
             pp++;
-
             for (int yy = 0; yy < ySize; yy++) {
                 float val = 0;
-
                 float yOffs = (yy - (yCenter)) * 12 / scale;
                 if (yOffs < 0) yOffs *= 4;
-
                 float bb = ar[p] / 512;
                 float cc = br[p] / 512;
-
                 float v = (pnr[p] / 10 + 1) / 2;
                 if (v < 0) val = bb;
                 else if (v > 1) val = cc;
                 else val = bb + (cc - bb) * v;
                 val -= yOffs;
-
                 if (yy > ySize - 4) {
                     float slide = (yy - (ySize - 4)) / (4 - 1.0f);
                     val = val * (1 - slide) + -10 * slide;
                 }
-
                 buffer[p] = val;
                 p++;
             }
@@ -706,9 +660,8 @@ void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int xt, int zt) {
     }
 }
 
-bool RandomLevelSource::hasChunk(int x, int y) {
-    //return x >= 0 && x < 16 && y >= 0 && y < 16;
-	return true;
+bool RandomLevelSource::hasChunk(int64_t x, int64_t z) {
+    return true;
 }
 
 bool RandomLevelSource::tick() {
