@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <list>
-
 #include "LevelStorage.h"
 #include "../chunk/storage/ChunkStorage.h"
 
@@ -22,25 +21,23 @@ typedef struct UnsavedLevelChunk
 
 typedef std::list<UnsavedLevelChunk> UnsavedChunkList;
 
-class ExternalFileLevelStorage:
-        public LevelStorage,
-        public ChunkStorage
+class ExternalFileLevelStorage : public LevelStorage, public ChunkStorage
 {
 public:
     ExternalFileLevelStorage(const std::string& levelId, const std::string& fullPath);
     virtual ~ExternalFileLevelStorage();
 
-    LevelData* prepareLevel(Level* level);
-    void checkSession() {}
+    LevelData* prepareLevel(Level* level) override;
+    void checkSession() override {}
 
-    ChunkStorage* createChunkStorage(Dimension* dimension) { return this; }
+    ChunkStorage* createChunkStorage(Dimension* dimension) override { return this; }
 
-    void saveLevelData(LevelData& levelData, std::vector<Player*>* players);
-    void closeAll() {}
+    void saveLevelData(LevelData& levelData, std::vector<Player*>* players) override;
+    void closeAll() override {}
 
     static bool readLevelData(const std::string& directory, LevelData& dest);
     static bool readPlayerData(const std::string& filename, LevelData& dest);
-    static void writeLevelData(const std::string& datFileName, LevelData& dest, const std::vector<Player*>* players);
+    static bool writeLevelData(const std::string& datFileName, LevelData& dest, const std::vector<Player*>* players);
     static void saveLevelData(const std::string& directory, LevelData& levelData, std::vector<Player*>* players);
 
     int savePendingUnsavedChunks(int maxCount);
