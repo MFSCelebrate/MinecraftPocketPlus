@@ -88,9 +88,9 @@ public:
         tags.insert(std::make_pair(name, new FloatTag(name, value)));
     }
 
-    void putDouble(const std::string& name, float value) {
+    void putDouble(const std::string& name, double value) {
         tags.insert(std::make_pair(name, new DoubleTag(name, value)));
-    }
+	}
 
     void putString(const std::string& name, const std::string& value) {
         tags.insert(std::make_pair(name, new StringTag(name, value)));
@@ -149,9 +149,13 @@ public:
     }
 
     double getDouble(const std::string& name) const {
-        if (!contains(name, TAG_Double)) return (double) 0;
-        return ((DoubleTag*) get(name))->data;
+    if (contains(name, TAG_Double)) {
+        return ((DoubleTag*)get(name))->data;
+    } else if (contains(name, TAG_Float)) {
+        return (double)((FloatTag*)get(name))->data;
     }
+    return 0.0;
+	}
 
     std::string getString(const std::string& name) const {
         if (!contains(name, TAG_String)) return "";
