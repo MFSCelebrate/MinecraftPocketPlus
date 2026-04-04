@@ -948,7 +948,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-	TIMER_PUSH("prepare");
+    TIMER_PUSH("prepare");
     TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, mc->cameraTargetPlayer, a);
     EntityRenderDispatcher::getInstance()->prepare(level, mc->font, mc->cameraTargetPlayer, &mc->options, a);
 
@@ -956,57 +956,70 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     renderedEntities = 0;
     culledEntities = 0;
 
-	Entity* player = mc->cameraTargetPlayer;
-    EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = (player->xOld + (player->x - player->xOld) * a);
-    EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = (player->yOld + (player->y - player->yOld) * a);
-    EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = (player->zOld + (player->z - player->zOld) * a);
+    Entity* player = mc->cameraTargetPlayer;
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
-	glEnableClientState2(GL_VERTEX_ARRAY);
-	glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
+    if (useRepair) {
+        // 条纹修复：使用双精度相机偏移
+        double xOff = player->xOld + (player->x - player->xOld) * a;
+        double yOff = player->yOld + (player->y - player->yOld) * a;
+        double zOff = player->zOld + (player->z - player->zOld) * a;
+        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
+        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
+        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
+    } else {
+        // 传统模式：不偏移（相机在绝对坐标）
+        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = 0.0;
+        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = 0.0;
+        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = 0.0;
+    }
 
-	TIMER_POP_PUSH("entities");
-	const EntityList& entities = level->getAllEntities();
-	totalEntities = entities.size();
-	if (totalEntities > 0) {
-		Entity** toRender = new Entity*[totalEntities];
-		for (int i = 0; i < totalEntities; i++) {
-			Entity* entity = entities[i];
+    glEnableClientState2(GL_VERTEX_ARRAY);
+    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-			bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
+    TIMER_POP_PUSH("entities");
+    const EntityList& entities = level->getAllEntities();
+    totalEntities = entities.size();
+    if (totalEntities > 0) {
+        Entity** toRender = new Entity*[totalEntities];
+        for (int i = 0; i < totalEntities; i++) {
+            Entity* entity = entities[i];
 
-			if (entity->shouldRender(cam) && culler->isVisible(entity->bb))
-			{
-				if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
-				if (entity == mc->cameraTargetPlayer && !thirdPerson)
-					continue;
-				if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z)))
-					continue;
+            bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
 
-				toRender[renderedEntities++] = entity;
-				//EntityRenderDispatcher::getInstance()->render(entity, a);
-			}
-		}
+            if (entity->shouldRender(cam) && culler->isVisible(entity->bb))
+            {
+                if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
+                if (entity == mc->cameraTargetPlayer && !thirdPerson)
+                    continue;
+                if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z)))
+                    continue;
 
-		if (renderedEntities > 0) {
-			std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
-			for (int i = 0; i < renderedEntities; ++i) {
-				EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
-				disp->render(toRender[i], a);
-			}
-		}
+                toRender[renderedEntities++] = entity;
+                //EntityRenderDispatcher::getInstance()->render(entity, a);
+            }
+        }
 
-		delete[] toRender;
-	}
+        if (renderedEntities > 0) {
+            std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
+            for (int i = 0; i < renderedEntities; ++i) {
+                EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+                disp->render(toRender[i], a);
+            }
+        }
+
+        delete[] toRender;
+    }
 
     TIMER_POP_PUSH("tileentities");
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
 
-	glDisableClientState2(GL_VERTEX_ARRAY);
-	glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+    glDisableClientState2(GL_VERTEX_ARRAY);
+    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-	TIMER_POP();
+    TIMER_POP();
 }
 
 std::string LevelRenderer::gatherStats1() {
@@ -1329,3 +1342,4 @@ void LevelRenderer::levelEvent(Player* player, int type, int x, int y, int z, in
         break;
 	}
 }
+
