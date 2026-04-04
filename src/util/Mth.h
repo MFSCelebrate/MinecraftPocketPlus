@@ -19,8 +19,8 @@ inline double cos(double x) { return std::cos(x); }
 inline double atan(double x) { return std::atan(x); }
 inline double atan2(double dy, double dx) { return std::atan2(dy, dx); }
 inline double abs(double a) { return a < 0 ? -a : a; }
-//inline double Min(double a, double b) { return a < b ? a : b; }
-//inline double Max(double a, double b) { return a > b ? a : b; }
+inline double Min(double a, double b) { return a < b ? a : b; }
+inline double Max(double a, double b) { return a > b ? a : b; }
 inline double clamp(double v, double low, double high) {
     if (v < low) return low;
     if (v > high) return high;
@@ -61,8 +61,8 @@ inline double absMaxSigned(double a, double b) {
 	int random(int n);
 
 	float abs(float a);
-	float Min(float a, float b);
-	float Max(float a, float b);
+	//float Min(float a, float b);
+	//float Max(float a, float b);
 	int abs(int a);
 	int Min(int a, int b);
 	int Max(int a, int b);
