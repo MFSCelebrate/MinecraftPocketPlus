@@ -97,13 +97,15 @@ public:
 	int getTile(int x, int y, int z);
     bool setTile(int x, int y, int z, int tile);
 
-	bool hasChunkAt(int x, int y, int z);
+	bool hasChunkAt(int64_t x, int64_t y, int64_t z) {
+        if (y < 0 || y >= Level::DEPTH) return false;
+        return hasChunk(x >> 4, z >> 4);
+	}
     bool hasChunksAt(int x, int y, int z, int r);
-    bool hasChunksAt(int x0, int y0, int z0, int x1, int y1, int z1);
-    bool hasChunk(int x, int z);
-    LevelChunk* getChunkAt(int x, int z);
-    LevelChunk* getChunk(int x, int z);
-
+    bool hasChunksAt(int64_t x0, int64_t y0, int64_t z0, int64_t x1, int64_t y1, int64_t z1);
+    bool hasChunk(int64_t x, int64_t z);
+    LevelChunk* getChunk(int64_t x, int64_t z);
+    LevelChunk* getChunkAt(int64_t x, int64_t z) { return getChunk(x >> 4, z >> 4); }
 	bool setTileAndDataNoUpdate(int x, int y, int z, int tile, int data);
     bool setTileNoUpdate(int x, int y, int z, int tile);
 
