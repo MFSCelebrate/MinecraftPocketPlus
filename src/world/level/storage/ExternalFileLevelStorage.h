@@ -28,7 +28,7 @@ public:
     virtual ~ExternalFileLevelStorage();
 
     LevelData* prepareLevel(Level* level) override;
-    void checkSession() override {}
+    void checkSession() {}   // 不是虚函数，不能加 override
 
     ChunkStorage* createChunkStorage(Dimension* dimension) override { return this; }
 
