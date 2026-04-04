@@ -70,7 +70,7 @@ inline double absMaxSigned(double a, double b) {
 	int   clamp(int v, int low, int high);
 	//float clamp(float v, float low, float high);
 	//float lerp(float src, float dst, float alpha);
-	int   lerp(int src, int dst, float alpha);
+	//int   lerp(int src, int dst, float alpha);
 
 	///@param value The original signed value
 	///@param with  The (possibly signed) value to "abs-decrease" <value> with
