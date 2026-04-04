@@ -1,15 +1,11 @@
 #include "RenderList.h"
-
 #include "gles.h"
 #include "RenderChunk.h"
 #include "Tesselator.h"
 
-
 RenderList::RenderList()
-    :   inited(false),
-        rendered(false),
-        m_useRelativeTranslation(false),
-        m_camX(0.0), m_camY(0.0), m_camZ(0.0)
+    : inited(false), rendered(false), m_useRelativeTranslation(false),
+      m_camX(0.0), m_camY(0.0), m_camZ(0.0)
 {
     lists = new int[MAX_NUM_OBJECTS];
     rlists = new RenderChunk[MAX_NUM_OBJECTS];
@@ -18,28 +14,28 @@ RenderList::RenderList()
 }
 
 RenderList::~RenderList() {
-	delete[] lists;
-	delete[] rlists;
+    delete[] lists;
+    delete[] rlists;
 }
 
 void RenderList::init(float xOff, float yOff, float zOff) {
     inited = true;
     listIndex = 0;
-    this->xOff = xOff;     // 保留
+    this->xOff = xOff;
     this->yOff = yOff;
     this->zOff = zOff;
-    m_camX = (double)xOff; // 存储为双精度
+    m_camX = (double)xOff;
     m_camY = (double)yOff;
     m_camZ = (double)zOff;
 }
 
 void RenderList::add(int list) {
-	lists[listIndex] = list;
-	if (listIndex == MAX_NUM_OBJECTS) /*lists.remaining() == 0)*/ render();
+    lists[listIndex] = list;
+    if (listIndex == MAX_NUM_OBJECTS) render();
 }
 
 void RenderList::addR(const RenderChunk& chunk) {
-	rlists[listIndex] = chunk;
+    rlists[listIndex] = chunk;
 }
 
 void RenderList::render() {
@@ -51,15 +47,14 @@ void RenderList::render() {
     }
     if (listIndex < bufferLimit) {
         glPushMatrix2();
-        // 启用相对平移时，跳过外层平移
         if (!m_useRelativeTranslation) {
             glTranslatef2(-xOff, -yOff, -zOff);
         }
-        #ifndef USE_VBO
-            glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
-        #else
-            renderChunks();
-        #endif
+#ifndef USE_VBO
+        glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
+#else
+        renderChunks();
+#endif
         glPopMatrix2();
     }
 }
@@ -77,13 +72,13 @@ void RenderList::renderChunks() {
         glPushMatrix2();
 
         if (m_useRelativeTranslation) {
-            // 相对平移：区块在世界中的位置减去相机位置
+            // 相对平移：区块世界坐标减去相机位置
             double transX = (double)rc.baseX - m_camX;
             double transY = (double)rc.baseY - m_camY;
             double transZ = (double)rc.baseZ - m_camZ;
             glTranslatef2((float)transX, (float)transY, (float)transZ);
         } else {
-            // 传统模式：直接平移区块到世界位置（因为顶点是局部坐标）
+            // 传统模式：直接平移区块到世界位置（顶点是局部坐标）
             glTranslatef2(rc.pos.x, rc.pos.y, rc.pos.z);
         }
 
@@ -99,4 +94,9 @@ void RenderList::renderChunks() {
     glDisableClientState2(GL_VERTEX_ARRAY);
     glDisableClientState2(GL_COLOR_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+}
+
+void RenderList::clear() {
+    inited = false;
+    rendered = false;
 }
