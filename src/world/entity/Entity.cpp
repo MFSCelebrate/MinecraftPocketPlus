@@ -112,10 +112,9 @@ bool Entity::isFree(float xa, float ya, float za) {
     return true;
 }
 
-// 双精度移动
 void Entity::move(double xa, double ya, double za) {
 	if (noPhysics) {
-        bb.move((float)xa, (float)ya, (float)za);
+        bb.move(xa, ya, za);
         x = (bb.x0 + bb.x1) / 2.0;
         y = bb.y0 + heightOffset - ySlideOffset;
         z = (bb.z0 + bb.z1) / 2.0;
@@ -147,19 +146,19 @@ void Entity::move(double xa, double ya, double za) {
 
     if (sneaking) {
         float d = 0.05f;
-        while (xa != 0 && level->getCubes(this, bb.cloneMove((float)xa, -1.0f, 0)).empty()) {
+        while (xa != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, 0)).empty()) {
             if (xa < d && xa >= -d) xa = 0;
             else if (xa > 0) xa -= d;
             else xa += d;
             xaOrg = xa;
         }
-        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0f, (float)za)).empty()) {
+        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0, za)).empty()) {
             if (za < d && za >= -d) za = 0;
             else if (za > 0) za -= d;
             else za += d;
             zaOrg = za;
         }
-		while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove((float)xa, -1.0f, (float)za)).empty()) {
+		while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, za)).empty()) {
 			if (xa < d && xa >= -d) xa = 0;
 			else if (xa > 0) xa -= d;
 			else xa += d;
@@ -171,11 +170,11 @@ void Entity::move(double xa, double ya, double za) {
 		}
     }
 
-    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand((float)xa, (float)ya, (float)za));
+    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        ya = aABBs[i].clipYCollide(bb, (float)ya);
-    bb.move(0, (float)ya, 0);
+        ya = aABBs[i].clipYCollide(bb, ya);
+    bb.move(0, ya, 0);
 
 	if (!slide && yaOrg != ya) {
 		xa = ya = za = 0;
@@ -184,16 +183,16 @@ void Entity::move(double xa, double ya, double za) {
     bool og = onGround || (yaOrg != ya && yaOrg < 0);
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        xa = aABBs[i].clipXCollide(bb, (float)xa);
-    bb.move((float)xa, 0, 0);
+        xa = aABBs[i].clipXCollide(bb, xa);
+    bb.move(xa, 0, 0);
 
     if (!slide && xaOrg != xa) {
         xa = ya = za = 0;
     }
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
-        za = aABBs[i].clipZCollide(bb, (float)za);
-    bb.move(0, 0, (float)za);
+        za = aABBs[i].clipZCollide(bb, za);
+    bb.move(0, 0, za);
 
     if (!slide && zaOrg != za) {
         xa = ya = za = 0;
@@ -208,27 +207,27 @@ void Entity::move(double xa, double ya, double za) {
         za = zaOrg;
         AABB normal = bb;
         bb.set(bbOrg);
-        aABBs = level->getCubes(this, bb.expand((float)xa, (float)ya, (float)za));
+        aABBs = level->getCubes(this, bb.expand(xa, ya, za));
 
         for (unsigned int i = 0; i < aABBs.size(); i++)
-            ya = aABBs[i].clipYCollide(bb, (float)ya);
-        bb.move(0, (float)ya, 0);
+            ya = aABBs[i].clipYCollide(bb, ya);
+        bb.move(0, ya, 0);
 
         if (!slide && yaOrg != ya) {
             xa = ya = za = 0;
         }
 
 		for (unsigned int i = 0; i < aABBs.size(); i++)
-            xa = aABBs[i].clipXCollide(bb, (float)xa);
-        bb.move((float)xa, 0, 0);
+            xa = aABBs[i].clipXCollide(bb, xa);
+        bb.move(xa, 0, 0);
 
         if (!slide && xaOrg != xa) {
             xa = ya = za = 0;
         }
 
         for (unsigned int i = 0; i < aABBs.size(); i++)
-            za = aABBs[i].clipZCollide(bb, (float)za);
-        bb.move(0, 0, (float)za);
+            za = aABBs[i].clipZCollide(bb, za);
+        bb.move(0, 0, za);
 
         if (!slide && zaOrg != za) {
             xa = ya = za = 0;
@@ -339,13 +338,12 @@ void Entity::setPos(EntityPos* pos) {
     else setRot(yRot, xRot);
 }
 
-// 双精度 setPos
 void Entity::setPos(double x, double y, double z) {
 	this->x = x; this->y = y; this->z = z;
 	float w = bbWidth / 2;
 	float h = bbHeight;
-	bb.set((float)(x - w), (float)(y - heightOffset + ySlideOffset), (float)(z - w),
-	       (float)(x + w), (float)(y - heightOffset + ySlideOffset + h), (float)(z + w));
+	bb.set(x - w, y - heightOffset + ySlideOffset, z - w,
+	       x + w, y - heightOffset + ySlideOffset + h, z + w);
 }
 
 float Entity::getBrightness(float a) {
