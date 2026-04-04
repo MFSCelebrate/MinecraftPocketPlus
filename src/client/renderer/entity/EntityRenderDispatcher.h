@@ -52,7 +52,8 @@ public:
 
 	//TripodCameraRenderer tripodCameraRenderer;
 
-	static float xOff, yOff, zOff;
+	// 修改为 double 类型，以保持相机偏移的高精度
+	static double xOff, yOff, zOff;
 
 	Textures* textures;
 	Level* level;
@@ -63,7 +64,8 @@ public:
 	float playerRotX;
 	Options* options;
 
-	float xPlayer, yPlayer, zPlayer;
+	// 相机观察点（玩家位置），改为 double
+	double xPlayer, yPlayer, zPlayer;
 
 private:
 	static EntityRenderDispatcher* instance;
@@ -73,4 +75,4 @@ private:
 	RendererMap _renderers;
 };
 
-#endif /*NET_MINECRAFT_CLIENT_RENDERER_ENTITY__EntityRenderDispatcher_H__*/
+#endif
