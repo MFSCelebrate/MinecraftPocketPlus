@@ -1525,13 +1525,13 @@ void Level::setUpdateLights(bool doUpdate) {
 	_updateLights = doUpdate;
 }
 
-void Level::updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1) {
+void Level::updateLight(const LightLayer& layer, int64_t x0, int y0, int64_t z0, int64_t x1, int y1, int64_t z1) {
     updateLight(layer, x0, y0, z0, x1, y1, z1, true);
 }
 
 static int maxLoop = 0;
 
-void Level::updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1, int y1, int z1, bool join) {
+void Level::updateLight(const LightLayer& layer, int64_t x0, int y0, int64_t z0, int64_t x1, int y1, int64_t z1, bool join) {
     if ((dimension->hasCeiling && &layer == &LightLayer::Sky) || !_updateLights) return;
 
     maxLoop++;
@@ -1539,30 +1539,29 @@ void Level::updateLight(const LightLayer& layer, int x0, int y0, int z0, int x1,
         maxLoop--;
         return;
     }
-    int xm = (x1 + x0) / 2;
-    int zm = (z1 + z0) / 2;
+    int64_t xm = (x1 + x0) / 2;
+    int64_t zm = (z1 + z0) / 2;
     if (!hasChunkAt(xm, Level::DEPTH / 2, zm)) {
         maxLoop--;
         return;
     }
-    if (getChunkAt(xm, zm)->isEmpty())
-	{
-		maxLoop--;
-		return;
-	}
+    if (getChunkAt(xm, zm)->isEmpty()) {
+        maxLoop--;
+        return;
+    }
     int count = _lightUpdates.size();
     if (join) {
         int toCheck = 5;
         if (toCheck > count) toCheck = count;
         for (int i = 0; i < toCheck; i++) {
             LightUpdate& last = _lightUpdates[_lightUpdates.size() - i - 1];
-            if (last.layer == &layer && last.expandToContain(x0, y0, z0, x1, y1, z1)) {
+            if (last.layer == &layer && last.expandToContain((int)x0, y0, (int)z0, (int)x1, y1, (int)z1)) {
                 maxLoop--;
                 return;
             }
         }
     }
-    _lightUpdates.push_back(LightUpdate(layer, x0, y0, z0, x1, y1, z1));
+    _lightUpdates.push_back(LightUpdate(layer, (int)x0, y0, (int)z0, (int)x1, y1, (int)z1));
     int max = 1000000;
     if ((int)_lightUpdates.size() > max) {
         LOGI("More than %d updates, aborting lighting updates\n", max);
