@@ -321,22 +321,19 @@ int LevelRenderer::render(Mob* player, int layer, float alpha)
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     double xOff_d = 0.0, yOff_d = 0.0, zOff_d = 0.0;
     float xOff_f = 0.0f, yOff_f = 0.0f, zOff_f = 0.0f;
-
-    if (useRepair) {
-        // 双精度偏移计算
-        xOff_d = player->xOld + (player->x - player->xOld) * alpha;
-        yOff_d = player->yOld + (player->y - player->yOld) * alpha;
-        zOff_d = player->zOld + (player->z - player->zOld) * alpha;
-        // 设置 Tesselator 的偏移，使后续顶点计算减去相机位置
-        Tesselator::instance.offset(-xOff_d, -yOff_d, -zOff_d);
-    } else {
-        // 单精度偏移（传统模式）
-        xOff_f = (float)(player->xOld + (player->x - player->xOld) * alpha);
-        yOff_f = (float)(player->yOld + (player->y - player->yOld) * alpha);
-        zOff_f = (float)(player->zOld + (player->z - player->zOld) * alpha);
-        Tesselator::instance.offset(0.0, 0.0, 0.0);
-    }
-
+	
+// 计算相机位置（用于 FrustumCuller 等，但不再设置 Tesselator 偏移）
+if (useRepair) {
+    double xOff = player->xOld + (player->x - player->xOld) * alpha;
+    double yOff = player->yOld + (player->y - player->yOld) * alpha;
+    double zOff = player->zOld + (player->z - player->zOld) * alpha;
+    // 不再调用 Tesselator::instance.offset
+} else {
+    float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
+    float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
+    float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
+}
+	
     // 更新上一帧位置（使用 double 存储，即使传统模式也保留精度）
     double xd = player->x - xOld;
     double yd = player->y - yOld;
