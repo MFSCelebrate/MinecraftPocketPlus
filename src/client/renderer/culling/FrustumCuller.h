@@ -1,8 +1,6 @@
 #ifndef NET_MINECRAFT_CLIENT_RENDERER_CULLING__FrustumCuller_H__
 #define NET_MINECRAFT_CLIENT_RENDERER_CULLING__FrustumCuller_H__
 
-//package net.minecraft.client.renderer.culling;
-
 #include "FrustumData.h"
 #include "Frustum.h"
 
@@ -17,7 +15,7 @@ public:
         frustum = Frustum::getFrustum();
     }
 
-	void prepare(float xOff, float yOff, float zOff) {
+    void prepare(float xOff, float yOff, float zOff) {
         this->xOff = xOff;
         this->yOff = yOff;
         this->zOff = zOff;
@@ -31,9 +29,11 @@ public:
         return frustum.cubeInFrustum(x0 - xOff, y0 - yOff, z0 - zOff, x1 - xOff, y1 - yOff, z1 - zOff);
     }
 
+    // 修改：接受 double 的 AABB，转换为 float 传递
     bool isVisible(const AABB& bb) {
-        return cubeInFrustum(bb.x0, bb.y0, bb.z0, bb.x1, bb.y1, bb.z1);
+        return cubeInFrustum((float)bb.x0, (float)bb.y0, (float)bb.z0,
+                             (float)bb.x1, (float)bb.y1, (float)bb.z1);
     }
 };
 
-#endif /*NET_MINECRAFT_CLIENT_RENDERER_CULLING__FrustumCuller_H__*/
+#endif
