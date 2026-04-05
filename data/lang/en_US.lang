@@ -8,7 +8,8 @@ options.debug_screen_size=Debug Screen Size
 options.sea_level=Sea Level (>63)
 options.stripe_repair=Stripe Repair [Experimental Feature]
 options.teleport=Teleport To Position
-options.world_scale
+options.world_scale=World Scale
+options.progressive_farlands=Progressive Farlands
 
 language.name=English
 language.region=US
