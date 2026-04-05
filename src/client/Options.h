@@ -16,6 +16,9 @@
 #define OPTIONS_DEBUG_SCREEN_SIZE debug_screen_size
 #define OPTIONS_SEA_LEVEL sea_level
 
+// 在 Options.h 中声明对应的 OptionString（用于文本输入）
+extern OptionString worldScale;
+
 //package net.minecraft.client;
 
 //#include "locale/Language.h"
@@ -96,6 +99,7 @@ enum OptionId {
     OPTIONS_SEA_LEVEL,
     OPTIONS_TELEPORT,           // 新增
     OPTIONS_STRIPE_REPAIR,   // 新增
+    OPTIONS_WORLD_SCALE,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
