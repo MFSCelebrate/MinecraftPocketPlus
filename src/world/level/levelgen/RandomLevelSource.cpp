@@ -30,7 +30,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     forestNoise(&random, 8),
     spawnMobs(spawnMobs),
     pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-    m_worldOffsetX(0), m_worldOffsetZ(0)
+    m_worldOffsetX(0), m_worldOffsetZ(0), m_worldScale(1.0f)
 {
     for (int i=0; i<32; ++i)
         for (int j=0; j<32; ++j)
@@ -40,6 +40,17 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
+
+    // 读取世界缩放（字符串转浮点）
+    m_worldScale = 1.0f;
+    if (Minecraft::instance) {
+        std::string scaleStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE);
+        if (!scaleStr.empty()) {
+            m_worldScale = (float)atof(scaleStr.c_str());
+            if (m_worldScale <= 0.0f) m_worldScale = 0.001f;
+            LOGI("World scale set to %.4f\n", m_worldScale);
+        }
+    }
 
     // 从 Options 读取精确世界偏移（单位：世界方块）
     if (Minecraft::instance) {
@@ -149,9 +160,10 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
-    float s = 1 / 32.0f;
-    float xf = (float)(xOffs);
-    float zf = (float)(zOffs);
+    float s = (1 / 32.0f) * m_worldScale;
+    // 应用偏移（世界坐标 + 偏移）除以 4
+    float xf = (float)((double)(xOffs + m_worldOffsetX) / 4.0);
+    float zf = (float)((double)(zOffs + m_worldOffsetZ) / 4.0);
     perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, s, s, 1);
     perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, s, 1, s);
     perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, s * 2, s * 2, s * 2);
@@ -216,7 +228,7 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
 }
 
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
-    // 使用新的精确世界偏移（直接基于区块索引和偏移）
+    // 世界偏移直接加到世界坐标上（生成物需要跟随地形）
     int64_t worldBlockX = xt * 16 + m_worldOffsetX;
     int64_t worldBlockZ = zt * 16 + m_worldOffsetZ;
     int xo = (int)worldBlockX;
@@ -233,7 +245,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
-    // 使用区块坐标 xt, zt 而不是 worldBlockX/worldBlockZ 来计算种子，保持随机性一致（旧 offsetX 为 0）
     random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
 
     // 以下所有使用 xo, zo 的地方不变，因为它们已经是 int 范围内的世界坐标
@@ -492,19 +503,18 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
-    // ... 缓存检查 ...
     int64_t hashedPos = (xOffs << 32) | (zOffs & 0xffffffff);
     ChunkMap::iterator it = chunkMap.find(hashedPos);
     if (it != chunkMap.end())
         return it->second;
-	
+
     random.setSeed((long)(xOffs * 341872712l + zOffs * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    // 世界方块坐标 = 区块索引 * 16 + 精确偏移
+    // 世界方块坐标 = 区块索引 * 16 + 精确偏移（世界单位）
     int64_t worldBlockX = xOffs * 16 + m_worldOffsetX;
     int64_t worldBlockZ = zOffs * 16 + m_worldOffsetZ;
 
@@ -513,16 +523,16 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
 
-	caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
-    // ...
 }
+
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
-    float s = 684.412f * farlandsScale;
-    float hs = 684.412f * farlandsScale;
+    float s = 684.412f * farlandsScale * m_worldScale;
+    float hs = 684.412f * farlandsScale * m_worldScale;
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
@@ -532,30 +542,28 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
 
-    // 关键修复：使用区块坐标（x/16, z/16）传递给 scaleNoise 和 depthNoise，
-    // 因为它们的输入只需要区块级别的精度，且能避免 int64_t 转 int 的溢出。
-    // 同时，这些噪声不需要世界偏移（已通过世界坐标传递）。
-    int64_t chunkX = x >> 4;   // 等效于 x / 16
-    int64_t chunkZ = z >> 4;
-    sr = scaleNoise.getRegion(sr, (int)chunkX, (int)chunkZ, xSize, zSize, 1.121f, 1.121f, 0.5f);
-    dr = depthNoise.getRegion(dr, (int)chunkX, (int)chunkZ, xSize, zSize, 200.0f, 200.0f, 0.5f);
+    // 精确偏移：世界坐标（已包含 m_worldOffsetX）除以 4，再加上边境修正（130/4=32.5）
+    const double FARLANDS_CORRECTION_NOISE = 0;   // 130 世界单位 / 4
+    double noiseX = (double)x / 4.0 + FARLANDS_CORRECTION_NOISE;
+    double noiseZ = (double)z / 4.0;
+    double noiseY = (double)y / 8.0;   // 高度方向无偏移，但缩放为 1/8
 
-    // 注意：x 和 z 已经是世界方块坐标，且已经包含了 m_worldOffsetX（在 getChunk 中加入）。
-    // 因此这里只添加边境之地修正（130 格），不再重复添加 m_worldOffsetX。
-    const double FARLANDS_CORRECTION = 0;
-    double worldX = (double)x / 4.0 + FARLANDS_CORRECTION;
-    double worldZ = (double)z / 4.0;
-    float xf = (float)worldX;
-    float zf = (float)worldZ;
-    float yf = (float)y;
+    // scaleNoise 和 depthNoise 使用整数噪声坐标（取整），保证区块边界连续
+    int64_t scaleX = (int64_t)noiseX;
+    int64_t scaleZ = (int64_t)noiseZ;
+    sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f, 1.121f, 0.5f);
+    dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f, 200.0f, 0.5f);
+
+    // 主要地形噪声使用浮点坐标（保留小数）
+    float xf = (float)noiseX;
+    float zf = (float)noiseZ;
+    float yf = (float)noiseY;
 
     pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
     ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
     br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
 
-    // 后续代码保持不变（计算地形高度的循环）
-    // ...
-
+    // 后续地形高度计算保持不变
     int p = 0;
     int pp = 0;
     int wScale = 16 / xSize;
@@ -615,8 +623,11 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
 
 /*private*/
 void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt) {
-    int xo = (int)(xt * 16);
-    int zo = (int)(zt * 16);
+    // 注意：此函数使用世界坐标，应应用偏移
+    int64_t worldX = xt * 16 + m_worldOffsetX;
+    int64_t worldZ = zt * 16 + m_worldOffsetZ;
+    int xo = (int)worldX;
+    int zo = (int)worldZ;
     for (int x = 0; x < 16; x++) {
         int y = level->getSeaLevel();
         for (int z = 0; z < 16; z++) {
@@ -664,45 +675,34 @@ bool RandomLevelSource::hasChunk(int64_t x, int64_t z) {
 }
 
 bool RandomLevelSource::tick() {
-	return false;
+    return false;
 }
 
 bool RandomLevelSource::shouldSave() {
-	return true;
+    return true;
 }
 
 std::string RandomLevelSource::gatherStats() {
-	return "RandomLevelSource";
+    return "RandomLevelSource";
 }
-
-//bool RandomLevelSource::save(bool force, ProgressListener progressListener) {
-//    return true;
-//}
 
 Biome::MobList RandomLevelSource::getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
     BiomeSource* biomeSource = level->getBiomeSource();
     if (biomeSource == NULL) {
         return Biome::MobList();
     }
-//    static Stopwatch sw; sw.start();
     Biome* biome = biomeSource->getBiome(x, z);
-//    sw.stop();
-//    sw.printEvery(10, "getBiome::");
     if (biome == NULL) {
         return Biome::MobList();
     }
     return biome->getMobs(mobCategory);
 }
 
-
 LevelChunk* PerformanceTestChunkSource::create(int64_t x, int64_t z) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     memset(blocks, 0, LevelChunk::ChunkBlockCount);
-
-    // 使用 x, z 时可能需要转换为 int，但这里只是用于区块坐标，范围不大，可以强转
     int xi = (int)x;
     int zi = (int)z;
-    // 原函数体中的代码使用 xi, zi 替代 x, z
     for (int y = 0; y < 65; y++) {
         if (y < 60) {
             for (int xx = (y + 1) & 1; xx < 16; xx += 2) {
@@ -718,7 +718,6 @@ LevelChunk* PerformanceTestChunkSource::create(int64_t x, int64_t z) {
             }
         }
     }
-
     LevelChunk* levelChunk = new LevelChunk(level, blocks, xi, zi);
     levelChunk->recalcHeightmap();
     return levelChunk;
