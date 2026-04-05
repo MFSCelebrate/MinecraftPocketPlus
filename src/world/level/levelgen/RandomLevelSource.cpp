@@ -42,7 +42,6 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     printf("random.get : %d\n", randomCopy.nextInt());
 
     // 读取世界缩放（字符串转浮点）
-    m_worldScale = 1.0f;
     if (Minecraft::instance) {
         std::string scaleStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE);
         if (!scaleStr.empty()) {
