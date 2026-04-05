@@ -239,6 +239,8 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes[5]->addOptionItem(OPTIONS_SEA_LEVEL, minecraft);
 	optionPanes[5]->addOptionItem(OPTIONS_STRIPE_REPAIR, minecraft);
 	optionPanes[5]->addOptionItem(OPTIONS_TELEPORT, minecraft);   // 新增
+	// 在 generateOptionScreens() 的 World Pane 中添加
+    optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
