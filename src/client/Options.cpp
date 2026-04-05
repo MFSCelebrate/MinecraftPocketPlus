@@ -184,6 +184,8 @@ void Options::initTable() {
 	m_options[OPTIONS_STRIPE_REPAIR] = &stripeRepair;
     static OptionString worldScale("world_scale", "1.0");
     m_options[OPTIONS_WORLD_SCALE] = &worldScale;
+	static OptionBool progressive_Farlands("progressive_farlands", false);
+    m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressiveFarlands;
 }
 
 void Options::set(OptionId key, const std::string& value) {
