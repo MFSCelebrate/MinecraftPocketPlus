@@ -185,7 +185,7 @@ void Options::initTable() {
     static OptionString worldScale("world_scale", "1.0");
     m_options[OPTIONS_WORLD_SCALE] = &worldScale;
 	static OptionBool progressive_Farlands("progressive_farlands", false);
-    m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressiveFarlands;
+    m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressive_Farlands;  // 一致
 	static OptionBool sixtyfourFarlands("64bit_farlands", false);
     m_options[OPTIONS_SIXTYFOUR_FARLANDS] = &sixtyfourFarlands;
 }
