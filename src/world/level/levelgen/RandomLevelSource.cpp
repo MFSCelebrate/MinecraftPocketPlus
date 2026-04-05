@@ -492,20 +492,19 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
 }
 
 LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
-    // 使用 pair 作为键避免移位混淆，但为保持与原代码一致，仍用移位
-    // 注意：此处 xOffs, zOffs 是区块索引，直接用于 map 键
+    // ... 缓存检查 ...
     int64_t hashedPos = (xOffs << 32) | (zOffs & 0xffffffff);
     ChunkMap::iterator it = chunkMap.find(hashedPos);
     if (it != chunkMap.end())
         return it->second;
-
+	
     random.setSeed((long)(xOffs * 341872712l + zOffs * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    // 计算世界方块坐标（区块基准 + 精确偏移）
+    // 世界方块坐标 = 区块索引 * 16 + 精确偏移
     int64_t worldBlockX = xOffs * 16 + m_worldOffsetX;
     int64_t worldBlockZ = zOffs * 16 + m_worldOffsetZ;
 
@@ -514,12 +513,12 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
 
-    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+	caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
+    // ...
 }
-
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
     float s = 684.412f * farlandsScale;
@@ -532,13 +531,20 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
 
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
-    sr = scaleNoise.getRegion(sr, (int)x, (int)z, xSize, zSize, 1.121f, 1.121f, 0.5f);
-    dr = depthNoise.getRegion(dr, (int)x, (int)z, xSize, zSize, 200.0f, 200.0f, 0.5f);
 
-    // 精确偏移 + 边境之地修正 130 格（世界单位）
+    // 关键修复：使用区块坐标（x/16, z/16）传递给 scaleNoise 和 depthNoise，
+    // 因为它们的输入只需要区块级别的精度，且能避免 int64_t 转 int 的溢出。
+    // 同时，这些噪声不需要世界偏移（已通过世界坐标传递）。
+    int64_t chunkX = x >> 4;   // 等效于 x / 16
+    int64_t chunkZ = z >> 4;
+    sr = scaleNoise.getRegion(sr, (int)chunkX, (int)chunkZ, xSize, zSize, 1.121f, 1.121f, 0.5f);
+    dr = depthNoise.getRegion(dr, (int)chunkX, (int)chunkZ, xSize, zSize, 200.0f, 200.0f, 0.5f);
+
+    // 注意：x 和 z 已经是世界方块坐标，且已经包含了 m_worldOffsetX（在 getChunk 中加入）。
+    // 因此这里只添加边境之地修正（130 格），不再重复添加 m_worldOffsetX。
     const double FARLANDS_CORRECTION = 0;
-    double worldX = (double)x + (double)m_worldOffsetX + FARLANDS_CORRECTION;
-    double worldZ = (double)z + (double)m_worldOffsetZ;
+    double worldX = (double)x + FARLANDS_CORRECTION;
+    double worldZ = (double)z;
     float xf = (float)worldX;
     float zf = (float)worldZ;
     float yf = (float)y;
@@ -546,6 +552,9 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
     ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
     br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
+
+    // 后续代码保持不变（计算地形高度的循环）
+    // ...
 
     int p = 0;
     int pp = 0;
