@@ -543,8 +543,8 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     // 注意：x 和 z 已经是世界方块坐标，且已经包含了 m_worldOffsetX（在 getChunk 中加入）。
     // 因此这里只添加边境之地修正（130 格），不再重复添加 m_worldOffsetX。
     const double FARLANDS_CORRECTION = 0;
-    double worldX = (double)x + FARLANDS_CORRECTION;
-    double worldZ = (double)z;
+    double worldX = (double)x / 4.0 + FARLANDS_CORRECTION;
+    double worldZ = (double)z / 4.0;
     float xf = (float)worldX;
     float zf = (float)worldZ;
     float yf = (float)y;
