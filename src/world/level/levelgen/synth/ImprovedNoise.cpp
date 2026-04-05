@@ -88,7 +88,7 @@ float ImprovedNoise::noise( float _x, float _y, float _z )
 const float ImprovedNoise::lerp( float t, float a, float b )
 {
     // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
-    if (Minecraft::instance && Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE)) {
+    if (Minecraft::instance && Minecraft::instance->options.getBooleanValue(OPTIONS_PROGRESSIVE_FARLANDS)) {
         return a;
     }
     return a + t * (b - a);
