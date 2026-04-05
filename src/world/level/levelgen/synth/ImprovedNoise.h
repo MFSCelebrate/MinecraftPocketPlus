@@ -31,8 +31,7 @@ public:
 
 	float scale;
 	float xo, yo, zo;
-private:
-	int p[512];
+    int p[512];
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL_LEVELGEN_SYNTH__ImprovedNoise_H__*/
