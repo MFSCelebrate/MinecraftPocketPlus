@@ -794,8 +794,8 @@ void Gui::renderDebugInfo() {
 
     // 获取 Postponed Fringe Lands 选项状态
     bool fringeEnabled = false;
-    if (minecraft->options.getOpt(OPTIONS_POSTPONED_FRINGE)) {
-        fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    if (minecraft->options.getOpt(OPTIONS_SIXTYFOUR_FARLANDS)) {
+        fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
     }
 
     // 获取调试屏幕缩放因子
