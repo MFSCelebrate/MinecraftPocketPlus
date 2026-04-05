@@ -186,6 +186,8 @@ void Options::initTable() {
     m_options[OPTIONS_WORLD_SCALE] = &worldScale;
 	static OptionBool progressive_Farlands("progressive_farlands", false);
     m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressiveFarlands;
+	static OptionBool sixtyfourFarlands("64bit_farlands", false);
+    m_options[OPTIONS_SIXTYFOUR_FARLANDS] = &sixtyfourFarlands;
 }
 
 void Options::set(OptionId key, const std::string& value) {
