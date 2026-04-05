@@ -96,6 +96,7 @@ enum OptionId {
     OPTIONS_TELEPORT,           // 新增
     OPTIONS_STRIPE_REPAIR,   // 新增
     OPTIONS_WORLD_SCALE,
+    OPTIONS_PROGRESSIVE_FARLANDS,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
