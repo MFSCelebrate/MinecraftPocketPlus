@@ -10,6 +10,7 @@ options.stripe_repair=Stripe Repair [Experimental Feature]
 options.teleport=Teleport To Position
 options.world_scale=World Scale
 options.progressive_farlands=Progressive Farlands
+options.sixtyfour_farlands=64Bit Farlands [Simulation]
 
 language.name=English
 language.region=US
