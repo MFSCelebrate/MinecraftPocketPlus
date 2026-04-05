@@ -91,6 +91,8 @@ private:
 
     // 新的精确偏移（单位：世界方块），废弃了旧的 offsetX/offsetZ
     int64_t m_worldOffsetX, m_worldOffsetZ;
+    // 在 RandomLevelSource.h 的 private 区域添加
+    float m_worldScale;
 };
 
 class PerformanceTestChunkSource : public ChunkSource
