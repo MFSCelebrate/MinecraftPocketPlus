@@ -182,7 +182,8 @@ void Options::initTable() {
     m_options[OPTIONS_DEBUG_SCREEN_SIZE] = &debugScreenSize;
 	m_options[OPTIONS_TELEPORT] = &teleport;
 	m_options[OPTIONS_STRIPE_REPAIR] = &stripeRepair;
-	m_options[OPTIONS_WORLD_SCALE] = &worldScale;
+    static OptionString worldScale("world_scale", "1.0");
+    m_options[OPTIONS_WORLD_SCALE] = &worldScale;
 }
 
 void Options::set(OptionId key, const std::string& value) {
