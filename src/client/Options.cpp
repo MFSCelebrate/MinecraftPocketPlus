@@ -80,6 +80,7 @@ OptionInt keyFog("key.fog", Keyboard::KEY_F);
 OptionInt keyUse("key.use", Keyboard::KEY_U);
 OptionString worldOffsetX("world_offset_x", "0");
 OptionString worldOffsetZ("world_offset_z", "0");
+OptionString worldScale("world_scale", "1.0");
 
 // TODO: make human readable keycodes here
 OptionInt keyMenuNext("key.menu.next", 40);
@@ -181,6 +182,7 @@ void Options::initTable() {
     m_options[OPTIONS_DEBUG_SCREEN_SIZE] = &debugScreenSize;
 	m_options[OPTIONS_TELEPORT] = &teleport;
 	m_options[OPTIONS_STRIPE_REPAIR] = &stripeRepair;
+	m_options[OPTIONS_WORLD_SCALE] = &worldScale;
 }
 
 void Options::set(OptionId key, const std::string& value) {
