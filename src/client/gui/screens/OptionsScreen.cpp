@@ -232,7 +232,7 @@ void OptionsScreen::generateOptionScreens() {
         .addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
 
     // World Pane
-    optionPanes[5]->addOptionItem(OPTIONS_FARLANDS_SCALE, minecraft)
+    optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE, minecraft)
         .addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
         .addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
         .addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
@@ -240,7 +240,6 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes[5]->addOptionItem(OPTIONS_STRIPE_REPAIR, minecraft);
 	optionPanes[5]->addOptionItem(OPTIONS_TELEPORT, minecraft);   // 新增
 	// 在 generateOptionScreens() 的 World Pane 中添加
-    optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE, minecraft);
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
