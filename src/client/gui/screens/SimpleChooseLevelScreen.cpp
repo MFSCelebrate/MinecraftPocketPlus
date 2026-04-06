@@ -173,8 +173,8 @@ void SimpleChooseLevelScreen::render( int xm, int ym, float a )
         case 2: noiseDesc = "Double (extreme range)"; break;
     }
     if (noiseDesc) {
-        drawCenteredString(minecraft->font, noiseDesc, width / 2, bNoiseMode->y + bNoiseMode->height + 4, 0xffcccccc);
-    }
+       drawCenteredString(minecraft->font, noiseDesc, width / 2, bNoiseMode->y + bNoiseMode->height + 20, 0xffcccccc);
+	}
 
     drawString(minecraft->font, "World name:", tLevelName.x, tLevelName.y - Font::DefaultLineHeight - 2, 0xffcccccc);
     drawString(minecraft->font, "World seed:", tSeed.x, tSeed.y - Font::DefaultLineHeight - 2, 0xffcccccc);
