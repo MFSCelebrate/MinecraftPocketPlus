@@ -188,6 +188,8 @@ void Options::initTable() {
     m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressive_Farlands;  // 一致
 	static OptionBool sixtyfourFarlands("64bit_farlands", false);
     m_options[OPTIONS_SIXTYFOUR_FARLANDS] = &sixtyfourFarlands;
+	static OptionBool doubleFarlands("double_farlands", false);
+    m_options[OPTIONS_DOUBLE_FARLANDS] = &doubleFarlands;
 }
 
 void Options::set(OptionId key, const std::string& value) {
