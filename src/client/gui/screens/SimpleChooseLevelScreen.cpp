@@ -8,17 +8,20 @@
 #include "../../../platform/time.h"
 #include "../../../platform/input/Keyboard.h"
 #include "../../../platform/log.h"
+#include "../../../client/Options.h"   // 新增，用于访问选项常量
 
 SimpleChooseLevelScreen::SimpleChooseLevelScreen(const std::string& levelName)
 :   bHeader(0),
     bGamemode(0),
     bCheats(0),
+    bNoiseMode(0),
     bBack(0),
     bCreate(0),
     levelName(levelName),
     hasChosen(false),
     gamemode(GameType::Survival),
     cheatsEnabled(false),
+    noiseMode(0),                     // 默认 32-bit
     tLevelName(0, "World name"),
     tSeed(1, "World seed")
 {
@@ -29,24 +32,21 @@ SimpleChooseLevelScreen::~SimpleChooseLevelScreen()
     if (bHeader) delete bHeader;
     delete bGamemode;
     delete bCheats;
+    delete bNoiseMode;
     delete bBack;
     delete bCreate;
 }
 
 void SimpleChooseLevelScreen::init()
 {
-    // make sure the base class loads the existing level list; the
-    // derived screen uses ChooseLevelScreen::getUniqueLevelName(), which
-    // depends on `levels` being populated.  omitting this used to result
-    // in duplicate IDs ("creating the second world would load the
-    // first") when the name already existed.
+    // make sure the base class loads the existing level list
     ChooseLevelScreen::init();
 
     tLevelName.text = "New world";
 
     // header + close button
     bHeader = new Touch::THeader(0, "Create World");
-    // create the back/X button as ImageButton like CreditsScreen
+    // create the back/X button as ImageButton
     bBack = new ImageButton(2, "");
     {
         ImageDef def;
@@ -59,10 +59,12 @@ void SimpleChooseLevelScreen::init()
     if (/* minecraft->useTouchscreen() */ true) {
         bGamemode = new Touch::TButton(1, "Survival mode");
         bCheats  = new Touch::TButton(4, "Cheats: Off");
+        bNoiseMode = new Touch::TButton(5, "Noise mode: 32-bit");   // 新增
         bCreate  = new Touch::TButton(3, "Create");
     } else {
         bGamemode = new Button(1, "Survival mode");
         bCheats  = new Button(4, "Cheats: Off");
+        bNoiseMode = new Button(5, "Noise mode: 32-bit");           // 新增
         bCreate  = new Button(3, "Create");
     }
 
@@ -70,10 +72,12 @@ void SimpleChooseLevelScreen::init()
     buttons.push_back(bBack);
     buttons.push_back(bGamemode);
     buttons.push_back(bCheats);
+    buttons.push_back(bNoiseMode);
     buttons.push_back(bCreate);
 
     tabButtons.push_back(bGamemode);
     tabButtons.push_back(bCheats);
+    tabButtons.push_back(bNoiseMode);
     tabButtons.push_back(bBack);
     tabButtons.push_back(bCreate);
 
@@ -110,13 +114,15 @@ void SimpleChooseLevelScreen::setupPositions()
 
     const int buttonWidth = 120;
     const int buttonSpacing = 10;
-    const int totalButtonWidth = buttonWidth * 2 + buttonSpacing;
+    const int totalButtonWidth = buttonWidth * 3 + buttonSpacing * 2;   // 三个按钮
 
     bGamemode->width = buttonWidth;
     bCheats->width = buttonWidth;
+    bNoiseMode->width = buttonWidth;
 
     bGamemode->x = centerX - totalButtonWidth / 2;
     bCheats->x = bGamemode->x + buttonWidth + buttonSpacing;
+    bNoiseMode->x = bCheats->x + buttonWidth + buttonSpacing;
 
     // compute vertical centre for buttons in remaining space
     {
@@ -128,6 +134,7 @@ void SimpleChooseLevelScreen::setupPositions()
         int y = availTop + (availHeight - bGamemode->height) / 2;
         bGamemode->y = y;
         bCheats->y = y;
+        bNoiseMode->y = y;
     }
 
     bCreate->width = 100;
@@ -156,6 +163,17 @@ void SimpleChooseLevelScreen::render( int xm, int ym, float a )
     }
     if (modeDesc) {
         drawCenteredString(minecraft->font, modeDesc, width / 2, bGamemode->y + bGamemode->height + 4, 0xffcccccc);
+    }
+
+    // 噪声模式描述
+    const char* noiseDesc = NULL;
+    switch (noiseMode) {
+        case 0: noiseDesc = "32-bit int (Far Lands)"; break;
+        case 1: noiseDesc = "64-bit int (No Far Lands)"; break;
+        case 2: noiseDesc = "Double (extreme range)"; break;
+    }
+    if (noiseDesc) {
+        drawCenteredString(minecraft->font, noiseDesc, width / 2, bNoiseMode->y + bNoiseMode->height + 4, 0xffcccccc);
     }
 
     drawString(minecraft->font, "World name:", tLevelName.x, tLevelName.y - Font::DefaultLineHeight - 2, 0xffcccccc);
@@ -218,6 +236,16 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
         return;
     }
 
+    if (button == bNoiseMode) {
+        noiseMode = (noiseMode + 1) % 3;
+        switch (noiseMode) {
+            case 0: bNoiseMode->msg = "Noise mode: 32-bit"; break;
+            case 1: bNoiseMode->msg = "Noise mode: 64-bit"; break;
+            case 2: bNoiseMode->msg = "Noise mode: Double"; break;
+        }
+        return;
+    }
+
     if (button == bCreate && !tLevelName.text.empty()) {
         int seed = getEpochTimeS();
         if (!tSeed.text.empty()) {
@@ -231,6 +259,12 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
         }
         std::string levelId = getUniqueLevelName(tLevelName.text);
         LevelSettings settings(seed, gamemode, cheatsEnabled);
+
+        // 根据选择的噪声模式设置全局选项
+        Options& opts = minecraft->options;
+        opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
+        opts.set(OPTIONS_DOUBLE_FARLANDS, (noiseMode == 2));
+
         minecraft->selectLevel(levelId, levelId, settings);
         minecraft->hostMultiplayer();
         minecraft->setScreen(new ProgressScreen());
