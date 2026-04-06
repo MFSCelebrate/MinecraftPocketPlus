@@ -702,37 +702,38 @@ HitResult Level::clip(const Vec3& A, const Vec3& b, bool liquid /*= false*/, boo
     SwStartStopper w(sw);
 
     if (A.x != A.x || A.y != A.y || A.z != A.z) return HitResult();
-	if (b.x != b.x || b.y != b.y || b.z != b.z) return HitResult();
+    if (b.x != b.x || b.y != b.y || b.z != b.z) return HitResult();
 
-	Vec3 a(A);
+    Vec3 a(A);
 
-    int xTile1 = Mth::floor(b.x);
-    int yTile1 = Mth::floor(b.y);
-    int zTile1 = Mth::floor(b.z);
+    // 🔧 使用 int64_t 存储方块坐标，避免溢出
+    int64_t xTile1 = Mth::floor64(b.x);
+    int64_t yTile1 = Mth::floor64(b.y);
+    int64_t zTile1 = Mth::floor64(b.z);
 
-    int xTile0 = Mth::floor(a.x);
-    int yTile0 = Mth::floor(a.y);
-    int zTile0 = Mth::floor(a.z);
+    int64_t xTile0 = Mth::floor64(a.x);
+    int64_t yTile0 = Mth::floor64(a.y);
+    int64_t zTile0 = Mth::floor64(a.z);
 
     int maxIterations = 200;
     while (maxIterations-- >= 0) {
-		if (a.x != a.x || a.y != a.y || a.z != a.z)
-			return HitResult();
+        if (a.x != a.x || a.y != a.y || a.z != a.z)
+            return HitResult();
         if (xTile0 == xTile1 && yTile0 == yTile1 && zTile0 == zTile1)
-			return HitResult();
+            return HitResult();
 
         float xClip = 999;
         float yClip = 999;
         float zClip = 999;
 
-        if (xTile1 > xTile0) xClip = xTile0 + 1.000f;
-        if (xTile1 < xTile0) xClip = xTile0 + 0.000f;
+        if (xTile1 > xTile0) xClip = (float)(xTile0 + 1.0f);
+        if (xTile1 < xTile0) xClip = (float)(xTile0 + 0.0f);
 
-        if (yTile1 > yTile0) yClip = yTile0 + 1.000f;
-        if (yTile1 < yTile0) yClip = yTile0 + 0.000f;
+        if (yTile1 > yTile0) yClip = (float)(yTile0 + 1.0f);
+        if (yTile1 < yTile0) yClip = (float)(yTile0 + 0.0f);
 
-        if (zTile1 > zTile0) zClip = zTile0 + 1.000f;
-        if (zTile1 < zTile0) zClip = zTile0 + 0.000f;
+        if (zTile1 > zTile0) zClip = (float)(zTile0 + 1.0f);
+        if (zTile1 < zTile0) zClip = (float)(zTile0 + 0.0f);
 
         float xDist = 999;
         float yDist = 999;
@@ -742,9 +743,9 @@ HitResult Level::clip(const Vec3& A, const Vec3& b, bool liquid /*= false*/, boo
         float yd = b.y - a.y;
         float zd = b.z - a.z;
 
-        if (xClip != 999) xDist = (xClip - a.x) / xd;
-        if (yClip != 999) yDist = (yClip - a.y) / yd;
-        if (zClip != 999) zDist = (zClip - a.z) / zd;
+        if (xClip != 999) xDist = (xClip - (float)a.x) / xd;
+        if (yClip != 999) yDist = (yClip - (float)a.y) / yd;
+        if (zClip != 999) zDist = (zClip - (float)a.z) / zd;
 
         int face = 0;
         if (xDist < yDist && xDist < zDist) {
@@ -771,33 +772,32 @@ HitResult Level::clip(const Vec3& A, const Vec3& b, bool liquid /*= false*/, boo
         }
 
         Vec3 tPos(a.x, a.y, a.z);
-        xTile0 = (int) (tPos.x = (float)Mth::floor(a.x));
+        xTile0 = Mth::floor64(a.x);
         if (face == 5) {
             xTile0--;
             tPos.x++;
         }
-        yTile0 = (int) (tPos.y = (float)Mth::floor(a.y));
+        yTile0 = Mth::floor64(a.y);
         if (face == 1) {
             yTile0--;
             tPos.y++;
         }
-        zTile0 = (int) (tPos.z = (float)Mth::floor(a.z));
+        zTile0 = Mth::floor64(a.z);
         if (face == 3) {
             zTile0--;
             tPos.z++;
         }
 
-        int t = getTile(xTile0, yTile0, zTile0);
-        int data = getData(xTile0, yTile0, zTile0);
+        int t = getTile(xTile0, (int)yTile0, zTile0);
+        int data = getData(xTile0, (int)yTile0, zTile0);
         Tile* tile = Tile::tiles[t];
 
-		if (solidOnly && tile != NULL && tile->getAABB(this, xTile0, yTile0, zTile0) == NULL) {
-			// No collision
-		} else if (t > 0 && tile->mayPick(data, liquid)) {
-			if(xTile0 >= 0 && zTile0 >= 0 && xTile0 < LEVEL_WIDTH && zTile0 < LEVEL_WIDTH) {
-				HitResult r = tile->clip(this, xTile0, yTile0, zTile0, a, b);
-				if (r.isHit()) return r;
-			}
+        if (solidOnly && tile != NULL && tile->getAABB(this, (int)xTile0, (int)yTile0, (int)zTile0) == NULL) {
+            // No collision
+        } else if (t > 0 && tile->mayPick(data, liquid)) {
+            // 🔧 移除原版的 LEVEL_WIDTH 边界检查（世界是无限的）
+            HitResult r = tile->clip(this, (int)xTile0, (int)yTile0, (int)zTile0, a, b);
+            if (r.isHit()) return r;
         }
     }
     return HitResult();
