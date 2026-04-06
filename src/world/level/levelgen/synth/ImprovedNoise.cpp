@@ -2,6 +2,7 @@
 #include "../../../../util/Random.h"
 #include "../../../../client/Minecraft.h"
 #include <cstdint>
+#include <cmath>
 
 ImprovedNoise::ImprovedNoise()
 {
@@ -354,14 +355,135 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
     }
 }
 
-// 原 add 函数：根据选项调用 32 位或 64 位版本
+// 使用 double 坐标的 add 函数（避免整数溢出，利用 double 的大范围）
+static void add_double(ImprovedNoise* self, float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
+{
+    bool doClamp = false;
+    if (Minecraft::instance) {
+        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+
+    if (ySize == 1) {
+        int A = 0, AA = 0, B = 0, BA = 0;
+        float vv0 = 0, vv2 = 0;
+        int pp = 0;
+        float scale = 1.0f / pow;
+        for (int xx = 0; xx < xSize; xx++) {
+            double x = (_x + xx) * xs + self->xo;
+            double xf = floor(x);
+            if (x < xf) xf -= 1.0;
+            int X = ((int64_t)xf) & 255;
+            double x_frac = x - xf;
+            if (doClamp) {
+                if (x_frac < 0.0) x_frac = 0.0;
+                if (x_frac > 1.0) x_frac = 1.0;
+            }
+            float u = (float)(x_frac * x_frac * x_frac * (x_frac * (x_frac * 6 - 15) + 10));
+
+            for (int zz = 0; zz < zSize; zz++) {
+                double z = (_z + zz) * zs + self->zo;
+                double zf = floor(z);
+                if (z < zf) zf -= 1.0;
+                int Z = ((int64_t)zf) & 255;
+                double z_frac = z - zf;
+                if (doClamp) {
+                    if (z_frac < 0.0) z_frac = 0.0;
+                    if (z_frac > 1.0) z_frac = 1.0;
+                }
+                float w = (float)(z_frac * z_frac * z_frac * (z_frac * (z_frac * 6 - 15) + 10));
+
+                A = self->p[X] + 0;
+                AA = self->p[A] + Z;
+                B = self->p[X + 1] + 0;
+                BA = self->p[B] + Z;
+                vv0 = self->lerp(u, self->grad2(self->p[AA], (float)x_frac, (float)z_frac), self->grad(self->p[BA], (float)(x_frac - 1), 0, (float)z_frac));
+                vv2 = self->lerp(u, self->grad(self->p[AA + 1], (float)x_frac, 0, (float)(z_frac - 1)), self->grad(self->p[BA + 1], (float)(x_frac - 1), 0, (float)(z_frac - 1)));
+
+                float val = self->lerp(w, vv0, vv2);
+                buffer[pp++] += val * scale;
+            }
+        }
+        return;
+    }
+
+    int pp = 0;
+    float scale = 1 / pow;
+    int yOld = -1;
+    int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
+    float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
+
+    for (int xx = 0; xx < xSize; xx++) {
+        double x = (_x + xx) * xs + self->xo;
+        double xf = floor(x);
+        if (x < xf) xf -= 1.0;
+        int X = ((int64_t)xf) & 255;
+        double x_frac = x - xf;
+        if (doClamp) {
+            if (x_frac < 0.0) x_frac = 0.0;
+            if (x_frac > 1.0) x_frac = 1.0;
+        }
+        float u = (float)(x_frac * x_frac * x_frac * (x_frac * (x_frac * 6 - 15) + 10));
+
+        for (int zz = 0; zz < zSize; zz++) {
+            double z = (_z + zz) * zs + self->zo;
+            double zf = floor(z);
+            if (z < zf) zf -= 1.0;
+            int Z = ((int64_t)zf) & 255;
+            double z_frac = z - zf;
+            if (doClamp) {
+                if (z_frac < 0.0) z_frac = 0.0;
+                if (z_frac > 1.0) z_frac = 1.0;
+            }
+            float w = (float)(z_frac * z_frac * z_frac * (z_frac * (z_frac * 6 - 15) + 10));
+
+            for (int yy = 0; yy < ySize; yy++) {
+                double y = (_y + yy) * ys + self->yo;
+                double yf = floor(y);
+                if (y < yf) yf -= 1.0;
+                int Y = ((int64_t)yf) & 255;
+                double y_frac = y - yf;
+                if (doClamp) {
+                    if (y_frac < 0.0) y_frac = 0.0;
+                    if (y_frac > 1.0) y_frac = 1.0;
+                }
+                float v = (float)(y_frac * y_frac * y_frac * (y_frac * (y_frac * 6 - 15) + 10));
+
+                if (yy == 0 || Y != yOld) {
+                    yOld = Y;
+                    A = self->p[X] + Y;
+                    AA = self->p[A] + Z;
+                    AB = self->p[A + 1] + Z;
+                    B = self->p[X + 1] + Y;
+                    BA = self->p[B] + Z;
+                    BB = self->p[B + 1] + Z;
+                    vv0 = self->lerp(u, self->grad(self->p[AA], (float)x_frac, (float)y_frac, (float)z_frac), self->grad(self->p[BA], (float)(x_frac - 1), (float)y_frac, (float)z_frac));
+                    vv1 = self->lerp(u, self->grad(self->p[AB], (float)x_frac, (float)(y_frac - 1), (float)z_frac), self->grad(self->p[BB], (float)(x_frac - 1), (float)(y_frac - 1), (float)z_frac));
+                    vv2 = self->lerp(u, self->grad(self->p[AA + 1], (float)x_frac, (float)y_frac, (float)(z_frac - 1)), self->grad(self->p[BA + 1], (float)(x_frac - 1), (float)y_frac, (float)(z_frac - 1)));
+                    vv3 = self->lerp(u, self->grad(self->p[AB + 1], (float)x_frac, (float)(y_frac - 1), (float)(z_frac - 1)), self->grad(self->p[BB + 1], (float)(x_frac - 1), (float)(y_frac - 1), (float)(z_frac - 1)));
+                }
+
+                float v0 = self->lerp(v, vv0, vv1);
+                float v1 = self->lerp(v, vv2, vv3);
+                float val = self->lerp(w, v0, v1);
+
+                buffer[pp++] += val * scale;
+            }
+        }
+    }
+}
+
+// 原 add 函数：根据选项调用 32 位、64 位或 double 版本
 void ImprovedNoise::add( float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow )
 {
     bool use64Bit = false;
+    bool useDouble = false;
     if (Minecraft::instance) {
         use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
+        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS); // 需要添加此选项
     }
-    if (use64Bit) {
+    if (useDouble) {
+        add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    } else if (use64Bit) {
         add_int64(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
     } else {
         add_int(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
