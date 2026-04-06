@@ -29,6 +29,7 @@ private:
 	Touch::THeader* bHeader;
 	Button* bGamemode;
 	Button* bCheats;
+	Button* bNoiseMode;          // 新增：噪声模式切换按钮
 	ImageButton* bBack;
 	Button* bCreate;
 	bool hasChosen;
@@ -36,6 +37,7 @@ private:
 	std::string levelName;
 	int gamemode;
 	bool cheatsEnabled;
+	int noiseMode;               // 0 = 32-bit, 1 = 64-bit, 2 = Double
 
 	TextBox tLevelName;
 	TextBox tSeed;
