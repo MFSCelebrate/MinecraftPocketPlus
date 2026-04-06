@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+// 在 Mth.h 中添加
 
 namespace Mth {
     constexpr float PI = 3.1415926535897932384626433832795028841971f;
@@ -29,6 +30,7 @@ namespace Mth {
         if (v > high) return high;
         return v;
     }
+
     inline double lerp(double src, double dst, double alpha) {
         return src + (dst - src) * alpha;
     }
