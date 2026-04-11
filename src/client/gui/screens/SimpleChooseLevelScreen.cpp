@@ -8,7 +8,7 @@
 #include "../../../platform/time.h"
 #include "../../../platform/input/Keyboard.h"
 #include "../../../platform/log.h"
-#include "../../../client/Options.h"   // 新增，用于访问选项常量
+#include "../../../client/Options.h"
 
 SimpleChooseLevelScreen::SimpleChooseLevelScreen(const std::string& levelName)
 :   bHeader(0),
@@ -21,7 +21,7 @@ SimpleChooseLevelScreen::SimpleChooseLevelScreen(const std::string& levelName)
     hasChosen(false),
     gamemode(GameType::Survival),
     cheatsEnabled(false),
-    noiseMode(0),                     // 默认 32-bit
+    noiseMode(-1),                     // 初始化为 -1，表示未读取
     tLevelName(0, "World name"),
     tSeed(1, "World seed")
 {
@@ -275,7 +275,7 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
         std::string levelId = getUniqueLevelName(tLevelName.text);
         LevelSettings settings(seed, gamemode, cheatsEnabled);
 
-        // 根据选择的噪声模式设置全局选项
+        // 根据选择的噪声模式设置全局选项（使用 bool 版本）
         Options& opts = minecraft->options;
         opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
         opts.set(OPTIONS_DOUBLE_FARLANDS, (noiseMode == 2));
