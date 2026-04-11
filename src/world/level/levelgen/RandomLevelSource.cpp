@@ -41,15 +41,24 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
 
-    // 读取世界缩放（字符串转浮点）
-    if (Minecraft::instance) {
-        std::string scaleStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE);
-        if (!scaleStr.empty()) {
-            m_worldScale = (float)atof(scaleStr.c_str());
-            if (m_worldScale <= 0.0f) m_worldScale = 0.001f;
-            LOGI("World scale set to %.4f\n", m_worldScale);
-        }
+    // 读取世界缩放 X 和 Z（字符串转浮点）
+if (Minecraft::instance) {
+    std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
+    std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+    if (!scaleXStr.empty()) {
+        m_worldScaleX = (float)atof(scaleXStr.c_str());
+        if (m_worldScaleX <= 0.0f) m_worldScaleX = 0.001f;
+    } else {
+        m_worldScaleX = 1.0f;
     }
+    if (!scaleZStr.empty()) {
+        m_worldScaleZ = (float)atof(scaleZStr.c_str());
+        if (m_worldScaleZ <= 0.0f) m_worldScaleZ = 0.001f;
+    } else {
+        m_worldScaleZ = 1.0f;
+    }
+    LOGI("World scale X=%.4f, Z=%.4f\n", m_worldScaleX, m_worldScaleZ);
+}
 
     // 从 Options 读取精确世界偏移（单位：世界方块）
     if (Minecraft::instance) {
@@ -159,14 +168,16 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
-    float s = (1 / 32.0f) * m_worldScale;
-    // 应用偏移（世界坐标 + 偏移）除以 4
+    float sx = (1.0f / 32.0f) * m_worldScaleX;
+    float sz = (1.0f / 32.0f) * m_worldScaleZ;
+
     float xf = (float)((double)(xOffs + m_worldOffsetX) / 4.0);
     float zf = (float)((double)(zOffs + m_worldOffsetZ) / 4.0);
-    perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, s, s, 1);
-    perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, s, 1, s);
-    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, s * 2, s * 2, s * 2);
+    perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, sx, sz, 1.0f);
+    perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, sx, 1.0f, sz);
+    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f); // 第三维通常也是Z
 
+    // ... 后续循环不变 ...
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
             float temp = 1;
@@ -530,8 +541,11 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
-    float s = 684.412f * farlandsScale * m_worldScale;
-    float hs = 684.412f * farlandsScale * m_worldScale;
+
+    // 🆕 分离 X、Y、Z 轴缩放因子
+    float sx = 684.412f * farlandsScale * m_worldScaleX;
+    float sz = 684.412f * farlandsScale * m_worldScaleZ;
+    float sy = 684.412f * farlandsScale;   // Y 轴暂不缩放，可自行扩展
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
@@ -541,26 +555,25 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
 
-    // 精确偏移：世界坐标（已包含 m_worldOffsetX）除以 4，再加上边境修正（130/4=32.5）
-    const double FARLANDS_CORRECTION_NOISE = 0;   // 130 世界单位 / 4
+    const double FARLANDS_CORRECTION_NOISE = 0;
     double noiseX = (double)x / 4.0 + FARLANDS_CORRECTION_NOISE;
     double noiseZ = (double)z / 4.0;
-    double noiseY = (double)y / 8.0;   // 高度方向无偏移，但缩放为 1/8
+    double noiseY = (double)y / 8.0;
 
-    // scaleNoise 和 depthNoise 使用整数噪声坐标（取整），保证区块边界连续
     int64_t scaleX = (int64_t)noiseX;
     int64_t scaleZ = (int64_t)noiseZ;
-    sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f, 1.121f, 0.5f);
-    dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f, 200.0f, 0.5f);
+    // scaleNoise 和 depthNoise 也应用独立缩放
+    sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f * m_worldScaleX, 1.121f * m_worldScaleZ, 0.5f);
+    dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f * m_worldScaleX, 200.0f * m_worldScaleZ, 0.5f);
 
-    // 主要地形噪声使用浮点坐标（保留小数）
     float xf = (float)noiseX;
     float zf = (float)noiseZ;
     float yf = (float)noiseY;
 
-    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, s / 80.0f, hs / 160.0f, s / 80.0f);
-    ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
-    br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, s, hs, s);
+    // 🆕 主要地形噪声调用，传入 sx, sy, sz
+    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0f, sy / 160.0f, sz / 80.0f);
+    ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
+    br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
 
     // 后续地形高度计算保持不变
     int p = 0;
