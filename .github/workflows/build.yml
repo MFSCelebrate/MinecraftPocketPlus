@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  # ================= 源码归档（条件执行优化） =================
+  # ================= 源码归档 =================
   archive-source:
     name: Archive Source Code (Old & New)
     runs-on: ubuntu-latest
@@ -116,10 +116,10 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  # ================= Android 构建 =================
+  # ================= Android 构建（固定 Ubuntu 22.04） =================
   build-android:
     name: Build Android (${{ matrix.abi }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04   # 👈 锁死版本，避免库漂移
     strategy:
       fail-fast: false
       matrix:
@@ -173,7 +173,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v3
+          key: system-deps-${{ runner.os }}-v4
 
       - name: Install system prerequisites
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -181,8 +181,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends wget unzip curl git python3
 
-          # 下载 Ubuntu 22.04 (jammy) 的旧版库包
-          cd ~/Downloads
+          # 下载适用于 Ubuntu 22.04 (jammy) 的旧版库包到 /tmp
+          cd /tmp
           wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
           wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb
           wget http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libncurses-dev_6.3-2ubuntu0.1_amd64.deb
