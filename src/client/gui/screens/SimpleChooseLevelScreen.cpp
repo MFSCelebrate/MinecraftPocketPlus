@@ -183,9 +183,9 @@ void SimpleChooseLevelScreen::render( int xm, int ym, float a )
     // 噪声模式描述
     const char* noiseDesc = NULL;
     switch (noiseMode) {
-        case 0: noiseDesc = "32-bit int (Far Lands)"; break;
-        case 1: noiseDesc = "64-bit int (No Far Lands)"; break;
-        case 2: noiseDesc = "Double (extreme range)"; break;
+        case 0: noiseDesc = "32-bit int (Default)"; break;
+        case 1: noiseDesc = "64-bit int (64-bit Generation)"; break;
+        case 2: noiseDesc = "Double (Imitate Java Edition)"; break;
     }
     if (noiseDesc) {
        drawCenteredString(minecraft->font, noiseDesc, width / 2, bNoiseMode->y + bNoiseMode->height + 20, 0xffcccccc);
