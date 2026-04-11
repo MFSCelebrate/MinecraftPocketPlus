@@ -223,6 +223,14 @@ void Options::set(OptionId key, int value) {
 	}
 }
 
+void Options::set(OptionId key, bool value) {
+    auto option = opt<OptionBool>(key);
+    if (option) {
+        option->set(value);
+        notifyOptionUpdate(key, value);
+    }
+}
+
 void Options::toggle(OptionId key) {
 	auto option = opt<OptionBool>(key);
 
