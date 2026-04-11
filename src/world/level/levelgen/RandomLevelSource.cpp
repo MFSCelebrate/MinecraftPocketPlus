@@ -30,7 +30,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     forestNoise(&random, 8),
     spawnMobs(spawnMobs),
     pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-    m_worldOffsetX(0), m_worldOffsetZ(0), m_worldScaleX(1.0f), m_worldScaleZ(1.0f)
+    m_worldOffsetX(0.0), m_worldOffsetZ(0.0), m_worldScaleX(1.0f), m_worldScaleZ(1.0f)
 {
     for (int i=0; i<32; ++i)
         for (int j=0; j<32; ++j)
@@ -62,16 +62,16 @@ if (Minecraft::instance) {
 
     // 从 Options 读取精确世界偏移（单位：世界方块）
     if (Minecraft::instance) {
-        std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
-        std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-        if (!xStr.empty()) {
-            m_worldOffsetX = atoll(xStr.c_str());
-        }
-        if (!zStr.empty()) {
-            m_worldOffsetZ = atoll(zStr.c_str());
-        }
-        LOGI("RandomLevelSource: world offset = (%lld, %lld)\n", (long long)m_worldOffsetX, (long long)m_worldOffsetZ);
+    std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+    std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+    if (!xStr.empty()) {
+        m_worldOffsetX = atof(xStr.c_str());   // 🆕 改为 atof
     }
+    if (!zStr.empty()) {
+        m_worldOffsetZ = atof(zStr.c_str());
+    }
+    LOGI("RandomLevelSource: world offset = (%.2f, %.2f)\n", m_worldOffsetX, m_worldOffsetZ);
+	}
 
     customSeaLevel = 63;
     if (Minecraft::instance) {
@@ -542,7 +542,7 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
 
-    // 🆕 分离 X、Y、Z 轴缩放因子
+    // 分离 X、Y、Z 轴缩放因子
     float sx = 684.412f * farlandsScale * m_worldScaleX;
     float sz = 684.412f * farlandsScale * m_worldScaleZ;
     float sy = 684.412f * farlandsScale;   // Y 轴暂不缩放，可自行扩展
@@ -555,14 +555,14 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
 
-    const double FARLANDS_CORRECTION_NOISE = 0;
-    double noiseX = (double)x / 4.0 + FARLANDS_CORRECTION_NOISE;
-    double noiseZ = (double)z / 4.0;
+    // 🆕 噪声坐标计算：世界坐标 + 精确偏移后再除以 4
+    double noiseX = (x + m_worldOffsetX) / 4.0;
+    double noiseZ = (z + m_worldOffsetZ) / 4.0;
     double noiseY = (double)y / 8.0;
 
     int64_t scaleX = (int64_t)noiseX;
     int64_t scaleZ = (int64_t)noiseZ;
-    // scaleNoise 和 depthNoise 也应用独立缩放
+    // scaleNoise 和 depthNoise 应用独立缩放
     sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f * m_worldScaleX, 1.121f * m_worldScaleZ, 0.5f);
     dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f * m_worldScaleX, 200.0f * m_worldScaleZ, 0.5f);
 
@@ -570,7 +570,7 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float zf = (float)noiseZ;
     float yf = (float)noiseY;
 
-    // 🆕 主要地形噪声调用，传入 sx, sy, sz
+    // 主要地形噪声调用，传入 sx, sy, sz
     pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0f, sy / 160.0f, sz / 80.0f);
     ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
     br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
@@ -632,7 +632,6 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     }
     return buffer;
 }
-
 /*private*/
 void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt) {
     // 注意：此函数使用世界坐标，应应用偏移
