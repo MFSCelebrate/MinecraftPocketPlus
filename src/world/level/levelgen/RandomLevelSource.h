@@ -47,9 +47,9 @@ public:
     std::string gatherStats() override;
 
     // 精确世界偏移（单位：世界方块）
-    void setWorldOffset(int64_t ox, int64_t oz) { m_worldOffsetX = ox; m_worldOffsetZ = oz; }
-    int64_t getWorldOffsetX() const { return m_worldOffsetX; }
-    int64_t getWorldOffsetZ() const { return m_worldOffsetZ; }
+    void setWorldOffset(double ox, double oz) { m_worldOffsetX = ox; m_worldOffsetZ = oz; }
+    double getWorldOffsetX() const { return m_worldOffsetX; }
+    double getWorldOffsetZ() const { return m_worldOffsetZ; }
 
 private:
     float* getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize);
@@ -90,7 +90,8 @@ private:
     int customSeaLevel;
 
     // 新的精确偏移（单位：世界方块），废弃了旧的 offsetX/offsetZ
-    int64_t m_worldOffsetX, m_worldOffsetZ;
+    double m_worldOffsetX;
+    double m_worldOffsetZ;
 
     // 替换原来的 float m_worldScale;
     float m_worldScaleX;
