@@ -833,7 +833,7 @@ void Gui::renderDebugInfo() {
 
     // 构建显示行（共 20 行，索引 0-19）
     static char ln[20][128];
-    sprintf(ln[0], "Minecraft 0.6.1 NoiseFarlands");
+    sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0'; // 空行
     sprintf(ln[3], "--- Local Server Position ---");
