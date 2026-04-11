@@ -49,7 +49,9 @@ public:
     // 精确世界偏移（单位：世界方块）
     void setWorldOffset(double ox, double oz) { m_worldOffsetX = ox; m_worldOffsetZ = oz; }
     double getWorldOffsetX() const { return m_worldOffsetX; }
-    double getWorldOffsetZ() const { return m_worldOffsetZ; }
+double getWorldOffsetZ() const { return m_worldOffsetZ; }
+float  getWorldScaleX()  const { return m_worldScaleX; }
+float  getWorldScaleZ()  const { return m_worldScaleZ; }
 
 private:
     float* getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize);
