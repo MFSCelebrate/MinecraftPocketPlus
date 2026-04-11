@@ -55,7 +55,7 @@ jobs:
           name: Source_Code
           path: Source_Code.zip
 
-  # ================= Windows 构建（llvm-mingw 缓存） =================
+  # ================= Windows 构建 =================
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
@@ -116,7 +116,7 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  # ================= Android 构建（NDK 深度优化 + libncurses5 修复） =================
+  # ================= Android 构建 =================
   build-android:
     name: Build Android (${{ matrix.abi }})
     runs-on: ubuntu-latest
@@ -173,15 +173,26 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v2
+          key: system-deps-${{ runner.os }}-v3
 
       - name: Install system prerequisites
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            wget unzip curl git python3 \
-            libncurses5 libtinfo5
+          sudo apt-get install -y --no-install-recommends wget unzip curl git python3
+
+          # 下载 Ubuntu 22.04 (jammy) 的旧版库包
+          cd ~/Downloads
+          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb
+          wget http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libncurses-dev_6.3-2ubuntu0.1_amd64.deb
+
+          # 手动安装 deb 包
+          sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libncurses-dev_6.3-2ubuntu0.1_amd64.deb
+
+          # 设置库路径
           echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           mkdir -p /tmp/deps-installed
 
