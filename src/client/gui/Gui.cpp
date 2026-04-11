@@ -710,10 +710,10 @@ void Gui::renderBubbles() {
 
 static OffsetPosTranslator posTranslator;
 void Gui::onLevelGenerated() {
-	if (Level* level = minecraft->level) {
-		Pos p = level->getSharedSpawnPos();
-		posTranslator = OffsetPosTranslator((float)-p.x, (float)-p.y, (float)-p.z);
-	}
+    if (Level* level = minecraft->level) {
+        Pos p = level->getSharedSpawnPos();
+        posTranslator = OffsetPosTranslator((double)-p.x, (double)-p.y, (double)-p.z);
+    }
 }
 
 void Gui::renderDebugInfo() {
@@ -853,6 +853,185 @@ void Gui::renderDebugInfo() {
     sprintf(ln[14], "                      Perlin3:%.4f  Scale:%.4f  Depth:%.4f  Forest:%.4f",
             noiseVals[4], noiseVals[5], noiseVals[6], noiseVals[7]);
     ln[15][0] = '\0'; // 空行
+    sprintf(ln[16], "--- Other Information ---");
+void Gui::renderDebugInfo() {
+    // FPS counter (updates once per second)
+    static float fps = 0.0f;
+    static float fpsLastTime = 0.0f;
+    static int   fpsFrames = 0;
+    float now = getTimeS();
+    fpsFrames++;
+    if (now - fpsLastTime >= 1.0f) {
+        fps = fpsFrames / (now - fpsLastTime);
+        fpsFrames = 0;
+        fpsLastTime = now;
+    }
+
+    LocalPlayer* p   = minecraft->player;
+    Level*       lvl = minecraft->level;
+
+    // 获取世界偏移 (double) 和缩放 (float)
+    double terrainOffsetX = 0.0, terrainOffsetZ = 0.0;
+    float worldScaleX = 1.0f, worldScaleZ = 1.0f;
+    RandomLevelSource* rls = nullptr;
+    if (lvl && lvl->getChunkSource()) {
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+        if (cache) {
+            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            if (rls) {
+                terrainOffsetX = rls->getWorldOffsetX();
+                terrainOffsetZ = rls->getWorldOffsetZ();
+                worldScaleX   = rls->getWorldScaleX();
+                worldScaleZ   = rls->getWorldScaleZ();
+            }
+        }
+    }
+
+    // 获取海平面高度
+    int seaLevel = 63;
+    if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
+        std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
+        if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
+    }
+
+    // 玩家原始坐标 (double 精度)
+    double px = p->x;
+    double py = p->y - p->heightOffset;
+    double pz = p->z;
+
+    // 应用位置偏移 (OffsetPosTranslator) —— 直接使用 double 版本
+    posTranslator.to(px, py, pz);
+
+    // 计算显示用的“偏移后世界坐标”：(原始坐标 + 偏移) * 缩放
+    double pxo = (px + terrainOffsetX) * worldScaleX;
+    double pzo = (pz + terrainOffsetZ) * worldScaleZ;
+
+    int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
+    int cx = bx >> 4, cz = bz >> 4;
+
+    // Facing direction
+    float yMod = fmodf(p->yRot, 360.0f);
+    if (yMod < 0) yMod += 360.0f;
+    const char* facing;
+    const char* axis;
+    if      (yMod < 45  || yMod >= 315) { facing = "South"; axis = "+Z"; }
+    else if (yMod < 135)                 { facing = "West";  axis = "-X"; }
+    else if (yMod < 225)                 { facing = "North"; axis = "-Z"; }
+    else                                 { facing = "East";  axis = "+X"; }
+
+    // Biome
+    const char* biomeName = "unknown";
+    if (lvl) {
+        Biome* biome = lvl->getBiome(bx, bz);
+        if (biome) biomeName = biome->name.c_str();
+    }
+
+    // Time
+    long worldTime = lvl ? lvl->getTime() : 0;
+    long dayTime   = worldTime % Level::TICKS_PER_DAY;
+    long day       = worldTime / Level::TICKS_PER_DAY;
+    long seed      = lvl ? lvl->getSeed() : 0;
+
+    // 获取 64-bit Farlands 选项状态
+    bool fringeEnabled = false;
+    if (minecraft->options.getOpt(OPTIONS_SIXTYFOUR_FARLANDS)) {
+        fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
+    }
+
+    // 调试屏幕缩放
+    float debugScale = 1.0f;
+    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
+    if (!scaleStr.empty()) {
+        debugScale = (float)atof(scaleStr.c_str());
+        if (debugScale < 0.5f) debugScale = 0.5f;
+        if (debugScale > 3.0f) debugScale = 3.0f;
+    }
+
+    // --- 噪声值计算 (Double 精度，应用偏移和缩放) ---
+    double noiseVals[8] = {0.0};
+    if (rls) {
+        // 采样世界坐标：原始玩家坐标 + 偏移，再乘以缩放
+        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
+        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+
+        const double s = 684.412;
+        const double scale_large      = s / 80.0;
+        const double scale_sand       = 1.0 / 32.0;
+        const double scale_depth      = 1.0 / 64.0;
+        const double scale_scale      = 1.0 / 80.0;
+        const double scale_depth_noise= 1.0 / 200.0;
+        const double scale_forest     = 0.5;
+
+        double nx_large = sampleWorldX * scale_large;
+        double nz_large = sampleWorldZ * scale_large;
+
+        noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)nz_large);
+        noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)nz_large);
+        noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)nz_large);
+
+        double nx_sand = sampleWorldX * scale_sand;
+        double nz_sand = sampleWorldZ * scale_sand;
+        noiseVals[3] = rls->getPerlinNoise2((float)nx_sand, (float)nz_sand);
+
+        double nx_depth = sampleWorldX * scale_depth;
+        double nz_depth = sampleWorldZ * scale_depth;
+        noiseVals[4] = rls->getPerlinNoise3((float)nx_depth, (float)nz_depth);
+
+        double nx_scale = sampleWorldX * scale_scale;
+        double nz_scale = sampleWorldZ * scale_scale;
+        noiseVals[5] = rls->getScaleNoise((float)nx_scale, (float)nz_scale);
+
+        double nx_depnoise = sampleWorldX * scale_depth_noise;
+        double nz_depnoise = sampleWorldZ * scale_depth_noise;
+        noiseVals[6] = rls->getDepthNoise((float)nx_depnoise, (float)nz_depnoise);
+
+        double nx_forest = sampleWorldX * scale_forest;
+        double nz_forest = sampleWorldZ * scale_forest;
+        noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);
+    }
+
+    // 构建显示行 (共 20 行)
+    static char ln[20][128];
+    sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
+    sprintf(ln[1], "%.2f fps", fps);
+    ln[2][0] = '\0';
+    sprintf(ln[3], "--- Local Server Position ---");
+    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
+    sprintf(ln[5], "X(World Offset): %.15f", pxo);
+    sprintf(ln[6], "Y(Float Offset): %.12f", py);
+    sprintf(ln[7], "Z(World Offset): %.15f", pzo);
+    sprintf(ln[8], "World Offset (Blocks): %.6f / %.6f (Scale X:%.3f Z:%.3f)",
+            terrainOffsetX, terrainOffsetZ, worldScaleX, worldScaleZ);
+    ln[9][0] = '\0';
+    sprintf(ln[10], "--- World Generator ---");
+    sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
+    sprintf(ln[12], "Sea Level: %d", seaLevel);
+
+    // 构建带非法标记的噪声标签和值
+    const char* labels[8] = {
+        "LPerlin1", "LPerlin2", "Perlin1", "Perlin2",
+        "Perlin3", "Scale", "Depth", "Forest"
+    };
+    char firstPart[256] = "";
+    char secondPart[256] = "";
+    for (int i = 0; i < 4; i++) {
+        char tmp[64];
+        bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ",
+                 bad ? "*" : "", labels[i], noiseVals[i]);
+        strcat(firstPart, tmp);
+    }
+    for (int i = 4; i < 8; i++) {
+        char tmp[64];
+        bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ",
+                 bad ? "*" : "", labels[i], noiseVals[i]);
+        strcat(secondPart, tmp);
+    }
+    snprintf(ln[13], sizeof(ln[13]), "MainTerrainNoise: %s", firstPart);
+    snprintf(ln[14], sizeof(ln[14]), "                      %s", secondPart);
+
+    ln[15][0] = '\0';
     sprintf(ln[16], "--- Other Information ---");
     sprintf(ln[17], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
     sprintf(ln[18], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
