@@ -8,12 +8,12 @@ on:
       - '**'
       - '!no-build-**'
 
-# 🆕 防止重复运行浪费额度
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   BUILD_TYPE: Release
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
@@ -80,7 +80,7 @@ jobs:
 
       - name: Cache llvm-mingw
         id: cache-mingw
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/llvm-mingw
           key: llvm-mingw-20260311-msvcrt
@@ -134,7 +134,7 @@ jobs:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_NDK_PATH: ${{ github.workspace }}/android-ndk-r14b
       ANDROID_PLATFORM_API: 36
-      ANDROID_BUILD_TOOLS_VERSION: 36.0.0
+      ANDROID_BUILD_TOOLS_VERSION: 33.0.0
       ADB: /bin/true
       MATRIX_ABI: ${{ matrix.abi }}
 
@@ -144,7 +144,7 @@ jobs:
 
       - name: Cache Android command-line tools
         id: cache-sdk
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env.ANDROID_SDK_ROOT }}
           key: android-sdk-${{ env.ANDROID_PLATFORM_API }}-${{ env.ANDROID_BUILD_TOOLS_VERSION }}
@@ -160,7 +160,7 @@ jobs:
 
       - name: Cache Android NDK r14b (extracted)
         id: cache-ndk
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ${{ env.ANDROID_NDK_PATH }}
           key: ndk-r14b-${{ runner.os }}-${{ hashFiles('.github/ndk-download-url.txt') }}
@@ -173,9 +173,8 @@ jobs:
           unzip -q ndk.zip -d "$GITHUB_WORKSPACE"
           rm ndk.zip
 
-      # 🆕 缓存 Android 中间文件 (obj 和 libs)
       - name: Cache Android build intermediates
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ${{ github.workspace }}/build-apk/obj
@@ -186,10 +185,10 @@ jobs:
 
       - name: Cache system dependencies marker
         id: cache-deps
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v2
+          key: system-deps-${{ runner.os }}-v3
 
       - name: Install system prerequisites
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -197,7 +196,20 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
             wget unzip curl git python3 \
-            libncurses5 libtinfo5
+            libncurses5 libtinfo5 \
+            libc++1 libc++abi1
+
+          cd /tmp
+          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb
+          wget http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libncurses-dev_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
+          sudo dpkg -i libncurses-dev_6.3-2ubuntu0.1_amd64.deb
+
+          sudo rm -f /usr/lib/x86_64-linux-gnu/libc++.so
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libc++.so.1 /usr/lib/x86_64-linux-gnu/libc++.so
+
           echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           mkdir -p /tmp/deps-installed
 
