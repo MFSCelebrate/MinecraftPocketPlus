@@ -5,8 +5,8 @@ on:
   pull_request:
   push:
     branches:
-      - '**'              # every branch
-      - '!no-build-**'    # unless marked as no-build
+      - '**'
+      - '!no-build-**'
 
 env:
   BUILD_TYPE: Release
@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  # ================= 源码归档任务（优化版） =================
+  # ================= 源码归档（条件执行优化） =================
   archive-source:
     name: Archive Source Code (Old & New)
     runs-on: ubuntu-latest
@@ -55,11 +55,10 @@ jobs:
           name: Source_Code
           path: Source_Code.zip
 
-  # ================= Windows 构建（增加 llvm-mingw 缓存） =================
+  # ================= Windows 构建（llvm-mingw 缓存） =================
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
-
     steps:
       - uses: actions/checkout@v4
 
@@ -117,11 +116,10 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  # ================= Android 构建（NDK 深度优化） =================
+  # ================= Android 构建（NDK 深度优化 + libncurses5 修复） =================
   build-android:
     name: Build Android (${{ matrix.abi }})
     runs-on: ubuntu-latest
-
     strategy:
       fail-fast: false
       matrix:
@@ -139,7 +137,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # --- SDK Tools 缓存 ---
       - name: Cache Android command-line tools
         id: cache-sdk
         uses: actions/cache@v3
@@ -156,7 +153,6 @@ jobs:
           mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_PLATFORM_API}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
 
-      # --- 🆕 NDK 缓存（已解压目录）---
       - name: Cache Android NDK r14b (extracted)
         id: cache-ndk
         uses: actions/cache@v3
@@ -172,31 +168,29 @@ jobs:
           unzip -q ndk.zip -d "$GITHUB_WORKSPACE"
           rm ndk.zip
 
-      # --- 系统依赖缓存标记 ---
       - name: Cache system dependencies marker
         id: cache-deps
         uses: actions/cache@v3
         with:
           path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v1
+          key: system-deps-${{ runner.os }}-v2
 
       - name: Install system prerequisites
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends wget unzip curl git python3 libncurses6 libtinfo6
-          sudo ln -sf /lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5 || true
-          sudo ln -sf /lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5 || true
+          sudo apt-get install -y --no-install-recommends \
+            wget unzip curl git python3 \
+            libncurses5 libtinfo5
+          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           mkdir -p /tmp/deps-installed
 
-      # --- Java 环境 ---
       - name: Setup Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 25
 
-      # --- 环境变量导出（确保 build.sh 能找到 NDK）---
       - name: Set up NDK environment
         run: |
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_PATH" >> $GITHUB_ENV
