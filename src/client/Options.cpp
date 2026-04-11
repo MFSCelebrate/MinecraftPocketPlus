@@ -34,6 +34,8 @@ OptionInt guiScale("guiScale", 0, 0, 5);
 OptionString skin("skin", "Default");
 OptionString debugScreenSize("debug_screen_size", "1.0");
 OptionString seaLevel("sea_level", "63");
+OptionString worldScaleX("world_scale_x", "1.0");
+OptionString worldScaleZ("world_scale_z", "1.0");
 
 #ifdef RPI
 OptionString username("username", "StevePi");
@@ -184,6 +186,8 @@ void Options::initTable() {
 	m_options[OPTIONS_STRIPE_REPAIR] = &stripeRepair;
     static OptionString worldScale("world_scale", "1.0");
     m_options[OPTIONS_WORLD_SCALE] = &worldScale;
+	m_options[OPTIONS_WORLD_SCALE_X] = &worldScaleX;
+    m_options[OPTIONS_WORLD_SCALE_Z] = &worldScaleZ;
 	static OptionBool progressive_Farlands("progressive_farlands", false);
     m_options[OPTIONS_PROGRESSIVE_FARLANDS] = &progressive_Farlands;  // 一致
 	static OptionBool sixtyfourFarlands("64bit_farlands", false);
