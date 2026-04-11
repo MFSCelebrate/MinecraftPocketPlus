@@ -9,7 +9,6 @@ on:
     - '!no-build-**'    # unless marked as no-build
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
 
@@ -17,6 +16,44 @@ permissions:
   contents: write
 
 jobs:
+  # ================= 新增：源码归档任务 =================
+  archive-source:
+    name: Archive Source Code (Old & New)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current code (NEW)
+        uses: actions/checkout@v4
+        with:
+          path: new_source
+
+      - name: Checkout previous commit (OLD)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.before }}   # push 事件中的「上一次提交 SHA」
+          path: old_source
+
+      - name: Package OLD source
+        run: |
+          zip -r Source_Code_Old.zip old_source -x "*.git*"
+        # 排除 .git 目录减小体积
+
+      - name: Package NEW source
+        run: |
+          zip -r Source_Code.zip new_source -x "*.git*"
+
+      - name: Upload OLD source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Source_Code_Old
+          path: Source_Code_Old.zip
+
+      - name: Upload NEW source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Source_Code
+          path: Source_Code.zip
+
+  # ================= 保留：Windows 构建 =================
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
@@ -42,8 +79,6 @@ jobs:
           mv llvm-mingw-* llvm-mingw
     
       - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
         run: cmake -E make_directory ${{github.workspace}}/build
 
       - name: Configure CMake
@@ -72,58 +107,12 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  build-linux:
-    name: Build Linux
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup caches
-        uses: ./.github/actions/setup-cache
-        with:
-          host: linux
-          target: linux
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Setup Environment
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install gcc-multilib
-          sudo apt-get install -y --no-install-recommends build-essential libgl-dev libwayland-dev xorg-dev libxkbcommon-dev
-      
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        shell: bash
-        run: |
-          cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
-          cmake --build . --config $BUILD_TYPE --target MinecraftPE-server --parallel
-      
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcpe-linux
-          path: |
-            ${{github.workspace}}/build/MinecraftPE
-            ${{github.workspace}}/build/MinecraftPE-server
-
-  build-android: # pray to god
+  # ================= 保留：Android 构建（矩阵） =================
+  build-android:
     name: Build Android (${{ matrix.abi }})
     runs-on: ubuntu-latest
 
     strategy:
-      # keep going with the other ABI if one fails so you at least get something useful
       fail-fast: false
       matrix:
         abi: [ arm64-v8a, armeabi-v7a ]
@@ -134,7 +123,6 @@ jobs:
       ANDROID_PLATFORM_API: 36
       ANDROID_BUILD_TOOLS_VERSION: 36.0.0
       ADB: /bin/true
-      # build.sh reads MATRIX_ABI to decide which ABI to build when no --abi flag is passed
       MATRIX_ABI: ${{ matrix.abi }}
 
     steps:
@@ -158,7 +146,6 @@ jobs:
             mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           fi
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_PLATFORM_API}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
-
 
       - name: Cache Android NDK r14b
         id: cache-android-ndk
@@ -210,63 +197,14 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          # artifact name is ABI-specific so both matrix legs can upload without clobbering each other
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup caches
-        uses: ./.github/actions/setup-cache
-        with:
-          host: linux
-          target: linux
-    
-      - name: Setup Ninja
-        uses: ./.github/actions/setup-ninja
-        with:
-          host: linux
-
-      - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 5.0.3
-          actions-cache-folder: 'emsdk-cache'
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/emsdk-cache/emsdk-main/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
-      
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcpe-web
-          path: |
-            ${{github.workspace}}/build/MinecraftPE.js
-            ${{github.workspace}}/build/MinecraftPE.wasm
-            ${{github.workspace}}/build/MinecraftPE.data
-
+  # ================= 修改：发布任务（只依赖保留的 Job） =================
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    needs: [ build-windows, build-linux, build-android, build-web ]
+    needs: [ build-windows, build-android ]   # 只等这两个，Linux和Web已移除
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
@@ -287,18 +225,6 @@ jobs:
           files: mcpe-windows/MinecraftPE.exe mcpe-windows/libpng16.dll mcpe-windows/OpenAL32.dll mcpe-windows/libz.dll
           dest: minecraftpe-${{ steps.ref.outputs.hash }}-windows.zip
 
-      - name: Zip Linux Artifacts
-        uses: vimtor/action-zip@v1.2
-        with:
-          files: mcpe-linux/MinecraftPE
-          dest: minecraftpe-${{ steps.ref.outputs.hash }}-linux.zip
-
-      - name: Zip Linux Server Artifacts
-        uses: vimtor/action-zip@v1.2
-        with:
-          files: mcpe-linux/MinecraftPE-server
-          dest: minecraftpe-server-${{ steps.ref.outputs.hash }}.zip
-
       - name: Zip Android arm64-v8a Artifact
         uses: vimtor/action-zip@v1.2
         with:
@@ -310,12 +236,6 @@ jobs:
         with:
           files: minecraftpe-apk-armeabi-v7a/minecraftpe-v7a-debug.apk
           dest: minecraftpe-${{ steps.ref.outputs.hash }}-android-armeabi-v7a.zip
-
-      - name: Zip Web Artifact
-        uses: vimtor/action-zip@v1.2
-        with:
-          files: mcpe-web/MinecraftPE.js mcpe-web/MinecraftPE.wasm mcpe-web/MinecraftPE.data misc/web/index.html
-          dest: minecraftpe-${{ steps.ref.outputs.hash }}-web.zip
 
       - name: Zip Data
         uses: vimtor/action-zip@v1.2
@@ -336,8 +256,5 @@ jobs:
           files: |
             ./data.zip
             ./minecraftpe-${{ steps.ref.outputs.hash }}-windows.zip
-            ./minecraftpe-${{ steps.ref.outputs.hash }}-linux.zip
-            ./minecraftpe-server-${{ steps.ref.outputs.hash }}.zip
             ./minecraftpe-${{ steps.ref.outputs.hash }}-android-arm64-v8a.zip
             ./minecraftpe-${{ steps.ref.outputs.hash }}-android-armeabi-v7a.zip
-            ./minecraftpe-${{ steps.ref.outputs.hash }}-web.zip
