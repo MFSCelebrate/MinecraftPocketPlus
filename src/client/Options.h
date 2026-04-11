@@ -160,8 +160,9 @@ public:
     void load();
     void save();
     void set(OptionId key, int value);
-    void set(OptionId key, float value);
-    void set(OptionId key, const std::string& value);
+void set(OptionId key, float value);
+void set(OptionId key, const std::string& value);
+void set(OptionId key, bool value);   // 🆕 新增
 	void setOptionsFilePath(const std::string& path);
 	void toggle(OptionId key);
 
