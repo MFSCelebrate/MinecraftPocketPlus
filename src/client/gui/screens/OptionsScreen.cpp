@@ -232,9 +232,11 @@ void OptionsScreen::generateOptionScreens() {
         .addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
 
     // World Pane
-    optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE, minecraft)
-        .addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
-        .addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
+optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE_X, minecraft)
+    .addOptionItem(OPTIONS_WORLD_SCALE_Z, minecraft)
+    .addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
+    .addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
+    // ... 后续其他选项保持不变
         .addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft);
 	optionPanes[5]->addOptionItem(OPTIONS_PROGRESSIVE_FARLANDS, minecraft);
 	//optionPanes[5]->addOptionItem(OPTIONS_SIXTYFOUR_FARLANDS, minecraft);   // 新增
