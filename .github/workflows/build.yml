@@ -5,8 +5,8 @@ on:
   pull_request:
   push:
     branches:
-      - '**'
-      - '!no-build-**'
+    - '**'              # every branch
+    - '!no-build-**'    # unless marked as no-build
 
 env:
   BUILD_TYPE: Release
@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 jobs:
-  # ================= 源码归档 =================
+  # ================= 新增：源码归档任务 =================
   archive-source:
     name: Archive Source Code (Old & New)
     runs-on: ubuntu-latest
@@ -27,23 +27,21 @@ jobs:
           path: new_source
 
       - name: Checkout previous commit (OLD)
-        if: github.event_name == 'push'
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.before }}
+          ref: ${{ github.event.before }}   # push 事件中的「上一次提交 SHA」
           path: old_source
 
       - name: Package OLD source
-        if: github.event_name == 'push'
         run: |
-          zip -r Source_Code_Old.zip old_source -x "*.git*" "old_source/data/*"
+          zip -r Source_Code_Old.zip old_source -x "*.git*"
+        # 排除 .git 目录减小体积
 
       - name: Package NEW source
         run: |
-          zip -r Source_Code.zip new_source -x "*.git*" "new_source/data/*"
+          zip -r Source_Code.zip new_source -x "*.git*"
 
       - name: Upload OLD source artifact
-        if: github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: Source_Code_Old
@@ -55,10 +53,11 @@ jobs:
           name: Source_Code
           path: Source_Code.zip
 
-  # ================= Windows 构建 =================
+  # ================= 保留：Windows 构建 =================
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
+
     steps:
       - uses: actions/checkout@v4
 
@@ -67,26 +66,18 @@ jobs:
         with:
           host: linux
           target: win
-
+      
       - name: Setup Ninja
         uses: ./.github/actions/setup-ninja
         with:
           host: linux
 
-      - name: Cache llvm-mingw
-        id: cache-mingw
-        uses: actions/cache@v3
-        with:
-          path: ${{ github.workspace }}/llvm-mingw
-          key: llvm-mingw-20260311-msvcrt
-
       - name: Download llvm-mingw
-        if: steps.cache-mingw.outputs.cache-hit != 'true'
         run: |
           curl -L https://github.com/mstorsjo/llvm-mingw/releases/download/20260311/llvm-mingw-20260311-msvcrt-ubuntu-22.04-x86_64.tar.xz -o llvm-mingw.tar.xz
           tar -xf llvm-mingw.tar.xz
           mv llvm-mingw-* llvm-mingw
-
+    
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
@@ -105,7 +96,7 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
-
+      
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -116,20 +107,21 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  # ================= Android 构建（修复 libc++.so + 降级 Build Tools） =================
+  # ================= 保留：Android 构建（矩阵） =================
   build-android:
     name: Build Android (${{ matrix.abi }})
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        abi: [arm64-v8a, armeabi-v7a]
+        abi: [ arm64-v8a, armeabi-v7a ]
 
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_NDK_PATH: ${{ github.workspace }}/android-ndk-r14b
       ANDROID_PLATFORM_API: 36
-      ANDROID_BUILD_TOOLS_VERSION: 33.0.0   # 降级到稳定版本
+      ANDROID_BUILD_TOOLS_VERSION: 36.0.0
       ADB: /bin/true
       MATRIX_ABI: ${{ matrix.abi }}
 
@@ -138,79 +130,54 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Cache Android command-line tools
-        id: cache-sdk
+        id: cache-android-tools
         uses: actions/cache@v3
         with:
           path: ${{ env.ANDROID_SDK_ROOT }}
-          key: android-sdk-${{ env.ANDROID_PLATFORM_API }}-${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+          key: android-cmdline-tools-v36
 
       - name: Setup Android command line tools
-        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        if: steps.cache-android-tools.outputs.cache-hit != 'true'
         run: |
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          curl -o cmdline-tools.zip -L "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip"
-          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
+            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+            curl -o cmdline-tools.zip -L "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip"
+            unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+            mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          fi
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_PLATFORM_API}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
 
-      - name: Cache Android NDK r14b (extracted)
-        id: cache-ndk
+      - name: Cache Android NDK r14b
+        id: cache-android-ndk
         uses: actions/cache@v3
         with:
-          path: ${{ env.ANDROID_NDK_PATH }}
-          key: ndk-r14b-${{ runner.os }}-${{ hashFiles('.github/ndk-download-url.txt') }}
+          path: ${{ github.workspace }}/android-ndk-r14b
+          key: android-ndk-r14b
 
       - name: Install Android NDK r14b
-        if: steps.cache-ndk.outputs.cache-hit != 'true'
+        if: steps.cache-android-ndk.outputs.cache-hit != 'true'
         run: |
-          echo "NDK cache miss, downloading and extracting..."
-          curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r14b-linux-x86_64.zip"
-          unzip -q ndk.zip -d "$GITHUB_WORKSPACE"
-          rm ndk.zip
-
-      - name: Cache system dependencies marker
-        id: cache-deps
-        uses: actions/cache@v3
-        with:
-          path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v5
+          if [ ! -d "$ANDROID_NDK_PATH" ]; then
+            curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r14b-linux-x86_64.zip"
+            unzip -q ndk.zip -d "$GITHUB_WORKSPACE"
+          fi
 
       - name: Install system prerequisites
-        if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends \
-            wget unzip curl git python3 \
-            libncurses5 libtinfo5 \
-            libc++1 libc++abi1   # 添加 C++ 标准库
-
-          # 下载旧版库包备用（ncurses 部分）
-          cd /tmp
-          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
-          wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb
-          wget http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libncurses-dev_6.3-2ubuntu0.1_amd64.deb
-          sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
-          sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
-          sudo dpkg -i libncurses-dev_6.3-2ubuntu0.1_amd64.deb
-
-          # 修复可能的 libc++.so 损坏链接
-          sudo rm -f /usr/lib/x86_64-linux-gnu/libc++.so
-          sudo ln -sf /usr/lib/x86_64-linux-gnu/libc++.so.1 /usr/lib/x86_64-linux-gnu/libc++.so
-
-          echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          mkdir -p /tmp/deps-installed
+          sudo apt-get install -y --no-install-recommends wget unzip curl git python3 libncurses6 libtinfo6
+          if ! ldconfig -p | grep -q "libncurses.so.5"; then
+            sudo ln -sf /lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5 || true
+          fi
+          if ! ldconfig -p | grep -q "libtinfo.so.5"; then
+            sudo ln -sf /lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5 || true
+          fi
 
       - name: Setup Java 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 25
-
-      - name: Set up NDK environment
-        run: |
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_PATH" >> $GITHUB_ENV
-          echo "$ANDROID_NDK_PATH" >> $GITHUB_PATH
-          echo "$ANDROID_NDK_PATH/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
 
       - name: Validate environment
         run: |
@@ -233,11 +200,11 @@ jobs:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
-  # ================= 发布任务 =================
+  # ================= 修改：发布任务（只依赖保留的 Job） =================
   publish:
     name: Publish
     runs-on: ubuntu-latest
-    needs: [build-windows, build-android]
+    needs: [ build-windows, build-android ]   # 只等这两个，Linux和Web已移除
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
