@@ -116,10 +116,10 @@ jobs:
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
 
-  # ================= Android 构建（固定 Ubuntu 22.04） =================
+  # ================= Android 构建（修复 libc++.so + 降级 Build Tools） =================
   build-android:
     name: Build Android (${{ matrix.abi }})
-    runs-on: ubuntu-22.04   # 👈 锁死版本，避免库漂移
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -129,7 +129,7 @@ jobs:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_NDK_PATH: ${{ github.workspace }}/android-ndk-r14b
       ANDROID_PLATFORM_API: 36
-      ANDROID_BUILD_TOOLS_VERSION: 36.0.0
+      ANDROID_BUILD_TOOLS_VERSION: 33.0.0   # 降级到稳定版本
       ADB: /bin/true
       MATRIX_ABI: ${{ matrix.abi }}
 
@@ -173,26 +173,30 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/deps-installed
-          key: system-deps-${{ runner.os }}-v4
+          key: system-deps-${{ runner.os }}-v5
 
       - name: Install system prerequisites
         if: steps.cache-deps.outputs.cache-hit != 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends wget unzip curl git python3
+          sudo apt-get install -y --no-install-recommends \
+            wget unzip curl git python3 \
+            libncurses5 libtinfo5 \
+            libc++1 libc++abi1   # 添加 C++ 标准库
 
-          # 下载适用于 Ubuntu 22.04 (jammy) 的旧版库包到 /tmp
+          # 下载旧版库包备用（ncurses 部分）
           cd /tmp
           wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.1_amd64.deb
           wget http://security.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.1_amd64.deb
           wget http://archive.ubuntu.com/ubuntu/pool/main/n/ncurses/libncurses-dev_6.3-2ubuntu0.1_amd64.deb
-
-          # 手动安装 deb 包
           sudo dpkg -i libtinfo5_6.3-2ubuntu0.1_amd64.deb
           sudo dpkg -i libncurses5_6.3-2ubuntu0.1_amd64.deb
           sudo dpkg -i libncurses-dev_6.3-2ubuntu0.1_amd64.deb
 
-          # 设置库路径
+          # 修复可能的 libc++.so 损坏链接
+          sudo rm -f /usr/lib/x86_64-linux-gnu/libc++.so
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libc++.so.1 /usr/lib/x86_64-linux-gnu/libc++.so
+
           echo "LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH" >> $GITHUB_ENV
           mkdir -p /tmp/deps-installed
 
