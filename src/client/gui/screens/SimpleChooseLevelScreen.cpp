@@ -46,7 +46,6 @@ void SimpleChooseLevelScreen::init()
 
     // header + close button
     bHeader = new Touch::THeader(0, "Create World");
-    // create the back/X button as ImageButton
     bBack = new ImageButton(2, "");
     {
         ImageDef def;
@@ -59,14 +58,30 @@ void SimpleChooseLevelScreen::init()
     if (/* minecraft->useTouchscreen() */ true) {
         bGamemode = new Touch::TButton(1, "Survival mode");
         bCheats  = new Touch::TButton(4, "Cheats: Off");
-        bNoiseMode = new Touch::TButton(5, "Noise mode: 32-bit");   // 新增
+        bNoiseMode = new Touch::TButton(5, "Noise mode: 32-bit");   // 临时文字，马上会根据实际选项更新
         bCreate  = new Touch::TButton(3, "Create");
     } else {
         bGamemode = new Button(1, "Survival mode");
         bCheats  = new Button(4, "Cheats: Off");
-        bNoiseMode = new Button(5, "Noise mode: 32-bit");           // 新增
+        bNoiseMode = new Button(5, "Noise mode: 32-bit");
         bCreate  = new Button(3, "Create");
     }
+
+    // --- 🆕 从全局选项读取当前噪声模式并同步界面 ---
+    Options& opts = minecraft->options;
+    bool is64 = opts.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
+    bool isDouble = opts.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
+    if (isDouble) {
+        noiseMode = 2;
+        bNoiseMode->msg = "Noise mode: Double";
+    } else if (is64) {
+        noiseMode = 1;
+        bNoiseMode->msg = "Noise mode: 64-bit";
+    } else {
+        noiseMode = 0;
+        bNoiseMode->msg = "Noise mode: 32-bit";
+    }
+    // ---------------------------------------------
 
     buttons.push_back(bHeader);
     buttons.push_back(bBack);
