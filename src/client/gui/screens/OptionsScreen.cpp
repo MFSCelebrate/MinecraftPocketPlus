@@ -98,11 +98,7 @@ void OptionsScreen::render(int xm, int ym, float a) {
 	renderBackground();
 
 	if (currentOptionsGroup) {
-		// 1. 获取缩放因子
-		float scale = Gui::GuiScale;                     // 逻辑坐标 -> 物理像素
-		float invScale = Gui::InvGuiScale;               // 物理像素 -> 逻辑坐标
-
-		// 2. 计算逻辑裁剪区域（左上角坐标系）
+		float scale = Gui::GuiScale;
 		int logicX = currentOptionsGroup->x;
 		int logicY = currentOptionsGroup->y;
 		int logicW = currentOptionsGroup->width;
@@ -110,36 +106,44 @@ void OptionsScreen::render(int xm, int ym, float a) {
 		int logicH = height - logicY - bottomPadding;
 		if (logicH < 0) logicH = 0;
 
-		// 3. 转换为物理像素坐标（OpenGL 视口坐标）
 		int scissorX = (int)(logicX * scale);
-		int scissorY = (int)((minecraft->height) - ((logicY + logicH) * scale)); // 关键转换
+		int scissorY = (int)(minecraft->height - ((logicY + logicH) * scale));
 		int scissorW = (int)(logicW * scale);
 		int scissorH = (int)(logicH * scale);
 
-		// 4. 保存旧裁剪状态
+		// 保存原始裁剪状态
 		GLboolean wasEnabled = glIsEnabled(GL_SCISSOR_TEST);
 		GLint oldBox[4];
 		glGetIntegerv(GL_SCISSOR_BOX, oldBox);
 
-		// 5. 设置新裁剪
+		// 设置外层裁剪
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(scissorX, scissorY, scissorW, scissorH);
 
-		// 6. 渲染内容（注意：滚动偏移量是逻辑坐标，渲染时也要用逻辑坐标平移）
 		glPushMatrix();
 		glTranslatef(0.0f, -scrollOffset, 0.0f);
-		// 传递的鼠标坐标在 render 中不关键，但为了一致性，也转换一下
+
+		// 🔧 临时禁用裁剪，防止 TextBox 内部的错误裁剪导致文字消失
+		glDisable(GL_SCISSOR_TEST);
+
 		int xmm = (int)(xm * width / (float)minecraft->width);
 		int ymm = (int)(ym * height / (float)minecraft->height) - 1 + (int)scrollOffset;
 		currentOptionsGroup->render(minecraft, xmm, ymm);
+
+		// 重新启用裁剪（外层）
+		glEnable(GL_SCISSOR_TEST);
+
 		glPopMatrix();
 
-		// 7. 恢复裁剪状态
-		if (!wasEnabled) glDisable(GL_SCISSOR_TEST);
-		else glScissor(oldBox[0], oldBox[1], oldBox[2], oldBox[3]);
+		// 恢复原始裁剪状态
+		if (wasEnabled) {
+			glEnable(GL_SCISSOR_TEST);
+			glScissor(oldBox[0], oldBox[1], oldBox[2], oldBox[3]);
+		} else {
+			glDisable(GL_SCISSOR_TEST);
+		}
 	}
 
-	// 渲染其他 UI（不被裁剪）
 	super::render(xm, ym, a);
 }
 
