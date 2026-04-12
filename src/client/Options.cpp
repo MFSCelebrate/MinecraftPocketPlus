@@ -33,7 +33,7 @@ OptionFloat cameraSpeed("cameraSpeed", 1.f);
 OptionInt guiScale("guiScale", 0, 0, 5);
 
 OptionString skin("skin", "Default");
-OptionString debugScreenSize("debug_screen_size", "1.0");
+OptionString debugScreenSize("debug_screen_size", "0.5");
 OptionString seaLevel("sea_level", "63");
 OptionString worldScaleX("world_scale_x", "1.0");
 OptionString worldScaleZ("world_scale_z", "1.0");
@@ -92,6 +92,8 @@ OptionInt keyMenuOk("key.menu.ok", 13);
 OptionInt keyMenuCancel("key.menu.cancel", 8);
 
 OptionBool firstLaunch("firstLaunch", true);
+OptionString worldScaleY("world_scale_y", "1.0");
+OptionString worldOffsetY("world_offset_y", "0");
 
 OptionString lastIp("lastip");
 
@@ -196,6 +198,8 @@ void Options::initTable() {
 	static OptionBool doubleFarlands("double_farlands", false);
     m_options[OPTIONS_DOUBLE_FARLANDS] = &doubleFarlands;
 	m_options[OPTIONS_DISABLE_SKYGRID] = &disableSkygrid;
+	m_options[OPTIONS_WORLD_SCALE_Y] = &worldScaleY;
+    m_options[OPTIONS_WORLD_OFFSET_Y] = &worldOffsetY;
 }
 
 void Options::set(OptionId key, const std::string& value) {
