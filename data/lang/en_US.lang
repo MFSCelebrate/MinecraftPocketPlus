@@ -14,6 +14,8 @@ options.64bit_farlands=64Bit Farlands [Simulation]
 options.world_scale_x=World Scale X
 options.world_scale_z=World Scale Z
 options.disable_skygrid=Disable Skygrid
+options.world_scale_y=World Scale Y
+options.world_offset_y=World Offset Y
 
 language.name=English
 language.region=US
