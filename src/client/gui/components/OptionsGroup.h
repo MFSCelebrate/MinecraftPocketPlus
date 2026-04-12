@@ -18,6 +18,7 @@ public:
 	virtual void setupPositions();
 	virtual void render(Minecraft* minecraft, int xm, int ym);
 	OptionsGroup& addOptionItem(OptionId optId, Minecraft* minecraft);
+    const std::vector<GuiElement*>& getChildren() const { return children; }
 protected:
 
 	void createToggle(OptionId optId, Minecraft* minecraft);
