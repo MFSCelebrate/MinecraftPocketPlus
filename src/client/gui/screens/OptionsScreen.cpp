@@ -9,7 +9,7 @@
 #include "../components/OptionsGroup.h"
 #include "../components/TextOption.h"
 #include "../components/OptionsItem.h"
-#include "../Gui.h"                     // 新增：用于 GuiScale
+#include "../Gui.h"
 #include "platform/input/Keyboard.h"
 #include <cmath>
 #include <algorithm>
@@ -111,31 +111,26 @@ void OptionsScreen::render(int xm, int ym, float a) {
 		int scissorW = (int)(logicW * scale);
 		int scissorH = (int)(logicH * scale);
 
-		// 保存原始裁剪状态
 		GLboolean wasEnabled = glIsEnabled(GL_SCISSOR_TEST);
 		GLint oldBox[4];
 		glGetIntegerv(GL_SCISSOR_BOX, oldBox);
 
-		// 设置外层裁剪
 		glEnable(GL_SCISSOR_TEST);
 		glScissor(scissorX, scissorY, scissorW, scissorH);
 
 		glPushMatrix();
 		glTranslatef(0.0f, -scrollOffset, 0.0f);
 
-		// 🔧 临时禁用裁剪，防止 TextBox 内部的错误裁剪导致文字消失
+		// 禁用内部裁剪，防止 TextBox 文字消失
 		glDisable(GL_SCISSOR_TEST);
 
 		int xmm = (int)(xm * width / (float)minecraft->width);
 		int ymm = (int)(ym * height / (float)minecraft->height) - 1 + (int)scrollOffset;
 		currentOptionsGroup->render(minecraft, xmm, ymm);
 
-		// 重新启用裁剪（外层）
 		glEnable(GL_SCISSOR_TEST);
-
 		glPopMatrix();
 
-		// 恢复原始裁剪状态
 		if (wasEnabled) {
 			glEnable(GL_SCISSOR_TEST);
 			glScissor(oldBox[0], oldBox[1], oldBox[2], oldBox[3]);
@@ -151,6 +146,7 @@ void OptionsScreen::removed() { }
 
 void OptionsScreen::buttonClicked(Button* button) {
 	if (button == btnClose) {
+		lostFocus();                 // 保存输入框
 		minecraft->options.save();
 		if (minecraft->screen)
 			minecraft->setScreen(NULL);
@@ -183,8 +179,10 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
 	optionPanes.push_back(new OptionsGroup("options.group.world"));
 
+	// General
 	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
 		.addOptionItem(OPTIONS_SENSITIVITY, minecraft);
+	// Game
 	optionPanes[1]->addOptionItem(OPTIONS_DIFFICULTY, minecraft)
 		.addOptionItem(OPTIONS_SERVER_VISIBLE, minecraft)
 		.addOptionItem(OPTIONS_THIRD_PERSON_VIEW, minecraft)
@@ -195,11 +193,13 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_SMOOTH_CAMERA, minecraft)
 		.addOptionItem(OPTIONS_DESTROY_VIBRATION, minecraft)
 		.addOptionItem(OPTIONS_IS_LEFT_HANDED, minecraft);
+	// Controls
 	optionPanes[2]->addOptionItem(OPTIONS_INVERT_Y_MOUSE, minecraft)
 		.addOptionItem(OPTIONS_USE_TOUCHSCREEN, minecraft)
 		.addOptionItem(OPTIONS_AUTOJUMP, minecraft);
 	for (int i = OPTIONS_KEY_FORWARD; i <= OPTIONS_KEY_USE; ++i)
 		optionPanes[2]->addOptionItem((OptionId)i, minecraft);
+	// Graphics
 	optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
 		.addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
 		.addOptionItem(OPTIONS_VSYNC, minecraft)
@@ -208,19 +208,34 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
 		.addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
 	optionPanes[3]->addOptionItem(OPTIONS_DEBUG_SCREEN_SIZE, minecraft);
+	// Tweaks
 	optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
 		.addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
 		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
+	// World
 	optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE_X, minecraft)
 		.addOptionItem(OPTIONS_WORLD_SCALE_Z, minecraft)
 		.addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
 		.addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
 		.addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft)
 		.addOptionItem(OPTIONS_PROGRESSIVE_FARLANDS, minecraft)
-		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft)  // 新增
 		.addOptionItem(OPTIONS_SEA_LEVEL, minecraft)
 		.addOptionItem(OPTIONS_STRIPE_REPAIR, minecraft)
-		.addOptionItem(OPTIONS_TELEPORT, minecraft);
+		.addOptionItem(OPTIONS_TELEPORT, minecraft)
+		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft);
+
+	// 收集所有 TextOption 到 textBoxes，以便基类 lostFocus 自动保存
+	for (OptionsGroup* pane : optionPanes) {
+		for (GuiElement* child : pane->getChildren()) {
+			if (OptionsItem* item = dynamic_cast<OptionsItem*>(child)) {
+				for (GuiElement* grandChild : item->getChildren()) {
+					if (TextOption* tb = dynamic_cast<TextOption*>(grandChild)) {
+						textBoxes.push_back(tb);
+					}
+				}
+			}
+		}
+	}
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
@@ -263,8 +278,10 @@ void OptionsScreen::mouseWheel(int dx, int dy, int xm, int ym) {
 void OptionsScreen::keyPressed(int eventKey) {
 	if (currentOptionsGroup)
 		currentOptionsGroup->keyPressed(minecraft, eventKey);
-	if (eventKey == Keyboard::KEY_ESCAPE)
+	if (eventKey == Keyboard::KEY_ESCAPE) {
+		lostFocus();                 // 保存输入框
 		minecraft->options.save();
+	}
 	super::keyPressed(eventKey);
 }
 
@@ -298,6 +315,10 @@ void OptionsScreen::tick() {
 		}
 	}
 	super::tick();
+}
+
+void OptionsScreen::lostFocus() {
+	super::lostFocus();   // 会遍历 textBoxes 调用 loseFocus，保存内容
 }
 
 // ========== 辅助函数 ==========
