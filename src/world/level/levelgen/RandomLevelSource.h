@@ -46,16 +46,18 @@ public:
     bool shouldSave() override;
     std::string gatherStats() override;
 
-    // 精确世界偏移（单位：世界方块）
-    double getWorldOffsetY() const { return m_worldOffsetY; }
-float  getWorldScaleY()  const { return m_worldScaleY; }
-void setWorldOffset(double ox, double oy, double oz) {
-    m_worldOffsetX = ox; m_worldOffsetY = oy; m_worldOffsetZ = oz;
-}
+    // 偏移访问器
     double getWorldOffsetX() const { return m_worldOffsetX; }
-double getWorldOffsetZ() const { return m_worldOffsetZ; }
-float  getWorldScaleX()  const { return m_worldScaleX; }
-float  getWorldScaleZ()  const { return m_worldScaleZ; }
+    double getWorldOffsetY() const { return m_worldOffsetY; }
+    double getWorldOffsetZ() const { return m_worldOffsetZ; }
+    void setWorldOffset(double ox, double oy, double oz) {
+        m_worldOffsetX = ox; m_worldOffsetY = oy; m_worldOffsetZ = oz;
+    }
+
+    // 缩放访问器
+    float getWorldScaleX() const { return m_worldScaleX; }
+    float getWorldScaleY() const { return m_worldScaleY; }
+    float getWorldScaleZ() const { return m_worldScaleZ; }
 
 private:
     float* getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize);
@@ -95,9 +97,17 @@ private:
 
     int customSeaLevel;
 
-    // 新的精确偏移（单位：世界方块），废弃了旧的 offsetX/offsetZ
-    double m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;  // 将原来的 Y 偏移也改为 double（之前可能没有）
-    float m_worldScaleX, m_worldScaleY, m_worldScaleZ;
+    // 偏移 (double 精度)
+    double m_worldOffsetX;
+    double m_worldOffsetY;
+    double m_worldOffsetZ;
+
+    // 缩放 (float)
+    float m_worldScaleX;
+    float m_worldScaleY;
+    float m_worldScaleZ;
+
+    bool m_disableSkygrid;   // 禁用天空网格开关缓存
 };
 
 class PerformanceTestChunkSource : public ChunkSource
