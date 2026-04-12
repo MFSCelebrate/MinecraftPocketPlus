@@ -97,6 +97,10 @@ void OptionsScreen::setupPositions() {
 void OptionsScreen::render(int xm, int ym, float a) {
 	renderBackground();
 
+	// 临时隐藏 textBoxes，避免基类重复渲染
+	std::vector<TextBox*> savedTextBoxes;
+	savedTextBoxes.swap(textBoxes);
+
 	if (currentOptionsGroup) {
 		float scale = Gui::GuiScale;
 		int logicX = currentOptionsGroup->x;
@@ -139,7 +143,11 @@ void OptionsScreen::render(int xm, int ym, float a) {
 		}
 	}
 
+	// 渲染其他 UI（此时 textBoxes 为空，不会重复绘制输入框）
 	super::render(xm, ym, a);
+
+	// 恢复 textBoxes，保证焦点管理和保存功能正常
+	savedTextBoxes.swap(textBoxes);
 }
 
 void OptionsScreen::removed() { }
