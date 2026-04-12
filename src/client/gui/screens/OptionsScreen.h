@@ -12,27 +12,27 @@ class OptionsScreen: public Screen
 {
 	typedef Screen super;
 
-	void init();
+	void init() override;
 	void generateOptionScreens();
 
 public:
 	OptionsScreen();
 	~OptionsScreen();
 
-	void setupPositions();
-	void buttonClicked(Button* button);
-	void render(int xm, int ym, float a);
-	void removed();
+	void setupPositions() override;
+	void buttonClicked(Button* button) override;
+	void render(int xm, int ym, float a) override;
+	void removed() override;
 	void selectCategory(int index);
 
-	virtual void mouseClicked(int x, int y, int buttonNum);
-	virtual void mouseReleased(int x, int y, int buttonNum);
+	virtual void mouseClicked(int x, int y, int buttonNum) override;
+	virtual void mouseReleased(int x, int y, int buttonNum) override;
 	virtual void mouseWheel(int dx, int dy, int xm, int ym) override;
-	virtual void keyPressed(int eventKey);
-	virtual void charPressed(char inputChar);
+	virtual void keyPressed(int eventKey) override;
+	virtual void charPressed(char inputChar) override;
 	
-	virtual void tick();
-	virtual void lostFocus() override;   // 保存输入框内容
+	virtual void tick() override;
+	virtual void lostFocus() override;
 
 private:
 	Touch::THeader* bHeader;
@@ -59,4 +59,4 @@ private:
 	void transformMouseForScroll(int& x, int& y) const;
 };
 
-#endif
+#endif /*NET_MINECRAFT_CLIENT_GUI_SCREENS__OptionsScreen_H__*/
