@@ -217,6 +217,7 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
 		.addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft)
 		.addOptionItem(OPTIONS_PROGRESSIVE_FARLANDS, minecraft)
+		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft)  // 新增
 		.addOptionItem(OPTIONS_SEA_LEVEL, minecraft)
 		.addOptionItem(OPTIONS_STRIPE_REPAIR, minecraft)
 		.addOptionItem(OPTIONS_TELEPORT, minecraft);
