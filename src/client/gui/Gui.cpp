@@ -811,6 +811,7 @@ void Gui::renderDebugInfo() {
 
     // --- 噪声值计算 (Double 精度，应用偏移和缩放) ---
     double noiseVals[8] = {0.0};
+    double nx_large = 0.0, nz_large = 0.0;  // 用于显示的噪声输入坐标
     if (rls) {
         // 采样世界坐标：原始玩家坐标 + 偏移，再乘以缩放
         double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
@@ -824,10 +825,8 @@ void Gui::renderDebugInfo() {
         const double scale_depth_noise= 1.0 / 200.0;
         const double scale_forest     = 0.5;
 
-        double nx_large = sampleWorldX * scale_large;
-        double nz_large = sampleWorldZ * scale_large;
-
-		snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.3f / %.3f", nx_large, nz_large);
+        nx_large = sampleWorldX * scale_large;
+        nz_large = sampleWorldZ * scale_large;
 
         noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)nz_large);
         noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)nz_large);
@@ -854,8 +853,8 @@ void Gui::renderDebugInfo() {
         noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);
     }
 
-    // 构建显示行 (共 20 行)
-    static char ln[21][512];
+    // 构建显示行 (共 22 行，增加一行用于 Noise Input)
+    static char ln[22][512];
     sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -864,7 +863,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[5], "X(World Offset): %.15f", pxo);
     sprintf(ln[6], "Y(Float Offset): %.12f", py);
     sprintf(ln[7], "Z(World Offset): %.15f", pzo);
-    sprintf(ln[8], "World Offset (Blocks): %.6f / %.6f (Scale X:%.3f Z:%.3f)",
+    sprintf(ln[8], "World Offset (Blocks): %.6f / %.6f  (Scale X:%.3f Z:%.3f)",
             terrainOffsetX, terrainOffsetZ, worldScaleX, worldScaleZ);
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
@@ -895,6 +894,13 @@ void Gui::renderDebugInfo() {
     snprintf(ln[13], sizeof(ln[13]), "MainTerrainNoise: %s", firstPart);
     snprintf(ln[14], sizeof(ln[14]), "                      %s", secondPart);
 
+    // 显示噪声输入坐标（用于诊断边境之地卡死）
+    if (rls) {
+        snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.1f / %.1f", nx_large, nz_large);
+    } else {
+        ln[15][0] = '\0';
+    }
+
     ln[16][0] = '\0';
     sprintf(ln[17], "--- Other Information ---");
     sprintf(ln[18], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
@@ -902,8 +908,9 @@ void Gui::renderDebugInfo() {
             facing, axis, p->yRot, p->xRot, biomeName);
     sprintf(ln[20], "Day %ld  Time: %ld  Seed: %ld",
             day, dayTime, seed);
+    ln[21][0] = '\0';
 
-    const int N = 21;
+    const int N = 22;  // 总行数
     const float LH  = (float)Font::DefaultLineHeight;
     const float MGN = 2.0f;
     const float PAD = 2.0f;
@@ -939,7 +946,6 @@ void Gui::renderDebugInfo() {
 
     glPopMatrix();
 }
-
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
