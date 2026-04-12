@@ -127,30 +127,44 @@ void OptionsScreen::render(int xm, int ym, float a) {
 	int ymm = ym * height / minecraft->height - 1;
 
 	if (currentOptionsGroup != NULL) {
-		// 计算滚动区域的裁剪矩形
+		// 1. 计算裁剪区域（屏幕坐标系，原点左上角）
 		int scissorX = currentOptionsGroup->x;
 		int scissorY = currentOptionsGroup->y;
 		int scissorW = currentOptionsGroup->width;
-		// 可视区域高度：从面板顶部到屏幕底部（留出一些空间给Credits按钮，但Credits在右下，不影响）
-		int scissorH = height - scissorY - (btnCredits ? btnCredits->height + 5 : 0);
+		// 可视区域高度：从面板顶部到屏幕底部，但要为底部按钮留出空间
+		int bottomPadding = (btnCredits ? btnCredits->height + 5 : 0);
+		int scissorH = height - scissorY - bottomPadding;
 		if (scissorH < 0) scissorH = 0;
 
-		// 开启裁剪测试
-		glEnable(GL_SCISSOR_TEST);
-		// OpenGL 坐标系原点在左下角，需要转换 Y 坐标
-		glScissor(scissorX, minecraft->height - scissorY - scissorH, scissorW, scissorH);
+		// 2. 保存当前的裁剪状态，避免影响后续渲染
+		GLboolean scissorWasEnabled = glIsEnabled(GL_SCISSOR_TEST);
+		GLint oldScissorBox[4];
+		glGetIntegerv(GL_SCISSOR_BOX, oldScissorBox);
 
-		// 应用滚动偏移
+		// 3. 启用裁剪并设置区域（注意Y坐标转换：OpenGL原点在左下角）
+		glEnable(GL_SCISSOR_TEST);
+		// OpenGL 裁剪区域：x, y(左下角), width, height
+		int glScissorY = minecraft->height - (scissorY + scissorH);
+		glScissor(scissorX, glScissorY, scissorW, scissorH);
+
+		// 4. 应用滚动偏移，渲染面板内容
 		glPushMatrix();
 		glTranslatef(0.0f, -scrollOffset, 0.0f);
 
-		// 渲染选项面板（所有子控件）
-		currentOptionsGroup->render(minecraft, xmm, ymm + (int)scrollOffset); // 注意：传递的鼠标坐标也需要调整，但 render 中鼠标坐标主要用于悬停效果，暂时忽略
+		// 注意：传递给 currentOptionsGroup 的鼠标坐标可能需要调整，但 render 中主要影响悬停效果，可忽略或稍后修正
+		currentOptionsGroup->render(minecraft, xmm, ymm + (int)scrollOffset);
 
 		glPopMatrix();
-		glDisable(GL_SCISSOR_TEST);
+
+		// 5. 恢复之前的裁剪状态
+		if (!scissorWasEnabled) {
+			glDisable(GL_SCISSOR_TEST);
+		} else {
+			glScissor(oldScissorBox[0], oldScissorBox[1], oldScissorBox[2], oldScissorBox[3]);
+		}
 	}
 	
+	// 渲染其他UI（分类按钮、关闭按钮、Credits等，这些不应被裁剪）
 	super::render(xm, ym, a);
 }
 
@@ -351,6 +365,21 @@ void OptionsScreen::updateMaxScrollOffset() {
 	maxScrollOffset = std::max(0.0f, contentHeight - viewportHeight);
 }
 
+bool OptionsScreen::isPointInScrollArea(int x, int y) const {
+	if (currentOptionsGroup == NULL) return false;
+	int bottomPadding = (btnCredits ? btnCredits->height + 5 : 0);
+	int areaBottom = height - bottomPadding;
+	return (x >= currentOptionsGroup->x && x < currentOptionsGroup->x + currentOptionsGroup->width &&
+	        y >= currentOptionsGroup->y && y < areaBottom);
+}
+
+void OptionsScreen::transformMouseForScroll(int& x, int& y) const {
+	// 将屏幕坐标转换为“内容坐标”：只需加上滚动偏移量
+	// 因为子控件存储的是原始屏幕绝对坐标（在 setupPositions 时确定的），
+	// 渲染时内容向上平移了 scrollOffset，所以点击测试时需要将鼠标 Y 坐标下移相同量。
+	y += (int)scrollOffset;
+}
+
 void OptionsScreen::applyScrollLimits() {
 	scrollOffset = Mth::clamp(scrollOffset, 0.0f, maxScrollOffset);
 	if (scrollOffset <= 0.0f || scrollOffset >= maxScrollOffset) {
@@ -362,15 +391,4 @@ float OptionsScreen::getContentHeight() const {
 	if (currentOptionsGroup == NULL) return 0.0f;
 	// OptionsGroup 的高度在 setupPositions 后已经计算好，存储在 height 成员中
 	return (float)currentOptionsGroup->height;
-}
-
-bool OptionsScreen::isPointInScrollArea(int x, int y) const {
-	if (currentOptionsGroup == NULL) return false;
-	return (x >= currentOptionsGroup->x && x < currentOptionsGroup->x + currentOptionsGroup->width &&
-	        y >= currentOptionsGroup->y && y < currentOptionsGroup->y + (height - currentOptionsGroup->y - (btnCredits ? btnCredits->height + 5 : 0)));
-}
-
-void OptionsScreen::transformMouseForScroll(int& x, int& y) const {
-	// 将屏幕坐标转换为内容坐标（加上滚动偏移）
-	y += (int)scrollOffset;
 }
