@@ -21,6 +21,9 @@ public:
 	virtual void keyPressed(Minecraft* minecraft, int key);
 	virtual void charPressed(Minecraft* minecraft, char key);
 
+	// 🆕 公共访问器，用于遍历子控件
+	const std::vector<GuiElement*>& getChildren() const { return children; }
+
 protected:
 	std::vector<GuiElement*> children;
 };
