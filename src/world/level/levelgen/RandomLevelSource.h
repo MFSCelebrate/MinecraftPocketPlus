@@ -47,7 +47,11 @@ public:
     std::string gatherStats() override;
 
     // 精确世界偏移（单位：世界方块）
-    void setWorldOffset(double ox, double oz) { m_worldOffsetX = ox; m_worldOffsetZ = oz; }
+    double getWorldOffsetY() const { return m_worldOffsetY; }
+float  getWorldScaleY()  const { return m_worldScaleY; }
+void setWorldOffset(double ox, double oy, double oz) {
+    m_worldOffsetX = ox; m_worldOffsetY = oy; m_worldOffsetZ = oz;
+}
     double getWorldOffsetX() const { return m_worldOffsetX; }
 double getWorldOffsetZ() const { return m_worldOffsetZ; }
 float  getWorldScaleX()  const { return m_worldScaleX; }
