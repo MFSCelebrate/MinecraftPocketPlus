@@ -19,6 +19,7 @@ OptionBool smoothCamera("smoothCamera", false);
 OptionBool fixedCamera("fixedCamera", false);
 OptionBool isFlying("isflying", false);
 OptionBool barOnTop("barOnTop", false);
+OptionBool disableSkygrid("disable_skygrid", false);  // 默认 false = 不禁用（允许天空网格）
 OptionBool allowSprint("allowSprint", true);
 OptionBool rpiCursor("rpiCursor", false);
 OptionBool autoJump("autoJump", true);
@@ -194,6 +195,7 @@ void Options::initTable() {
     m_options[OPTIONS_SIXTYFOUR_FARLANDS] = &sixtyfourFarlands;
 	static OptionBool doubleFarlands("double_farlands", false);
     m_options[OPTIONS_DOUBLE_FARLANDS] = &doubleFarlands;
+	m_options[OPTIONS_DISABLE_SKYGRID] = &disableSkygrid;
 }
 
 void Options::set(OptionId key, const std::string& value) {
