@@ -827,6 +827,8 @@ void Gui::renderDebugInfo() {
         double nx_large = sampleWorldX * scale_large;
         double nz_large = sampleWorldZ * scale_large;
 
+		snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.3f / %.3f", nx_large, nz_large);
+
         noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)nz_large);
         noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)nz_large);
         noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)nz_large);
@@ -892,7 +894,6 @@ void Gui::renderDebugInfo() {
     }
     snprintf(ln[13], sizeof(ln[13]), "MainTerrainNoise: %s", firstPart);
     snprintf(ln[14], sizeof(ln[14]), "                      %s", secondPart);
-	snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.3f / %.3f", nx_large, nz_large);
 
     ln[16][0] = '\0';
     sprintf(ln[17], "--- Other Information ---");
