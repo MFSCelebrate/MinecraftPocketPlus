@@ -12,6 +12,8 @@
 #include "../tile/HeavyTile.h"
 #include "../../../util/Random.h"
 #include "../../../client/Minecraft.h"
+#include <cmath>  // 确保包含
+#define CHECK_FLOAT_VALID(v) (!std::isnan(v) && !std::isinf(v))
 
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
 const float RandomLevelSource::SNOW_SCALE = 0.3f;
@@ -143,10 +145,20 @@ void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned ch
                                     tileId = Tile::calmWater->id;
                                 }
                             }
-                            if (val > 0) {
-                                tileId = Tile::rock->id;
-                            }
-                            blocks[offs] = (unsigned char) tileId;
+                            // 获取禁用天空网格选项（默认 false，即不禁用）
+bool disableSkygrid = false;
+if (Minecraft::instance) {
+    disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
+}
+
+if (val > 0) {
+    tileId = Tile::rock->id;
+}
+// 如果开关开启且噪声值非法，强制设为空气（0）
+if (disableSkygrid && (std::isnan(val) || std::isinf(val))) {
+    tileId = 0;
+}
+blocks[offs] = (unsigned char) tileId;
                             offs += step;
                             val += vala;
                         }
@@ -182,8 +194,21 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
         for (int z = 0; z < 16; z++) {
             float temp = 1;
             Biome* b = biomes[x + z * 16];
-            bool sand = (sandBuffer[x + z * 16] + random.nextFloat() * 0.2f) > 0;
-            bool gravel = (gravelBuffer[x + z * 16] + random.nextFloat() * 0.2f) > 3;
+            bool disableSkygrid = false;
+if (Minecraft::instance) {
+    disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
+}
+
+float sandVal = sandBuffer[x + z * 16];
+float gravelVal = gravelBuffer[x + z * 16];
+bool sand = (sandVal + random.nextFloat() * 0.2f) > 0;
+bool gravel = (gravelVal + random.nextFloat() * 0.2f) > 3;
+
+// 如果开关开启且基础噪声值非法，强制不生成沙子/沙砾
+if (disableSkygrid) {
+    if (std::isnan(sandVal) || std::isinf(sandVal)) sand = false;
+    if (std::isnan(gravelVal) || std::isinf(gravelVal)) gravel = false;
+}
             int runDepth = (int)(depthBuffer[x + z * 16] / 3 + 3 + random.nextFloat() * 0.25f);
             int run = -1;
             char top = b->topMaterial;
