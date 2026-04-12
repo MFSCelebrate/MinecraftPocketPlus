@@ -733,8 +733,8 @@ void Gui::renderDebugInfo() {
     Level*       lvl = minecraft->level;
 
     // 获取世界偏移 (double) 和缩放 (float)
-    double terrainOffsetX = 0.0, terrainOffsetZ = 0.0;
-    float worldScaleX = 1.0f, worldScaleZ = 1.0f;
+    double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
+    float worldScaleX = 1.0f, worldScaleY = 1.0f, worldScaleZ = 1.0f;
     RandomLevelSource* rls = nullptr;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -742,8 +742,10 @@ void Gui::renderDebugInfo() {
             rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
             if (rls) {
                 terrainOffsetX = rls->getWorldOffsetX();
+                terrainOffsetY = rls->getWorldOffsetY();
                 terrainOffsetZ = rls->getWorldOffsetZ();
                 worldScaleX   = rls->getWorldScaleX();
+                worldScaleY   = rls->getWorldScaleY();
                 worldScaleZ   = rls->getWorldScaleZ();
             }
         }
@@ -766,6 +768,7 @@ void Gui::renderDebugInfo() {
 
     // 计算显示用的“偏移后世界坐标”：(原始坐标 + 偏移) * 缩放
     double pxo = (px + terrainOffsetX) * worldScaleX;
+    double pyo = (py + terrainOffsetY) * worldScaleY;
     double pzo = (pz + terrainOffsetZ) * worldScaleZ;
 
     int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
@@ -853,18 +856,19 @@ void Gui::renderDebugInfo() {
         noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);
     }
 
-    // 构建显示行 (共 22 行，增加一行用于 Noise Input)
+    // 构建显示行 (共 22 行)
     static char ln[22][512];
     sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
     sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-    sprintf(ln[5], "X(World Offset): %.15f", pxo);
-    sprintf(ln[6], "Y(Float Offset): %.12f", py);
-    sprintf(ln[7], "Z(World Offset): %.15f", pzo);
-    sprintf(ln[8], "World Offset (Blocks): %.6f / %.6f  (Scale X:%.3f Z:%.3f)",
-            terrainOffsetX, terrainOffsetZ, worldScaleX, worldScaleZ);
+    sprintf(ln[5], "X(World): %.15f", pxo);
+    sprintf(ln[6], "Y(World): %.15f", pyo);
+    sprintf(ln[7], "Z(World): %.15f", pzo);
+    sprintf(ln[8], "Offsets: %.2f / %.2f / %.2f  Scales: %.3f / %.3f / %.3f",
+            terrainOffsetX, terrainOffsetY, terrainOffsetZ,
+            worldScaleX, worldScaleY, worldScaleZ);
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
@@ -946,6 +950,7 @@ void Gui::renderDebugInfo() {
 
     glPopMatrix();
 }
+
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
