@@ -228,8 +228,10 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
 	// World
 	optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE_X, minecraft)
+		.addOptionItem(OPTIONS_WORLD_SCALE_Y, minecraft)    // 🆕 Y 缩放
 		.addOptionItem(OPTIONS_WORLD_SCALE_Z, minecraft)
 		.addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
+	    .addOptionItem(OPTIONS_WORLD_OFFSET_Y, minecraft)   // 🆕 Y 偏移
 		.addOptionItem(OPTIONS_WORLD_OFFSET_Z, minecraft)
 		.addOptionItem(OPTIONS_POSTPONED_FRINGE, minecraft)
 		.addOptionItem(OPTIONS_PROGRESSIVE_FARLANDS, minecraft)
