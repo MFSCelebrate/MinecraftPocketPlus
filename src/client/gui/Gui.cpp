@@ -853,7 +853,7 @@ void Gui::renderDebugInfo() {
     }
 
     // 构建显示行 (共 20 行)
-    static char ln[20][128];
+    static char ln[20][512];
     sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -874,8 +874,8 @@ void Gui::renderDebugInfo() {
         "LPerlin1", "LPerlin2", "Perlin1", "Perlin2",
         "Perlin3", "Scale", "Depth", "Forest"
     };
-    char firstPart[256] = "";
-    char secondPart[256] = "";
+    char firstPart[512] = "";
+    char secondPart[512] = "";
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
