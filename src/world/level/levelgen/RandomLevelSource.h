@@ -92,12 +92,8 @@ private:
     int customSeaLevel;
 
     // 新的精确偏移（单位：世界方块），废弃了旧的 offsetX/offsetZ
-    double m_worldOffsetX;
-    double m_worldOffsetZ;
-
-    // 替换原来的 float m_worldScale;
-    float m_worldScaleX;
-    float m_worldScaleZ;
+    double m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;  // 将原来的 Y 偏移也改为 double（之前可能没有）
+    float m_worldScaleX, m_worldScaleY, m_worldScaleZ;
 };
 
 class PerformanceTestChunkSource : public ChunkSource
