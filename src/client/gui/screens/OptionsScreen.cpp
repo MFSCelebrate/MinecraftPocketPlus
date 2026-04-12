@@ -9,6 +9,7 @@
 #include "../components/OptionsGroup.h"
 #include "../components/TextOption.h"
 #include "../components/OptionsItem.h"
+#include "../Gui.h"                     // 新增：用于 GuiScale
 #include "platform/input/Keyboard.h"
 #include <cmath>
 #include <algorithm>
@@ -96,38 +97,46 @@ void OptionsScreen::setupPositions() {
 void OptionsScreen::render(int xm, int ym, float a) {
 	renderBackground();
 
-	int xmm = xm * width / minecraft->width;
-	int ymm = ym * height / minecraft->height - 1;
-
 	if (currentOptionsGroup) {
-		// 1. 计算裁剪区域（屏幕坐标系，原点左上角）
-		int scissorX = currentOptionsGroup->x;
-		int scissorY = currentOptionsGroup->y;
-		int scissorW = currentOptionsGroup->width;
+		// 1. 获取缩放因子
+		float scale = Gui::GuiScale;                     // 逻辑坐标 -> 物理像素
+		float invScale = Gui::InvGuiScale;               // 物理像素 -> 逻辑坐标
+
+		// 2. 计算逻辑裁剪区域（左上角坐标系）
+		int logicX = currentOptionsGroup->x;
+		int logicY = currentOptionsGroup->y;
+		int logicW = currentOptionsGroup->width;
 		int bottomPadding = (btnCredits ? btnCredits->height + 5 : 0);
-		int scissorH = height - scissorY - bottomPadding;
-		if (scissorH < 0) scissorH = 0;
+		int logicH = height - logicY - bottomPadding;
+		if (logicH < 0) logicH = 0;
 
-		// 2. 保存旧裁剪状态
-		GLboolean scissorWasEnabled = glIsEnabled(GL_SCISSOR_TEST);
-		GLint oldScissor[4];
-		glGetIntegerv(GL_SCISSOR_BOX, oldScissor);
+		// 3. 转换为物理像素坐标（OpenGL 视口坐标）
+		int scissorX = (int)(logicX * scale);
+		int scissorY = (int)((minecraft->height) - ((logicY + logicH) * scale)); // 关键转换
+		int scissorW = (int)(logicW * scale);
+		int scissorH = (int)(logicH * scale);
 
-		// 3. 设置新裁剪（OpenGL 原点在左下角）
+		// 4. 保存旧裁剪状态
+		GLboolean wasEnabled = glIsEnabled(GL_SCISSOR_TEST);
+		GLint oldBox[4];
+		glGetIntegerv(GL_SCISSOR_BOX, oldBox);
+
+		// 5. 设置新裁剪
 		glEnable(GL_SCISSOR_TEST);
-		int glY = minecraft->height - (scissorY + scissorH);  // 关键转换！
-		glScissor(scissorX, glY, scissorW, scissorH);
+		glScissor(scissorX, scissorY, scissorW, scissorH);
 
-		// 4. 应用滚动偏移并渲染
+		// 6. 渲染内容（注意：滚动偏移量是逻辑坐标，渲染时也要用逻辑坐标平移）
 		glPushMatrix();
 		glTranslatef(0.0f, -scrollOffset, 0.0f);
-		// 传入的鼠标 Y 坐标也需加上滚动偏移（因为子控件坐标是绝对屏幕坐标）
-		currentOptionsGroup->render(minecraft, xmm, ymm + (int)scrollOffset);
+		// 传递的鼠标坐标在 render 中不关键，但为了一致性，也转换一下
+		int xmm = (int)(xm * width / (float)minecraft->width);
+		int ymm = (int)(ym * height / (float)minecraft->height) - 1 + (int)scrollOffset;
+		currentOptionsGroup->render(minecraft, xmm, ymm);
 		glPopMatrix();
 
-		// 5. 恢复裁剪状态
-		if (!scissorWasEnabled) glDisable(GL_SCISSOR_TEST);
-		else glScissor(oldScissor[0], oldScissor[1], oldScissor[2], oldScissor[3]);
+		// 7. 恢复裁剪状态
+		if (!wasEnabled) glDisable(GL_SCISSOR_TEST);
+		else glScissor(oldBox[0], oldBox[1], oldBox[2], oldBox[3]);
 	}
 
 	// 渲染其他 UI（不被裁剪）
@@ -170,10 +179,8 @@ void OptionsScreen::generateOptionScreens() {
 	optionPanes.push_back(new OptionsGroup("options.group.tweaks"));
 	optionPanes.push_back(new OptionsGroup("options.group.world"));
 
-	// General
 	optionPanes[0]->addOptionItem(OPTIONS_USERNAME, minecraft)
 		.addOptionItem(OPTIONS_SENSITIVITY, minecraft);
-	// Game
 	optionPanes[1]->addOptionItem(OPTIONS_DIFFICULTY, minecraft)
 		.addOptionItem(OPTIONS_SERVER_VISIBLE, minecraft)
 		.addOptionItem(OPTIONS_THIRD_PERSON_VIEW, minecraft)
@@ -184,13 +191,11 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_SMOOTH_CAMERA, minecraft)
 		.addOptionItem(OPTIONS_DESTROY_VIBRATION, minecraft)
 		.addOptionItem(OPTIONS_IS_LEFT_HANDED, minecraft);
-	// Controls
 	optionPanes[2]->addOptionItem(OPTIONS_INVERT_Y_MOUSE, minecraft)
 		.addOptionItem(OPTIONS_USE_TOUCHSCREEN, minecraft)
 		.addOptionItem(OPTIONS_AUTOJUMP, minecraft);
 	for (int i = OPTIONS_KEY_FORWARD; i <= OPTIONS_KEY_USE; ++i)
 		optionPanes[2]->addOptionItem((OptionId)i, minecraft);
-	// Graphics
 	optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
 		.addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
 		.addOptionItem(OPTIONS_VSYNC, minecraft)
@@ -199,11 +204,9 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
 		.addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
 	optionPanes[3]->addOptionItem(OPTIONS_DEBUG_SCREEN_SIZE, minecraft);
-	// Tweaks
 	optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
 		.addOptionItem(OPTIONS_BAR_ON_TOP, minecraft)
 		.addOptionItem(OPTIONS_RPI_CURSOR, minecraft);
-	// World
 	optionPanes[5]->addOptionItem(OPTIONS_WORLD_SCALE_X, minecraft)
 		.addOptionItem(OPTIONS_WORLD_SCALE_Z, minecraft)
 		.addOptionItem(OPTIONS_WORLD_OFFSET_X, minecraft)
@@ -270,7 +273,6 @@ void OptionsScreen::tick() {
 	if (currentOptionsGroup)
 		currentOptionsGroup->tick(minecraft);
 
-	// 惯性滚动
 	if (!isDragging && fabs(scrollVelocity) > 0.01f) {
 		scrollOffset += scrollVelocity;
 		applyScrollLimits();
@@ -278,7 +280,6 @@ void OptionsScreen::tick() {
 		if (fabs(scrollVelocity) < 0.01f) scrollVelocity = 0.0f;
 	}
 
-	// 拖动更新
 	if (isDragging) {
 		int mx = Mouse::getX();
 		int my = Mouse::getY();
