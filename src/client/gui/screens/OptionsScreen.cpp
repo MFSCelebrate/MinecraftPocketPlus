@@ -168,6 +168,20 @@ void OptionsScreen::selectCategory(int index) {
 		scrollOffset = 0.0f;
 		scrollVelocity = 0.0f;
 		updateMaxScrollOffset();
+
+		// 🆕 重建 textBoxes 列表：只包含当前面板中的 TextOption
+		textBoxes.clear();
+		if (currentOptionsGroup) {
+			for (GuiElement* child : currentOptionsGroup->getChildren()) {
+				if (OptionsItem* item = dynamic_cast<OptionsItem*>(child)) {
+					for (GuiElement* grandChild : item->getChildren()) {
+						if (TextOption* tb = dynamic_cast<TextOption*>(grandChild)) {
+							textBoxes.push_back(tb);
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
