@@ -102,6 +102,8 @@ enum OptionId {
     OPTIONS_WORLD_SCALE_X,   // 新增：X 轴缩放
     OPTIONS_WORLD_SCALE_Z,   // 新增：Z 轴缩放
     OPTIONS_DISABLE_SKYGRID,
+    OPTIONS_WORLD_SCALE_Y,   // 新增：Y 轴缩放
+    OPTIONS_WORLD_OFFSET_Y,  // 新增：Y 轴偏移
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
