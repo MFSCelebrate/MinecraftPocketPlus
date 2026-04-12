@@ -853,7 +853,7 @@ void Gui::renderDebugInfo() {
     }
 
     // 构建显示行 (共 20 行)
-    static char ln[20][512];
+    static char ln[21][512];
     sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -892,16 +892,17 @@ void Gui::renderDebugInfo() {
     }
     snprintf(ln[13], sizeof(ln[13]), "MainTerrainNoise: %s", firstPart);
     snprintf(ln[14], sizeof(ln[14]), "                      %s", secondPart);
+	snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.3f / %.3f", nx_large, nz_large);
 
-    ln[15][0] = '\0';
-    sprintf(ln[16], "--- Other Information ---");
-    sprintf(ln[17], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[18], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
+    ln[16][0] = '\0';
+    sprintf(ln[17], "--- Other Information ---");
+    sprintf(ln[18], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[19], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
             facing, axis, p->yRot, p->xRot, biomeName);
-    sprintf(ln[19], "Day %ld  Time: %ld  Seed: %ld",
+    sprintf(ln[20], "Day %ld  Time: %ld  Seed: %ld",
             day, dayTime, seed);
 
-    const int N = 20;
+    const int N = 21;
     const float LH  = (float)Font::DefaultLineHeight;
     const float MGN = 2.0f;
     const float PAD = 2.0f;
