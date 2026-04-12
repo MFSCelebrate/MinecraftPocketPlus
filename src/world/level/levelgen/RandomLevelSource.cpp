@@ -1,5 +1,4 @@
 #include "RandomLevelSource.h"
-
 #include "feature/FeatureInclude.h"
 #include "../Level.h"
 #include "../ChunkPos.h"
@@ -12,8 +11,7 @@
 #include "../tile/HeavyTile.h"
 #include "../../../util/Random.h"
 #include "../../../client/Minecraft.h"
-#include <cmath>  // 确保包含
-#define CHECK_FLOAT_VALID(v) (!std::isnan(v) && !std::isinf(v))
+#include <cmath>
 
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
 const float RandomLevelSource::SNOW_SCALE = 0.3f;
@@ -32,7 +30,9 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     forestNoise(&random, 8),
     spawnMobs(spawnMobs),
     pnr(NULL), ar(NULL), br(NULL), sr(NULL), dr(NULL), fi(NULL), fis(NULL),
-    m_worldOffsetX(0.0), m_worldOffsetZ(0.0), m_worldScaleX(1.0f), m_worldScaleZ(1.0f)
+    m_worldOffsetX(0.0), m_worldOffsetY(0.0), m_worldOffsetZ(0.0),
+    m_worldScaleX(1.0f), m_worldScaleY(1.0f), m_worldScaleZ(1.0f),
+    m_disableSkygrid(false)
 {
     for (int i=0; i<32; ++i)
         for (int j=0; j<32; ++j)
@@ -43,37 +43,36 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
 
-    // 读取世界缩放 X 和 Z（字符串转浮点）
-if (Minecraft::instance) {
-    std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
-    std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
-    if (!scaleXStr.empty()) {
-        m_worldScaleX = (float)atof(scaleXStr.c_str());
-        if (m_worldScaleX <= 0.0f) m_worldScaleX = 0.001f;
-    } else {
-        m_worldScaleX = 1.0f;
-    }
-    if (!scaleZStr.empty()) {
-        m_worldScaleZ = (float)atof(scaleZStr.c_str());
-        if (m_worldScaleZ <= 0.0f) m_worldScaleZ = 0.001f;
-    } else {
-        m_worldScaleZ = 1.0f;
-    }
-    LOGI("World scale X=%.4f, Z=%.4f\n", m_worldScaleX, m_worldScaleZ);
-}
-
-    // 从 Options 读取精确世界偏移（单位：世界方块）
+    // 读取世界缩放 X, Y, Z
     if (Minecraft::instance) {
-    std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
-    std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-    if (!xStr.empty()) {
-        m_worldOffsetX = atof(xStr.c_str());   // 🆕 改为 atof
+        std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
+        std::string scaleYStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
+        std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+        if (!scaleXStr.empty()) {
+            m_worldScaleX = (float)atof(scaleXStr.c_str());
+            if (m_worldScaleX <= 0.0f) m_worldScaleX = 0.001f;
+        } else m_worldScaleX = 1.0f;
+        if (!scaleYStr.empty()) {
+            m_worldScaleY = (float)atof(scaleYStr.c_str());
+            if (m_worldScaleY <= 0.0f) m_worldScaleY = 0.001f;
+        } else m_worldScaleY = 1.0f;
+        if (!scaleZStr.empty()) {
+            m_worldScaleZ = (float)atof(scaleZStr.c_str());
+            if (m_worldScaleZ <= 0.0f) m_worldScaleZ = 0.001f;
+        } else m_worldScaleZ = 1.0f;
+        LOGI("World scale X=%.4f Y=%.4f Z=%.4f\n", m_worldScaleX, m_worldScaleY, m_worldScaleZ);
     }
-    if (!zStr.empty()) {
-        m_worldOffsetZ = atof(zStr.c_str());
+
+    // 读取世界偏移 (double)
+    if (Minecraft::instance) {
+        std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+        std::string yStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
+        std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+        if (!xStr.empty()) m_worldOffsetX = atof(xStr.c_str());
+        if (!yStr.empty()) m_worldOffsetY = atof(yStr.c_str());
+        if (!zStr.empty()) m_worldOffsetZ = atof(zStr.c_str());
+        LOGI("RandomLevelSource: world offset = (%.2f, %.2f, %.2f)\n", m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ);
     }
-    LOGI("RandomLevelSource: world offset = (%.2f, %.2f)\n", m_worldOffsetX, m_worldOffsetZ);
-	}
 
     customSeaLevel = 63;
     if (Minecraft::instance) {
@@ -83,6 +82,7 @@ if (Minecraft::instance) {
             if (sl >= 0 && sl <= 127) customSeaLevel = sl;
             else LOGI("Sea level adjusted from %d to %d (must be 0-127)\n", sl, customSeaLevel);
         }
+        m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
     }
 }
 
@@ -145,20 +145,13 @@ void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned ch
                                     tileId = Tile::calmWater->id;
                                 }
                             }
-                            // 获取禁用天空网格选项（默认 false，即不禁用）
-bool disableSkygrid = false;
-if (Minecraft::instance) {
-    disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
-}
-
-if (val > 0) {
-    tileId = Tile::rock->id;
-}
-// 如果开关开启且噪声值非法，强制设为空气（0）
-if (disableSkygrid && (std::isnan(val) || std::isinf(val))) {
-    tileId = 0;
-}
-blocks[offs] = (unsigned char) tileId;
+                            if (val > 0) {
+                                tileId = Tile::rock->id;
+                            }
+                            if (m_disableSkygrid && (std::isnan(val) || std::isinf(val))) {
+                                tileId = 0;
+                            }
+                            blocks[offs] = (unsigned char) tileId;
                             offs += step;
                             val += vala;
                         }
@@ -183,32 +176,24 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     float sx = (1.0f / 32.0f) * m_worldScaleX;
     float sz = (1.0f / 32.0f) * m_worldScaleZ;
 
-    float xf = (float)((double)(xOffs + m_worldOffsetX) / 4.0);
-    float zf = (float)((double)(zOffs + m_worldOffsetZ) / 4.0);
+    float xf = (float)((xOffs + m_worldOffsetX) / 4.0);
+    float zf = (float)((zOffs + m_worldOffsetZ) / 4.0);
     perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, sx, sz, 1.0f);
     perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, sx, 1.0f, sz);
-    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f); // 第三维通常也是Z
+    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f);
 
-    // ... 后续循环不变 ...
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
             float temp = 1;
             Biome* b = biomes[x + z * 16];
-            bool disableSkygrid = false;
-if (Minecraft::instance) {
-    disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
-}
-
-float sandVal = sandBuffer[x + z * 16];
-float gravelVal = gravelBuffer[x + z * 16];
-bool sand = (sandVal + random.nextFloat() * 0.2f) > 0;
-bool gravel = (gravelVal + random.nextFloat() * 0.2f) > 3;
-
-// 如果开关开启且基础噪声值非法，强制不生成沙子/沙砾
-if (disableSkygrid) {
-    if (std::isnan(sandVal) || std::isinf(sandVal)) sand = false;
-    if (std::isnan(gravelVal) || std::isinf(gravelVal)) gravel = false;
-}
+            float sandVal = sandBuffer[x + z * 16];
+            float gravelVal = gravelBuffer[x + z * 16];
+            bool sand = (sandVal + random.nextFloat() * 0.2f) > 0;
+            bool gravel = (gravelVal + random.nextFloat() * 0.2f) > 3;
+            if (m_disableSkygrid) {
+                if (std::isnan(sandVal) || std::isinf(sandVal)) sand = false;
+                if (std::isnan(gravelVal) || std::isinf(gravelVal)) gravel = false;
+            }
             int runDepth = (int)(depthBuffer[x + z * 16] / 3 + 3 + random.nextFloat() * 0.25f);
             int run = -1;
             char top = b->topMaterial;
@@ -263,9 +248,8 @@ if (disableSkygrid) {
 }
 
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
-    // 世界偏移直接加到世界坐标上（生成物需要跟随地形）
-    int64_t worldBlockX = xt * 16 + m_worldOffsetX;
-    int64_t worldBlockZ = zt * 16 + m_worldOffsetZ;
+    int64_t worldBlockX = xt * 16 + (int64_t)m_worldOffsetX;
+    int64_t worldBlockZ = zt * 16 + (int64_t)m_worldOffsetZ;
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
 
@@ -284,6 +268,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 
     // 以下所有使用 xo, zo 的地方不变，因为它们已经是 int 范围内的世界坐标
     // ... 原有代码（生成树、矿石、花朵等）保持不变 ...
+    
 	// //@todo: hide those chunks if they are aren't visible
 //    if (random.nextInt(4) == 0) {
 //        int x = xo + random.nextInt(16) + 8;
@@ -549,9 +534,8 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    // 世界方块坐标 = 区块索引 * 16 + 精确偏移（世界单位）
-    int64_t worldBlockX = xOffs * 16 + m_worldOffsetX;
-    int64_t worldBlockZ = zOffs * 16 + m_worldOffsetZ;
+    int64_t worldBlockX = xOffs * 16 + (int64_t)m_worldOffsetX;
+    int64_t worldBlockZ = zOffs * 16 + (int64_t)m_worldOffsetZ;
 
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
     float* temperatures = level->getBiomeSource()->temperatures;
@@ -567,10 +551,9 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
 
-    // 分离 X、Y、Z 轴缩放因子
     float sx = 684.412f * farlandsScale * m_worldScaleX;
+    float sy = 684.412f * farlandsScale * m_worldScaleY;
     float sz = 684.412f * farlandsScale * m_worldScaleZ;
-    float sy = 684.412f * farlandsScale;   // Y 轴暂不缩放，可自行扩展
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
@@ -580,27 +563,24 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
 
-    // 🆕 噪声坐标计算：世界坐标 + 精确偏移后再除以 4
+    // 应用 Y 偏移
     double noiseX = (x + m_worldOffsetX) / 4.0;
+    double noiseY = (y + m_worldOffsetY) / 8.0;
     double noiseZ = (z + m_worldOffsetZ) / 4.0;
-    double noiseY = (double)y / 8.0;
 
     int64_t scaleX = (int64_t)noiseX;
     int64_t scaleZ = (int64_t)noiseZ;
-    // scaleNoise 和 depthNoise 应用独立缩放
     sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f * m_worldScaleX, 1.121f * m_worldScaleZ, 0.5f);
     dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f * m_worldScaleX, 200.0f * m_worldScaleZ, 0.5f);
 
     float xf = (float)noiseX;
-    float zf = (float)noiseZ;
     float yf = (float)noiseY;
+    float zf = (float)noiseZ;
 
-    // 主要地形噪声调用，传入 sx, sy, sz
     pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0f, sy / 160.0f, sz / 80.0f);
     ar = lperlinNoise1.getRegion(ar, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
     br = lperlinNoise2.getRegion(br, xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
 
-    // 后续地形高度计算保持不变
     int p = 0;
     int pp = 0;
     int wScale = 16 / xSize;
@@ -657,7 +637,7 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     }
     return buffer;
 }
-/*private*/
+
 void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt) {
     // 注意：此函数使用世界坐标，应应用偏移
     int64_t worldX = xt * 16 + m_worldOffsetX;
@@ -724,13 +704,9 @@ std::string RandomLevelSource::gatherStats() {
 
 Biome::MobList RandomLevelSource::getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
     BiomeSource* biomeSource = level->getBiomeSource();
-    if (biomeSource == NULL) {
-        return Biome::MobList();
-    }
+    if (biomeSource == NULL) return Biome::MobList();
     Biome* biome = biomeSource->getBiome(x, z);
-    if (biome == NULL) {
-        return Biome::MobList();
-    }
+    if (biome == NULL) return Biome::MobList();
     return biome->getMobs(mobCategory);
 }
 
