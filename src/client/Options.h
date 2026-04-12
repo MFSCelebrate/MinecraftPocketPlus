@@ -101,6 +101,7 @@ enum OptionId {
     OPTIONS_DOUBLE_FARLANDS,
     OPTIONS_WORLD_SCALE_X,   // 新增：X 轴缩放
     OPTIONS_WORLD_SCALE_Z,   // 新增：Z 轴缩放
+    OPTIONS_DISABLE_SKYGRID,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
