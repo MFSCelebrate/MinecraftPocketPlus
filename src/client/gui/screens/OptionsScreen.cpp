@@ -239,17 +239,6 @@ void OptionsScreen::generateOptionScreens() {
 		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft);
 
 	// 收集所有 TextOption 到 textBoxes，以便基类 lostFocus 自动保存
-	for (OptionsGroup* pane : optionPanes) {
-		for (GuiElement* child : pane->getChildren()) {
-			if (OptionsItem* item = dynamic_cast<OptionsItem*>(child)) {
-				for (GuiElement* grandChild : item->getChildren()) {
-					if (TextOption* tb = dynamic_cast<TextOption*>(grandChild)) {
-						textBoxes.push_back(tb);
-					}
-				}
-			}
-		}
-	}
 }
 
 void OptionsScreen::mouseClicked(int x, int y, int buttonNum) {
