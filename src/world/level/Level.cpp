@@ -381,13 +381,19 @@ bool Level::findPath(Path* path, Entity* from, int xBest, int yBest, int zBest, 
 /*protected*/
 void Level::setInitialSpawn() {
     isFindingSpawn = true;
-    int xSpawn = CHUNK_CACHE_WIDTH * CHUNK_WIDTH / 2;
+
+    int xSpawn = 0;
     int ySpawn = 64;
-    int zSpawn = CHUNK_CACHE_WIDTH * CHUNK_DEPTH / 2;
-    while (!dimension->isValidSpawn(xSpawn, zSpawn)) {
-        xSpawn += random.nextInt(32) - random.nextInt(32);
-        zSpawn += random.nextInt(32) - random.nextInt(32);
-    }
+    int zSpawn = 0;
+
+    // 强制加载出生点所在区块
+    getChunk(xSpawn >> 4, zSpawn >> 4);
+    
+    // 放置基岩
+    setTileAndDataNoUpdate(xSpawn, ySpawn - 1, zSpawn, Tile::unbreakable->id, 0);
+    setTileNoUpdate(xSpawn, ySpawn, zSpawn, 0);
+    setTileNoUpdate(xSpawn, ySpawn + 1, zSpawn, 0);
+
     levelData.setSpawn(xSpawn, ySpawn, zSpawn);
     isFindingSpawn = false;
 }
