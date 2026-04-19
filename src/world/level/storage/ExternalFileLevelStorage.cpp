@@ -14,6 +14,7 @@
 #include "../../../util/RakDataIO.h"
 #include "../../../raknet/GetTime.h"
 #include "../tile/entity/TileEntity.h"
+#include "../chunk/ChunkCache.h"
 
 static const int ChunkVersion_Light = 1;
 static const int ChunkVersion_Entity = 2;
