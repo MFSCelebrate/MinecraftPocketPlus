@@ -134,6 +134,15 @@ public:
         return source->tick();
     }
 
+    void getLoadedChunks(std::vector<LevelChunk*>& out) const {
+    out.clear();
+    for (const auto& pair : chunks) {
+        if (pair.second && pair.second != emptyChunk) {
+            out.push_back(pair.second);
+        }
+    }
+}
+
     bool shouldSave() { return true; }
     std::string gatherStats() { return "ChunkCache: dynamic"; }
 
