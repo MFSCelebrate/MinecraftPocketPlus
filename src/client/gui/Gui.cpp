@@ -857,8 +857,8 @@ void Gui::renderDebugInfo() {
     }
 
     // 构建显示行 (共 22 行)
-    static char ln[22][512];
-    sprintf(ln[0], "Minecraft NoiseFarlands [Vanilla/0.6.1 and NF-1.9.4]");
+    static char ln[22][1024];
+    sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
@@ -866,7 +866,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[5], "X(World): %.15f", pxo);
     sprintf(ln[6], "Y(World): %.15f", pyo);
     sprintf(ln[7], "Z(World): %.15f", pzo);
-    sprintf(ln[8], "Offsets: %.2f / %.2f / %.2f  Scales: %.3f / %.3f / %.3f",
+    sprintf(ln[8], "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
     ln[9][0] = '\0';
@@ -879,8 +879,8 @@ void Gui::renderDebugInfo() {
         "LPerlin1", "LPerlin2", "Perlin1", "Perlin2",
         "Perlin3", "Scale", "Depth", "Forest"
     };
-    char firstPart[512] = "";
-    char secondPart[512] = "";
+    char firstPart[1024] = "";
+    char secondPart[1024] = "";
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
