@@ -84,10 +84,38 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
     }
 }
 
-ExternalFileLevelStorage::~ExternalFileLevelStorage()
-{
-    delete regionFile;
+ExternalFileLevelStorage::~ExternalFileLevelStorage() {
+    for (auto& pair : m_regionCache) {
+        delete pair.second;
+    }
+    m_regionCache.clear();
     delete loadedLevelData;
+}
+RegionFile* ExternalFileLevelStorage::getRegionFile(int64_t chunkX, int64_t chunkZ) {
+    // 计算区域坐标（每个区域 32×32 区块）
+    int64_t regionX = (chunkX >= 0) ? (chunkX / 32) : ((chunkX - 31) / 32);
+    int64_t regionZ = (chunkZ >= 0) ? (chunkZ / 32) : ((chunkZ - 31) / 32);
+
+    auto key = std::make_pair(regionX, regionZ);
+    auto it = m_regionCache.find(key);
+    if (it != m_regionCache.end()) {
+        return it->second;
+    }
+
+    // 确保目录存在
+    std::string regionDir = levelPath + "/region";
+    createFolderIfNotExists(regionDir.c_str());
+
+    char fileName[512];
+    snprintf(fileName, sizeof(fileName), "%s/r.%lld.%lld.dat", regionDir.c_str(),
+             (long long)regionX, (long long)regionZ);
+    RegionFile* rf = new RegionFile(fileName);
+    if (!rf->open()) {
+        delete rf;
+        return nullptr;
+    }
+    m_regionCache[key] = rf;
+    return rf;
 }
 
 void ExternalFileLevelStorage::saveLevelData(LevelData& levelData, std::vector<Player*>* players) {
@@ -203,53 +231,74 @@ bool ExternalFileLevelStorage::readPlayerData(const std::string& filename, Level
     return false;
 }
 
-void ExternalFileLevelStorage::tick()
-{
+void ExternalFileLevelStorage::tick() {
     tickCount++;
+    
+    // 每 1000 tick（约 50 秒）执行一次区块保存检查
     if ((tickCount % 1000) == 0 && level) {
         LOGI("Saving level...\n");
-        for (int z = 0; z < CHUNK_CACHE_WIDTH; z++) {
-            for (int x = 0; x < CHUNK_CACHE_WIDTH; x++) {
-                LevelChunk* chunk = level->getChunk(x, z);
-                if (chunk && chunk->unsaved) {
-                    int pos = x + z * CHUNK_CACHE_WIDTH;
+        
+        // 从 ChunkCache 获取当前已加载的区块列表
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(level->getChunkSource());
+        if (cache) {
+            std::vector<LevelChunk*> loaded;
+            cache->getLoadedChunks(loaded);
+            
+            int added = 0;
+            for (LevelChunk* chunk : loaded) {
+                if (!chunk) continue;
+                if (chunk->unsaved) {
+                    // 构造唯一标识（使用区块坐标）
+                    int64_t pos = (chunk->x << 16) ^ chunk->z;
+                    
+                    // 检查是否已在待保存列表中
                     UnsavedChunkList::iterator prev = unsavedChunkList.begin();
+                    bool found = false;
                     for ( ; prev != unsavedChunkList.end(); ++prev) {
                         if ((*prev).pos == pos) {
                             (*prev).addedToList = RakNet::GetTimeMS();
+                            found = true;
                             break;
                         }
                     }
-                    if (prev == unsavedChunkList.end()) {
+                    
+                    if (!found) {
                         UnsavedLevelChunk unsaved;
-                        unsaved.pos = pos;
+                        unsaved.pos = (int)pos;
                         unsaved.addedToList = RakNet::GetTimeMS();
                         unsaved.chunk = chunk;
                         unsavedChunkList.push_back(unsaved);
+                        added++;
                     }
-                    chunk->unsaved = false;
+                    // 注意：这里不将 unsaved 置 false，因为我们只是在排队
                 }
             }
+            LOGI("Added %d chunks to save queue. Total pending: %d\n", added, (int)unsavedChunkList.size());
         }
-        savePendingUnsavedChunks(2);
+        
+        // 每次 tick 保存最多 4 个最旧的待保存区块
+        int saved = savePendingUnsavedChunks(4);
+        LOGI("Saved %d chunks.\n", saved);
     }
+    
+    // 每 60 秒保存一次实体数据
     if (tickCount - lastSavedEntitiesTick > (60 * SharedConstants::TicksPerSecond)) {
         saveEntities(level, NULL);
+        lastSavedEntitiesTick = tickCount;
     }
 }
 
-void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
-{
-    if (!regionFile)
-    {
-        regionFile = new RegionFile(levelPath);
-        if (!regionFile->open())
-        {
-            delete regionFile;
-            regionFile = NULL;
-            return;
-        }
-    }
+void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk) {
+    int64_t x = levelChunk->x;
+    int64_t z = levelChunk->z;
+
+    RegionFile* rf = getRegionFile(x, z);
+    if (!rf) return;
+
+    int64_t regionX = (x >= 0) ? (x / 32) : ((x - 31) / 32);
+    int64_t regionZ = (z >= 0) ? (z / 32) : ((z - 31) / 32);
+    int localX = (int)(x - regionX * 32);
+    int localZ = (int)(z - regionZ * 32);
 
     RakNet::BitStream chunkData;
     chunkData.Write((const char*)levelChunk->getBlockData(), CHUNK_BLOCK_COUNT);
@@ -258,41 +307,41 @@ void ExternalFileLevelStorage::save(Level* level, LevelChunk* levelChunk)
     chunkData.Write((const char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
     chunkData.Write((const char*)levelChunk->updateMap, CHUNK_COLUMNS);
 
-    regionFile->writeChunk(levelChunk->x, levelChunk->z, chunkData);
+    rf->writeChunk(localX, localZ, chunkData);
 }
 
-LevelChunk* ExternalFileLevelStorage::load(Level* level, int64_t x, int64_t z)
-{
-    if (!regionFile)
-    {
-        regionFile = new RegionFile(levelPath);
-        if (!regionFile->open())
-        {
-            delete regionFile;
-            regionFile = NULL;
-            return NULL;
-        }
-    }
+LevelChunk* ExternalFileLevelStorage::load(Level* level, int64_t x, int64_t z) {
+    RegionFile* rf = getRegionFile(x, z);
+    if (!rf) return nullptr;
 
-    RakNet::BitStream* chunkData = NULL;
-    if (!regionFile->readChunk(x, z, &chunkData))
-        return NULL;
+    // 计算区域内的局部坐标 (0~31)
+    int64_t regionX = (x >= 0) ? (x / 32) : ((x - 31) / 32);
+    int64_t regionZ = (z >= 0) ? (z / 32) : ((z - 31) / 32);
+    int localX = (int)(x - regionX * 32);
+    int localZ = (int)(z - regionZ * 32);
+
+    RakNet::BitStream* chunkData = nullptr;
+    if (!rf->readChunk(localX, localZ, &chunkData)) {
+        return nullptr;
+    }
 
     chunkData->ResetReadPointer();
     unsigned char* blockIds = new unsigned char[CHUNK_BLOCK_COUNT];
     chunkData->Read((char*)blockIds, CHUNK_BLOCK_COUNT);
 
-    LevelChunk* levelChunk = new LevelChunk(level, blockIds, (int)x, (int)z);
+    LevelChunk* levelChunk = new LevelChunk(level, blockIds, x, z);
     chunkData->Read((char*)levelChunk->data.data, CHUNK_BLOCK_COUNT / 2);
+
     if (loadedStorageVersion >= ChunkVersion_Light) {
         chunkData->Read((char*)levelChunk->skyLight.data, CHUNK_BLOCK_COUNT / 2);
         chunkData->Read((char*)levelChunk->blockLight.data, CHUNK_BLOCK_COUNT / 2);
     }
     chunkData->Read((char*)levelChunk->updateMap, CHUNK_COLUMNS);
 
-    delete [] chunkData->GetData();
+    delete[] chunkData->GetData();
     delete chunkData;
 
+    // 版本转换（保留原有逻辑）
     bool changed = false;
     if (loadedStorageVersion == 1)
         changed |= LevelConverters::v1_ClothIdToClothData(levelChunk);
@@ -302,7 +351,6 @@ LevelChunk* ExternalFileLevelStorage::load(Level* level, int64_t x, int64_t z)
     levelChunk->unsaved = changed;
     levelChunk->terrainPopulated = true;
     levelChunk->createdFromSave = true;
-
     return levelChunk;
 }
 
@@ -421,28 +469,44 @@ void ExternalFileLevelStorage::saveGame(Level* level) {
     saveEntities(level, NULL);
 }
 
-int ExternalFileLevelStorage::savePendingUnsavedChunks( int maxCount ) {
-    if (maxCount < 0)
-        maxCount = unsavedChunkList.size();
-
+int ExternalFileLevelStorage::savePendingUnsavedChunks(int maxCount) {
+    if (maxCount < 0) {
+        maxCount = (int)unsavedChunkList.size();
+    }
     int count = 0;
-    while (++count <= maxCount && !unsavedChunkList.empty()) {
+    int safety = maxCount * 3 + 10; // 防止意外死循环
+    
+    while (count < maxCount && !unsavedChunkList.empty() && --safety > 0) {
+        // 找到加入时间最早的待保存区块
         UnsavedChunkList::iterator it = unsavedChunkList.begin();
-        UnsavedChunkList::iterator remove = unsavedChunkList.begin();
+        UnsavedChunkList::iterator removeIt = it;
         UnsavedLevelChunk* oldest = &(*it);
+        
         for ( ; it != unsavedChunkList.end(); ++it) {
             if ((*it).addedToList < oldest->addedToList) {
                 oldest = &(*it);
-                remove = it;
+                removeIt = it;
             }
         }
+        
         LevelChunk* chunk = oldest->chunk;
-        unsavedChunkList.erase(remove);
-        save(level, chunk);
+        unsavedChunkList.erase(removeIt);
+        
+        if (chunk) {
+            save(level, chunk);
+            chunk->unsaved = false;
+            count++;
+        } else {
+            LOGW("Null chunk in unsaved list!\n");
+        }
+    }
+    
+    if (safety <= 0) {
+        LOGE("savePendingUnsavedChunks safety triggered! Clearing list.\n");
+        unsavedChunkList.clear();
     }
     return count;
 }
-
 void ExternalFileLevelStorage::saveAll( Level* level, std::vector<LevelChunk*>& levelChunks ) {
     ChunkStorage::saveAll(level, levelChunks);
     int numChunks = savePendingUnsavedChunks(-1);
