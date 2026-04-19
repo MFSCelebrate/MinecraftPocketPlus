@@ -54,6 +54,8 @@ public:
     virtual void flush() override {}
 
 private:
+    std::map<std::pair<int64_t, int64_t>, RegionFile*> m_regionCache;
+    RegionFile* getRegionFile(int64_t chunkX, int64_t chunkZ);
     std::string levelId;
     std::string levelPath;
     LevelData* loadedLevelData;
