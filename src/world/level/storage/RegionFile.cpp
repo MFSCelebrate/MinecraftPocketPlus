@@ -1,259 +1,216 @@
 #include "RegionFile.h"
 #include "../../../platform/log.h"
+#include <cstring>
+#include <cerrno>
 
-const int SECTOR_BYTES = 4096;
-const int SECTOR_INTS = SECTOR_BYTES / 4;
-const int SECTOR_COLS = 32;
-const int MAP_MAGIC = 0x4D41505F;
-const int MAP_VERSION = 1;
-
-static const char* const REGION_DAT_NAME = "chunks.dat";
-
-static void logAssert(int actual, int expected) {
-    if (actual != expected) {
-        LOGI("ERROR: I/O operation failed (%d vs %d)\n", actual, expected);
-    }
+RegionFile::RegionFile(const std::string& filePath)
+    : m_filePath(filePath), m_file(nullptr) {
+    memset(m_chunks, 0, sizeof(m_chunks));
 }
 
-RegionFile::RegionFile(const std::string& basePath)
-:   file(NULL), useOldFormat(false)
-{
-    filename = basePath;
-    filename += "/";
-    filename += REGION_DAT_NAME;
-
-    offsets = new int[SECTOR_INTS];
-    emptyChunk = new int[SECTOR_INTS];
-    memset(emptyChunk, 0, SECTOR_INTS * sizeof(int));
-}
-
-RegionFile::~RegionFile()
-{
+RegionFile::~RegionFile() {
     close();
-    delete [] offsets;
-    delete [] emptyChunk;
 }
 
-bool RegionFile::open()
-{
+bool RegionFile::open() {
     close();
-
-    memset(offsets, 0, SECTOR_INTS * sizeof(int));
-    sectorFree.clear();
-    chunkToSector.clear();
-    useOldFormat = false;
-
-    file = fopen(filename.c_str(), "r+b");
-    if (file)
-    {
-        fseek(file, 0, SEEK_END);
-        long fileSize = ftell(file);
-        if (fileSize >= (int)sizeof(int) * 2) {
-            fseek(file, - (int)sizeof(int), SEEK_END);
-            int magic;
-            fread(&magic, sizeof(int), 1, file);
-            if (magic == MAP_MAGIC) {
-                fseek(file, - (int)sizeof(int) * 2, SEEK_END);
-                int version;
-                fread(&version, sizeof(int), 1, file);
-                if (version == MAP_VERSION) {
-                    useOldFormat = false;
-                    readSectorMap();
-                } else {
-                    useOldFormat = true;
-                }
-            } else {
-                useOldFormat = true;
-            }
-        } else {
-            useOldFormat = true;
-        }
-
-        if (useOldFormat) {
-            fseek(file, 0, SEEK_SET);
-            logAssert(fread(offsets, sizeof(int), SECTOR_INTS, file), SECTOR_INTS);
-            sectorFree[0] = false;
-            for (int sector = 0; sector < SECTOR_INTS; sector++) {
-                int offset = offsets[sector];
-                if (offset) {
-                    int base = offset >> 8;
-                    int count = offset & 0xff;
-                    for (int i = 0; i < count; i++)
-                        sectorFree[base + i] = false;
-                }
-            }
-        } else {
-            for (auto& kv : chunkToSector) {
-                int base = kv.second;
-                sectorFree[base] = false;
-            }
-        }
-    }
-    else
-    {
-        file = fopen(filename.c_str(), "w+b");
-        if (!file)
-        {
-            LOGI("Failed to create chunk file %s\n", filename.c_str());
+    m_file = fopen(m_filePath.c_str(), "r+b");
+    if (!m_file) {
+        // 文件不存在，创建新文件
+        m_file = fopen(m_filePath.c_str(), "w+b");
+        if (!m_file) {
+            LOGE("Failed to create region file: %s", m_filePath.c_str());
             return false;
         }
-        logAssert(fwrite(offsets, sizeof(int), SECTOR_INTS, file), SECTOR_INTS);
-        sectorFree[0] = false;
-        useOldFormat = false;
-    }
-
-    return file != NULL;
-}
-
-void RegionFile::close()
-{
-    if (file)
-    {
-        if (!useOldFormat) {
-            writeSectorMap();
-        }
-        fclose(file);
-        file = NULL;
-    }
-}
-
-bool RegionFile::readChunk(int64_t x, int64_t z, RakNet::BitStream** destChunkData)
-{
-    std::pair<int64_t, int64_t> key(x, z);
-    auto it = chunkToSector.find(key);
-    if (it == chunkToSector.end() && useOldFormat) {
-        int cx = (int)(x & (SECTOR_COLS - 1));
-        int cz = (int)(z & (SECTOR_COLS - 1));
-        int idx = cx + cz * SECTOR_COLS;
-        int offset = offsets[idx];
-        if (offset == 0) return false;
-        int sectorNum = offset >> 8;
-        fseek(file, sectorNum * SECTOR_BYTES, SEEK_SET);
-        int length = 0;
-        fread(&length, sizeof(int), 1, file);
-        assert(length < ((offset & 0xff) * SECTOR_BYTES));
-        length -= sizeof(int);
-        if (length <= 0) return false;
-        unsigned char* data = new unsigned char[length];
-        logAssert(fread(data, 1, length, file), length);
-        *destChunkData = new RakNet::BitStream(data, length, false);
-        return true;
-    } else if (it != chunkToSector.end()) {
-        int sectorNum = it->second;
-        fseek(file, sectorNum * SECTOR_BYTES, SEEK_SET);
-        int length = 0;
-        fread(&length, sizeof(int), 1, file);
-        length -= sizeof(int);
-        if (length <= 0) return false;
-        unsigned char* data = new unsigned char[length];
-        logAssert(fread(data, 1, length, file), length);
-        *destChunkData = new RakNet::BitStream(data, length, false);
+        // 初始化偏移表（全0）
+        memset(m_chunks, 0, sizeof(m_chunks));
+        saveOffsetTable();
+        // 扇区 0 和 1 被偏移表占用（32×32×4 = 4096 字节，正好 1 扇区，但为对齐保留 2 扇区）
+        m_freeSectors[0] = false;
+        m_freeSectors[1] = false;
         return true;
     }
-    return false;
-}
 
-bool RegionFile::writeChunk(int64_t x, int64_t z, RakNet::BitStream& chunkData)
-{
-    int size = chunkData.GetNumberOfBytesUsed() + sizeof(int);
-    int sectorsNeeded = (size / SECTOR_BYTES) + 1;
-    if (sectorsNeeded > 256) {
-        LOGI("ERROR: Chunk is too big to be saved to file\n");
+    // 读取已有文件
+    if (!loadOffsetTable()) {
+        LOGE("Failed to read offset table from %s", m_filePath.c_str());
         return false;
     }
 
-    std::pair<int64_t, int64_t> key(x, z);
-    auto it = chunkToSector.find(key);
-    int sectorNum = (it != chunkToSector.end()) ? it->second : 0;
-
-    if (sectorNum != 0) {
-        sectorFree[sectorNum] = true;
-        sectorNum = 0;
+    // 扫描所有已用扇区，构建空闲扇区表
+    fseek(m_file, 0, SEEK_END);
+    long fileSize = ftell(m_file);
+    uint32_t totalSectors = (fileSize + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    for (uint32_t i = 0; i < totalSectors; i++) {
+        m_freeSectors[i] = true;
     }
-
-    if (sectorNum == 0) {
-        sectorNum = allocateSector(sectorsNeeded);
-        if (sectorNum < 0) return false;
-        chunkToSector[key] = sectorNum;
+    // 偏移表占用的扇区
+    m_freeSectors[0] = false;
+    m_freeSectors[1] = false;
+    // 遍历所有区块，标记已用扇区
+    for (int x = 0; x < CHUNKS_PER_REGION; x++) {
+        for (int z = 0; z < CHUNKS_PER_REGION; z++) {
+            ChunkInfo& info = m_chunks[x][z];
+            if (info.sectorStart == 0) continue;
+            uint32_t sectorCount = (info.sizeBytes + sizeof(uint32_t) + SECTOR_SIZE - 1) / SECTOR_SIZE;
+            for (uint32_t i = 0; i < sectorCount; i++) {
+                m_freeSectors[info.sectorStart + i] = false;
+            }
+        }
     }
-
-    fseek(file, sectorNum * SECTOR_BYTES, SEEK_SET);
-    int totalSize = chunkData.GetNumberOfBytesUsed() + sizeof(int);
-    fwrite(&totalSize, sizeof(int), 1, file);
-    fwrite(chunkData.GetData(), 1, chunkData.GetNumberOfBytesUsed(), file);
-
     return true;
 }
 
-int RegionFile::allocateSector(int sectorsNeeded)
-{
-    int slot = 0;
-    int runLength = 0;
-    while (runLength < sectorsNeeded) {
-        if (sectorFree.find(slot + runLength) == sectorFree.end()) {
-            break;
+void RegionFile::close() {
+    if (m_file) {
+        fclose(m_file);
+        m_file = nullptr;
+    }
+}
+
+bool RegionFile::loadOffsetTable() {
+    fseek(m_file, 0, SEEK_SET);
+    uint32_t table[CHUNKS_PER_REGION * CHUNKS_PER_REGION];
+    if (fread(table, sizeof(uint32_t), CHUNKS_PER_REGION * CHUNKS_PER_REGION, m_file) != CHUNKS_PER_REGION * CHUNKS_PER_REGION) {
+        return false;
+    }
+    for (int x = 0; x < CHUNKS_PER_REGION; x++) {
+        for (int z = 0; z < CHUNKS_PER_REGION; z++) {
+            uint32_t entry = table[x + z * CHUNKS_PER_REGION];
+            m_chunks[x][z].sectorStart = entry >> 8;
+            m_chunks[x][z].sizeBytes = 0; // 大小在读取数据时更新
         }
-        if (sectorFree[slot + runLength] == true) {
-            runLength++;
+    }
+    return true;
+}
+
+bool RegionFile::saveOffsetTable() {
+    fseek(m_file, 0, SEEK_SET);
+    uint32_t table[CHUNKS_PER_REGION * CHUNKS_PER_REGION];
+    memset(table, 0, sizeof(table));
+    for (int x = 0; x < CHUNKS_PER_REGION; x++) {
+        for (int z = 0; z < CHUNKS_PER_REGION; z++) {
+            ChunkInfo& info = m_chunks[x][z];
+            if (info.sectorStart == 0) continue;
+            uint32_t sectorCount = (info.sizeBytes + sizeof(uint32_t) + SECTOR_SIZE - 1) / SECTOR_SIZE;
+            table[x + z * CHUNKS_PER_REGION] = (info.sectorStart << 8) | (sectorCount & 0xFF);
+        }
+    }
+    fseek(m_file, 0, SEEK_SET);
+    return fwrite(table, sizeof(uint32_t), CHUNKS_PER_REGION * CHUNKS_PER_REGION, m_file) == CHUNKS_PER_REGION * CHUNKS_PER_REGION;
+}
+
+bool RegionFile::readChunk(int localX, int localZ, RakNet::BitStream** outData) {
+    if (localX < 0 || localX >= CHUNKS_PER_REGION || localZ < 0 || localZ >= CHUNKS_PER_REGION) {
+        return false;
+    }
+    ChunkInfo& info = m_chunks[localX][localZ];
+    if (info.sectorStart == 0) {
+        return false; // 区块不存在
+    }
+
+    fseek(m_file, info.sectorStart * SECTOR_SIZE, SEEK_SET);
+    uint32_t totalSize;
+    if (fread(&totalSize, sizeof(uint32_t), 1, m_file) != 1) {
+        return false;
+    }
+    if (totalSize < sizeof(uint32_t) || totalSize > SECTOR_SIZE * 255) {
+        LOGE("Invalid chunk size: %u", totalSize);
+        return false;
+    }
+    uint32_t dataSize = totalSize - sizeof(uint32_t);
+    unsigned char* buffer = new unsigned char[dataSize];
+    if (fread(buffer, 1, dataSize, m_file) != dataSize) {
+        delete[] buffer;
+        return false;
+    }
+    *outData = new RakNet::BitStream(buffer, dataSize, false);
+    info.sizeBytes = dataSize; // 更新缓存大小
+    return true;
+}
+
+bool RegionFile::writeChunk(int localX, int localZ, RakNet::BitStream& data) {
+    if (localX < 0 || localX >= CHUNKS_PER_REGION || localZ < 0 || localZ >= CHUNKS_PER_REGION) {
+        return false;
+    }
+
+    uint32_t dataSize = data.GetNumberOfBytesUsed();
+    uint32_t totalSize = dataSize + sizeof(uint32_t);
+    uint32_t sectorsNeeded = (totalSize + SECTOR_SIZE - 1) / SECTOR_SIZE;
+
+    ChunkInfo& info = m_chunks[localX][localZ];
+    // 如果已有空间，先释放
+    if (info.sectorStart != 0) {
+        uint32_t oldSectors = (info.sizeBytes + sizeof(uint32_t) + SECTOR_SIZE - 1) / SECTOR_SIZE;
+        freeSectors(info.sectorStart, oldSectors);
+    }
+
+    // 分配新扇区
+    uint32_t newSector = allocateSectors(sectorsNeeded);
+    if (newSector == 0) {
+        LOGE("Failed to allocate %u sectors for chunk (%d,%d)", sectorsNeeded, localX, localZ);
+        return false;
+    }
+
+    info.sectorStart = newSector;
+    info.sizeBytes = dataSize;
+
+    // 写入数据
+    fseek(m_file, newSector * SECTOR_SIZE, SEEK_SET);
+    if (fwrite(&totalSize, sizeof(uint32_t), 1, m_file) != 1) {
+        return false;
+    }
+    if (fwrite(data.GetData(), 1, dataSize, m_file) != dataSize) {
+        return false;
+    }
+    // 填充剩余扇区（可选）
+    uint32_t written = sizeof(uint32_t) + dataSize;
+    uint32_t padding = sectorsNeeded * SECTOR_SIZE - written;
+    if (padding > 0) {
+        unsigned char zero[4096] = {0};
+        fwrite(zero, 1, padding, m_file);
+    }
+    fflush(m_file);
+
+    // 更新偏移表
+    return saveOffsetTable();
+}
+
+uint32_t RegionFile::allocateSectors(uint32_t sectorsNeeded) {
+    // 寻找连续空闲扇区
+    uint32_t start = 2; // 从扇区 2 开始（0,1 被偏移表占用）
+    uint32_t consecutive = 0;
+    while (true) {
+        if (m_freeSectors.find(start + consecutive) == m_freeSectors.end() || m_freeSectors[start + consecutive]) {
+            consecutive++;
+            if (consecutive == sectorsNeeded) {
+                // 找到，标记为已用
+                for (uint32_t i = 0; i < sectorsNeeded; i++) {
+                    m_freeSectors[start + i] = false;
+                }
+                return start;
+            }
         } else {
-            slot = slot + runLength + 1;
-            runLength = 0;
+            // 不连续，跳到下一个扇区
+            start = start + consecutive + 1;
+            consecutive = 0;
         }
+        // 防止无限循环（实际不会，因为文件可以扩展）
+        if (start > 1000000) break;
     }
-    if (runLength < sectorsNeeded) {
-        fseek(file, 0, SEEK_END);
-        long endPos = ftell(file);
-        int newSector = endPos / SECTOR_BYTES;
-        for (int i = 0; i < sectorsNeeded; i++) {
-            fwrite(emptyChunk, sizeof(int), SECTOR_INTS, file);
-            sectorFree[newSector + i] = true;
-        }
-        slot = newSector;
+
+    // 没有足够连续空间，扩展文件
+    fseek(m_file, 0, SEEK_END);
+    long fileSize = ftell(m_file);
+    start = (fileSize + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    for (uint32_t i = 0; i < sectorsNeeded; i++) {
+        m_freeSectors[start + i] = false;
     }
-    for (int i = 0; i < sectorsNeeded; i++) {
-        sectorFree[slot + i] = false;
-    }
-    return slot;
+    return start;
 }
 
-void RegionFile::writeSectorMap()
-{
-    fseek(file, 0, SEEK_END);
-    long pos = ftell(file);
-    int count = (int)chunkToSector.size();
-    fwrite(&count, sizeof(int), 1, file);
-    for (auto& kv : chunkToSector) {
-        fwrite(&kv.first.first, sizeof(int64_t), 1, file);
-        fwrite(&kv.first.second, sizeof(int64_t), 1, file);
-        fwrite(&kv.second, sizeof(int), 1, file);
-    }
-    int version = MAP_VERSION;
-    fwrite(&version, sizeof(int), 1, file);
-    int magic = MAP_MAGIC;
-    fwrite(&magic, sizeof(int), 1, file);
-}
-
-void RegionFile::readSectorMap()
-{
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, - (int)sizeof(int) * 2, SEEK_END);
-    int version, magic;
-    fread(&version, sizeof(int), 1, file);
-    fread(&magic, sizeof(int), 1, file);
-    if (magic != MAP_MAGIC || version != MAP_VERSION) {
-        useOldFormat = true;
-        return;
-    }
-    fseek(file, - (int)sizeof(int) * 2 - (int)sizeof(int), SEEK_END);
-    int count;
-    fread(&count, sizeof(int), 1, file);
-    for (int i = 0; i < count; i++) {
-        int64_t x, z;
-        int sector;
-        fread(&x, sizeof(int64_t), 1, file);
-        fread(&z, sizeof(int64_t), 1, file);
-        fread(&sector, sizeof(int), 1, file);
-        chunkToSector[std::make_pair(x, z)] = sector;
+void RegionFile::freeSectors(uint32_t startSector, uint32_t sectorCount) {
+    for (uint32_t i = 0; i < sectorCount; i++) {
+        m_freeSectors[startSector + i] = true;
     }
 }
