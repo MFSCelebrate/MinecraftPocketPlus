@@ -10,21 +10,21 @@
 #include "../../../sound/SoundEngine.h"
 #include "client/gui/screens/ScreenChooser.h"
 #include "client/gui/Gui.h"
-#include "world/entity/MobFactory.h"          // 刷怪工厂
-#include "world/level/MobSpawner.h"          // 刷怪辅助 (修正路径)
+#include "world/entity/MobFactory.h"
+#include "world/level/MobSpawner.h"
 #include "client/Options.h"
 #include "world/level/Level.h"
 #include "world/level/tile/Tile.h"
-#include "client/gui/screens/PrerenderTilesScreen.h" // KEY_H
+#include "client/gui/screens/PrerenderTilesScreen.h"
 #include "client/gamemode/GameMode.h"
 #include "world/entity/player/Inventory.h"
+#include "client/player/LocalPlayer.h"          // 修复 LocalPlayer 不完整类型
+#include "client/gui/screens/ArmorScreen.h"    // 修复 ArmorScreen 找不到
 #include "client/renderer/Textures.h"
 #include "client/renderer/entity/EntityRenderDispatcher.h"
 #include "client/renderer/LevelRenderer.h"
 #include "client/renderer/GameRenderer.h"
 #include <cmath>
-
-// ... 后续代码和之前完全相同，已修正 include，无其他改动 ...
 
 // 原有区域ID
 static const int AREA_DPAD_FIRST = 100;
@@ -37,26 +37,47 @@ static const int AREA_PAUSE = 105;
 static const int AREA_CHAT = 106;
 // 调试区域ID
 static const int AREA_DEBUG = 200;
-static const int AREA_DBG_BTN0 = 201;  // 调试按钮起始ID
+static const int AREA_DBG_BTN0 = 201;
 
 static int cPressed = 0, cReleased = 0, cDiscreet = 0, cPressedPause = 0, cReleasedPause = 0;
 
 // 调试按钮标签
 const char* TouchscreenInput_TestFps::DEBUG_LABELS[12] = {
-    "GodMode",     // 0: KEY_U
-    "Gamemode",    // 1: KEY_B
-    "Time+",       // 2: KEY_P
-    "Armor",       // 3: KEY_G
-    "Hurt+Reload", // 4: KEY_Y
-    "SpawnMob",    // 5: KEY_Z
-    "Massacre",    // 6: KEY_X
-    "ClearInv",    // 7: KEY_C
-    "PreRender",   // 8: KEY_H
-    "DropAll",     // 9: KEY_O
-    "SpeedUp",     // 10: KEY_M
-    "3rdPerson"    // 11: KEY_F5
+    "GodMode", "Gamemode", "Time+", "Armor",
+    "Hurt+Reload", "SpawnMob", "Massacre", "ClearInv",
+    "PreRender", "DropAll", "SpeedUp", "3rdPerson"
 };
 
+// ========== 辅助绘制函数（必须放在 rebuild 之前） ==========
+static void drawRectangleArea(Tesselator& t, RectangleArea* a, int ux, int vy, float ssz = 64.0f) {
+    const float pm = 1.0f / 256.0f;
+    const float sz = ssz * pm;
+    const float uu = (float)(ux) * pm;
+    const float vv = (float)(vy) * pm;
+    const float x0 = a->_x0 * Gui::InvGuiScale;
+    const float x1 = a->_x1 * Gui::InvGuiScale;
+    const float y0 = a->_y0 * Gui::InvGuiScale;
+    const float y1 = a->_y1 * Gui::InvGuiScale;
+
+    t.vertexUV(x0, y1, 0, uu, vv+sz);
+    t.vertexUV(x1, y1, 0, uu+sz, vv+sz);
+    t.vertexUV(x1, y0, 0, uu+sz, vv);
+    t.vertexUV(x0, y0, 0, uu, vv);
+}
+
+static void drawPolygonArea(Tesselator& t, PolygonArea* a, int x, int y) {
+    float pm = 1.0f / 256.0f;
+    float sz = 64.0f * pm;
+    float uu = (float)(x) * pm;
+    float vv = (float)(y) * pm;
+    float uvs[] = {uu, vv, uu+sz, vv, uu+sz, vv+sz, uu, vv+sz};
+    const int o = 0;
+    for (int j = 0; j < a->_numPoints; ++j) {
+        t.vertexUV(a->_x[j] * Gui::InvGuiScale, a->_y[j] * Gui::InvGuiScale, 0, uvs[(o+j+j)&7], uvs[(o+j+j+1)&7]);
+    }
+}
+
+// ==================== 构造函数 ====================
 TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* options )
     : _minecraft(mc),
       _options(options),
@@ -96,6 +117,11 @@ void TouchscreenInput_TestFps::clear() {
     _debugButtons.clear();
 }
 
+bool TouchscreenInput_TestFps::isButtonDown(int areaId) {
+    return _buttons[areaId - AREA_DPAD_FIRST];
+}
+
+// ==================== onConfigChanged ====================
 void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
     clear();
 
@@ -146,7 +172,7 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
         for (auto* btn : _debugButtons) delete btn;
         _debugButtons.clear();
 
-        int gridW = 64 * DEBUG_PANEL_COLS;  // 64是按钮宽度
+        int gridW = 64 * DEBUG_PANEL_COLS;
         int gridH = 64 * DEBUG_PANEL_ROWS;
         int startX = (w - gridW) / 2;
         int startY = (h - gridH) / 2;
@@ -161,6 +187,7 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
     }
 }
 
+// ==================== tick ====================
 void TouchscreenInput_TestFps::tick( Player* player ) {
     xa = ya = 0;
     jumping = false;
@@ -176,7 +203,7 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
         int p = pointerIds[i];
         int x = Multitouch::getX(p), y = Multitouch::getY(p);
 
-        // 调试按钮 (入口和面板内按钮)
+        // 调试按钮 (入口和面板内)
         int areaId2 = _model.getPointerId(x, y, p);
         if (areaId2 == AREA_DEBUG) {
             if (Multitouch::isReleased(p)) {
@@ -194,12 +221,11 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
                     _minecraft->soundEngine->playUI("random.click", 1, 1);
                 }
             }
-            continue; // 面板打开时不处理移动/攻击
+            continue;
         }
 
-        // 原有移动和按钮逻辑
-        if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight)
-        {
+        // 原有移动逻辑
+        if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight) {
             float angle = Mth::PI + Mth::atan2(y - _boundingRectangle.centerY(), x - _boundingRectangle.centerX());
             ya = Mth::sin(angle);
             xa = Mth::cos(angle);
@@ -213,15 +239,10 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
         if (Multitouch::isPressed(p)) _allowHeightChange = (areaId == AREA_DPAD_C);
 
         if (areaId == AREA_DPAD_C) {
-            setButton = true;
-            heldJump = true;
+            setButton = true; heldJump = true;
             if (player->isInWater()) jumping = true;
             else if (Multitouch::isPressed(p)) jumping = true;
-            else if (_forward && !player->abilities.flying) {
-                areaId = AREA_DPAD_N;
-                tmpNorthJump = true;
-                ya += 1;
-            }
+            else if (_forward && !player->abilities.flying) { areaId = AREA_DPAD_N; tmpNorthJump = true; ya += 1; }
         }
         if (areaId == AREA_DPAD_N) { setButton = true; if (player->isInWater()) jumping = true; else if (!isChangingFlightHeight) tmpForward = true; ya += 1; }
         else if (areaId == AREA_DPAD_S && !_forward) { setButton = true; ya -= 1; }
@@ -236,7 +257,7 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
         _buttons[areaId - AREA_DPAD_FIRST] = setButton;
     }
 
-    if (_debugPanelVisible) return; // 重要：面板打开时不处理移动
+    if (_debugPanelVisible) return;
 
     _forward = tmpForward;
     if (tmpNorthJump) { if (!_northJump) jumping = true; _northJump = true; }
@@ -252,6 +273,7 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
     _pressedJump = heldJump;
 }
 
+// ==================== rebuild ====================
 void TouchscreenInput_TestFps::rebuild() {
     if (_options->getBooleanValue(OPTIONS_HIDEGUI)) return;
 
@@ -261,19 +283,17 @@ void TouchscreenInput_TestFps::rebuild() {
     const int imageU = 0, imageV = 107, imageSize = 26;
     bool northDiagonals = !isChangingFlightHeight && (_northJump || _forward);
 
-    // 左按钮
+    // 方向键按钮（左、右、上、下、对角、跳跃）
     if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_W)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     drawRectangleArea(t, aLeft, imageU + imageSize, imageV, (float)imageSize);
 
-    // 右按钮
     if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_E)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     drawRectangleArea(t, aRight, imageU + imageSize * 3, imageV, (float)imageSize);
 
-    // 上按钮
     if (isButtonDown(AREA_DPAD_N)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     if (isChangingFlightHeight) drawRectangleArea(t, aUp, imageU + imageSize * 2, imageV + imageSize, (float)imageSize);
@@ -285,21 +305,19 @@ void TouchscreenInput_TestFps::rebuild() {
         drawRectangleArea(t, aUpRight, imageU + imageSize, imageV + imageSize, (float)imageSize);
     }
 
-    // 下按钮
     if (northDiagonals) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_S)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     if (isChangingFlightHeight) drawRectangleArea(t, aDown, imageU + imageSize * 3, imageV + imageSize, (float)imageSize);
     else drawRectangleArea(t, aDown, imageU + imageSize * 2, imageV, (float)imageSize);
 
-    // 跳跃/飞行按钮
     if (_renderFlightImage && northDiagonals) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_C)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     if (_renderFlightImage) drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV + imageSize, (float)imageSize);
     else drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV, (float)imageSize);
 
-    // 右上角HUD按钮
+    // 右上角 HUD 按钮
     if (!_minecraft->screen) {
         t.colorABGR(0xFFFFFFFF);
         drawRectangleArea(t, aPause, 200, 64, 18.0f);
@@ -308,7 +326,7 @@ void TouchscreenInput_TestFps::rebuild() {
     }
     t.draw();
 
-    // 调试面板
+    // 调试面板渲染
     if (_debugPanelVisible) {
         float invScale = Gui::InvGuiScale;
         fill(50.f * invScale, 80.f * invScale,
@@ -337,6 +355,7 @@ void TouchscreenInput_TestFps::rebuild() {
     }
 }
 
+// ==================== executeDebugAction ====================
 void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
     Minecraft* mc = _minecraft;
     switch (btnIdx) {
@@ -344,7 +363,7 @@ void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
             mc->onGraphicsReset();
             mc->player->heal(100);
             break;
-        case 1: // Gamemode (KEY_B) 创造/生存切换
+        case 1: // Gamemode (KEY_B)
             mc->setIsCreativeMode(!mc->isCreativeMode());
             break;
         case 2: // Time + (KEY_P)
@@ -370,13 +389,13 @@ void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
             }
             break;
         case 6: // Kill all non-player entities (KEY_X)
-            {
-                const EntityList& entities = mc->level->getAllEntities();
-                for (int i = entities.size() - 1; i >= 0; --i) {
-                    Entity* e = entities[i];
-                    if (!e->isPlayer()) mc->level->removeEntity(e);
-                }
+        {
+            const EntityList& entities = mc->level->getAllEntities();
+            for (int i = entities.size() - 1; i >= 0; --i) {
+                Entity* e = entities[i];
+                if (!e->isPlayer()) mc->level->removeEntity(e);
             }
+        }
             break;
         case 7: // Clear inventory (KEY_C)
             mc->player->inventory->clearInventoryWithDefault();
@@ -398,3 +417,5 @@ void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
             break;
     }
 }
+
+// 其他原有函数保持不变（setKey, releaseAllKeys, render 等省略，实际文件需包含）
