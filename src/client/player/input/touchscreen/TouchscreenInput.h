@@ -70,14 +70,16 @@ private:
     bool _buttons[8];
 
     // ========== 调试面板 ==========
-    bool _debugPanelVisible;
-    RectangleArea* aDebug;                   // 入口按钮
-    RectangleArea* aDebugBG;                 // 面板背景
-    std::vector<RectangleArea*> _debugButtons; // 所有调试按钮区域
-    static const int DEBUG_PANEL_ROWS = 3;
-    static const int DEBUG_PANEL_COLS = 4;   // 3行4列 → 12个按钮
-    static const int NUM_DEBUG_BUTTONS = 12;
-    static const char* DEBUG_LABELS[12];     // 按钮上的文字
+    // 调试齿轮（不涉及任何新对象创建）
+bool _debugPanelVisible;
+RectangleArea* aDebug;
+static const int AREA_DEBUG = 200;                   // 入口按钮
+   // RectangleArea* aDebugBG;                 // 面板背景
+   // std::vector<RectangleArea*> _debugButtons; // 所有调试按钮区域
+    //static const int DEBUG_PANEL_ROWS = 3;
+   // static const int DEBUG_PANEL_COLS = 4;   // 3行4列 → 12个按钮
+    //static const int NUM_DEBUG_BUTTONS = 12;
+  //  static const char* DEBUG_LABELS[12];     // 按钮上的文字
 };
 
 #endif
