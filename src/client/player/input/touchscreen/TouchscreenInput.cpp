@@ -418,4 +418,50 @@ void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
     }
 }
 
+// ==================== render ====================
+void TouchscreenInput_TestFps::render( float a ) {
+    glDisable2(GL_ALPHA_TEST);
+    glEnable2(GL_BLEND);
+    glBlendFunc2(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    _minecraft->textures->loadAndBindTexture("gui/gui.png");
+
+    rebuild();
+
+    glDisable2(GL_BLEND);
+}
+
+// ==================== setKey ====================
+void TouchscreenInput_TestFps::setKey( int key, bool state ) {
+#ifdef WIN32
+    int id = -1;
+    if (key == _options->getIntValue(OPTIONS_KEY_FORWARD)) id = KEY_UP;
+    if (key == _options->getIntValue(OPTIONS_KEY_BACK))   id = KEY_DOWN;
+    if (key == _options->getIntValue(OPTIONS_KEY_LEFT))   id = KEY_LEFT;
+    if (key == _options->getIntValue(OPTIONS_KEY_RIGHT))  id = KEY_RIGHT;
+    if (key == _options->getIntValue(OPTIONS_KEY_JUMP))   id = KEY_JUMP;
+    if (key == _options->getIntValue(OPTIONS_KEY_SNEAK))  id = KEY_SNEAK;
+#endif
+}
+
+// ==================== releaseAllKeys ====================
+void TouchscreenInput_TestFps::releaseAllKeys() {
+    xa = ya = 0;
+    for (int i = 0; i < 8; ++i) _buttons[i] = false;
+#ifdef WIN32
+    for (int i = 0; i < NumKeys; ++i) _keys[i] = false;
+#endif
+    _pressedJump = false;
+    _allowHeightChange = false;
+}
+
+// ==================== getRectangleArea ====================
+const RectangleArea& TouchscreenInput_TestFps::getRectangleArea() {
+    return _boundingRectangle;
+}
+
+// ==================== getPauseRectangleArea ====================
+const RectangleArea& TouchscreenInput_TestFps::getPauseRectangleArea() {
+    return *aPause;
+}
+
 // 其他原有函数保持不变（setKey, releaseAllKeys, render 等省略，实际文件需包含）
