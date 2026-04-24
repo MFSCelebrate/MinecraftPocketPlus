@@ -318,9 +318,9 @@ int LevelRenderer::render(Mob* player, int layer, float alpha)
         emptyChunks = 0;
     }
 
-    float xOff = player->xOld + (player->x - player->xOld) * alpha;
-    float yOff = player->yOld + (player->y - player->yOld) * alpha;
-    float zOff = player->zOld + (player->z - player->zOld) * alpha;
+    double xOff = player->xOld + (player->x - player->xOld) * alpha;
+double yOff = player->yOld + (player->y - player->yOld) * alpha;
+double zOff = player->zOld + (player->z - player->zOld) * alpha;
 
     float xd = player->x - xOld;
     float yd = player->y - yOld;
