@@ -418,68 +418,52 @@ float GameRenderer::getFov(float a, bool applyEffects) {
 /*private*/
 void GameRenderer::moveCameraToPlayer(float a) {
     Entity* player = mc->cameraTargetPlayer;
+    double heightOffset = player->heightOffset - 1.62;              // ★ 变为 double
+    double x = player->xo + (player->x - player->xo) * (double)a;
+    double y = player->yo + (player->y - player->yo) * (double)a - heightOffset;
+    double z = player->zo + (player->z - player->zo) * (double)a;
 
-    float heightOffset = player->heightOffset - 1.62f;
-
-    double x = player->xo + (player->x - player->xo) * a;
-double y = player->yo + (player->y - player->yo) * a - heightOffset;
-double z = player->zo + (player->z - player->zo) * a;
-	
-	//printf("rot: %f %f\n", cameraRollO, cameraRoll);
     glRotatef2(cameraRollO + (cameraRoll - cameraRollO) * a, 0, 0, 1);
 
-	//LOGI("player. alive, removed: %d, %d\n", player->isAlive(), player->removed);
-	if(player->isPlayer() && ((Player*)player)->isSleeping()) {
-		heightOffset += 1.0;
-		glTranslatef(0.0f, 0.3f, 0);
-		if (!mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
-			int t = mc->level->getTile(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
-			if (t == Tile::bed->id) {
-				int data = mc->level->getData(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
-
-				int direction = data & 3;
-				glRotatef(float(direction * 90), 0, 1, 0);
-			}
-			glRotatef(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, -1, 0);
-			glRotatef(player->xRotO + (player->xRot - player->xRotO) * a, -1, 0, 0);
-		}
-	} else if (mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW)/* || (player->isPlayer() && !player->isAlive())*/) {
-        float cameraDist = thirdDistanceO + (thirdDistance - thirdDistanceO) * a;
-
+    if(player->isPlayer() && ((Player*)player)->isSleeping()) {
+        heightOffset += 1.0;                 // double 累加，保持精度
+        glTranslatef(0.0f, 0.3f, 0);
+        if (!mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
+            int t = mc->level->getTile(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
+            if (t == Tile::bed->id) {
+                int data = mc->level->getData(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
+                int direction = data & 3;
+                glRotatef(float(direction * 90), 0, 1, 0);
+            }
+            glRotatef(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, -1, 0);
+            glRotatef(player->xRotO + (player->xRot - player->xRotO) * a, -1, 0, 0);
+        }
+    } else if (mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW)) {
+        double cameraDist = (double)thirdDistanceO + ((double)thirdDistance - (double)thirdDistanceO) * (double)a;
         if (mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
-
             float rotationY = thirdRotationO + (thirdRotation - thirdRotationO) * a;
             float xRot = thirdTiltO + (thirdTilt - thirdTiltO) * a;
-
             glTranslatef2(0, 0, (float) -cameraDist);
             glRotatef2(xRot, 1, 0, 0);
             glRotatef2(rotationY, 0, 1, 0);
         } else {
             float yRot = player->yRot;
-            float xRot = player->xRot/* + 180.0f*/;
-            float xd = -Mth::sin(yRot / 180 * Mth::PI) * Mth::cos(xRot / 180 * Mth::PI) * cameraDist;
-            float zd = Mth::cos(yRot / 180 * Mth::PI) * Mth::cos(xRot / 180 * Mth::PI) * cameraDist;
-            float yd = -Mth::sin(xRot / 180 * Mth::PI) * cameraDist;
-
+            float xRot = player->xRot;
+            double xd = -Mth::sin(yRot / 180 * Mth::PI) * Mth::cos(xRot / 180 * Mth::PI) * cameraDist;
+            double zd =  Mth::cos(yRot / 180 * Mth::PI) * Mth::cos(xRot / 180 * Mth::PI) * cameraDist;
+            double yd = -Mth::sin(xRot / 180 * Mth::PI) * cameraDist;
             for (int i = 0; i < 8; i++) {
-                float xo = (float)((i & 1) * 2 - 1);
-                float yo = (float)(((i >> 1) & 1) * 2 - 1);
-                float zo = (float)(((i >> 2) & 1) * 2 - 1);
-
-                xo *= 0.1f;
-                yo *= 0.1f;
-                zo *= 0.1f;
-
-                HitResult hr = mc->level->clip(Vec3(x + xo, y + yo, z + zo), Vec3(x - xd + xo + zo, y - yd + yo, z - zd + zo)); // newTemp
-				if (hr.type != NO_HIT) {
-                    float dist = hr.pos.distanceTo(Vec3(x, y, z)); // newTemp
+                double xo = ((i & 1) * 2 - 1) * 0.1;
+                double yo = (((i >> 1) & 1) * 2 - 1) * 0.1;
+                double zo = (((i >> 2) & 1) * 2 - 1) * 0.1;
+                HitResult hr = mc->level->clip(Vec3(x + xo, y + yo, z + zo),
+                                                Vec3(x - xd + xo + zo, y - yd + yo, z - zd + zo));
+                if (hr.type != NO_HIT) {
+                    double dist = hr.pos.distanceTo(Vec3(x, y, z));
                     if (dist < cameraDist) cameraDist = dist;
                 }
             }
-
-			//glRotatef2(180, 0, 1, 0);
-
-			glRotatef2(player->xRot - xRot, 1, 0, 0);
+            glRotatef2(player->xRot - xRot, 1, 0, 0);
             glRotatef2(player->yRot - yRot, 0, 1, 0);
             glTranslatef2(0, 0, (float) -cameraDist);
             glRotatef2(yRot - player->yRot, 0, 1, 0);
@@ -492,9 +476,8 @@ double z = player->zo + (player->z - player->zo) * a;
     if (!mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
         glRotatef2(player->xRotO + (player->xRot - player->xRotO) * a, 1.0f, 0.0f, 0.0f);
         glRotatef2(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, 1, 0);
-		//if (_t_keepPic > 0)
-	}
-    glTranslatef2(0, heightOffset, 0);
+    }
+    glTranslatef2((float)(-x), (float)(-y), (float)(-z));   // ★ 最终转换为 float 喂给 OpenGL
 }
 
 /*private*/
