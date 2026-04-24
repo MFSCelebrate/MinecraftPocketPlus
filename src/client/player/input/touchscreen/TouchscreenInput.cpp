@@ -209,11 +209,11 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
             if (Multitouch::isReleased(p)) {
                 _minecraft->soundEngine->playUI("random.click", 1, 1);
                 _debugPanelVisible = !_debugPanelVisible;
-                onConfigChanged( createConfig(_minecraft) );
+             //   onConfigChanged( createConfig(_minecraft) );
             }
         }
 
-        if (_debugPanelVisible) {
+        /*if (_debugPanelVisible) {
             int dbgIdx = areaId2 - AREA_DBG_BTN0;
             if (dbgIdx >= 0 && dbgIdx < (int)_debugButtons.size()) {
                 if (Multitouch::isReleased(p)) {
@@ -222,7 +222,7 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
                 }
             }
             continue;
-        }
+        }*/
 
         // 原有移动逻辑
         if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight) {
@@ -327,7 +327,7 @@ void TouchscreenInput_TestFps::rebuild() {
     t.draw();
 
     // 调试面板渲染
-    if (_debugPanelVisible) {
+    /*if (_debugPanelVisible) {
         float invScale = Gui::InvGuiScale;
         fill(50.f * invScale, 80.f * invScale,
              (_minecraft->width - 50) * invScale,
@@ -352,12 +352,13 @@ void TouchscreenInput_TestFps::rebuild() {
                 cy - _minecraft->font->lineHeight * 0.5f,
                 0xFFFFFFFF);
         }
-    }
+    }*/
 }
 
 // ==================== executeDebugAction ====================
 void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
-    Minecraft* mc = _minecraft;
+    return;
+    /*Minecraft* mc = _minecraft;
     switch (btnIdx) {
         case 0: // GodMode (KEY_U)
             mc->onGraphicsReset();
@@ -415,7 +416,7 @@ void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
         case 11: // 3rd person (KEY_F5)
             mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
             break;
-    }
+    }*/
 }
 
 // ==================== render ====================
