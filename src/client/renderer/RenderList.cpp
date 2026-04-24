@@ -48,7 +48,7 @@ void RenderList::render() {
     if (listIndex < bufferLimit) {
         glPushMatrix2();
         if (!m_useRelativeTranslation) {
-            glTranslatef2(-xOff, -yOff, -zOff);
+            glTranslatef2((float)-xOff, (float)-yOff, (float)-zOff);
         }
 #ifndef USE_VBO
         glCallLists(bufferLimit, GL_UNSIGNED_INT, lists);
