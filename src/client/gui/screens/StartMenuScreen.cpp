@@ -201,11 +201,11 @@ void StartMenuScreen::render( int xm, int ym, float a )
 
 void StartMenuScreen::mouseClicked(int x, int y, int buttonNum) {
 	const int logoX = 2;
-	const int logoW = 8 + 2 + font->width("Kolyah35/minecraft-pe-0.6.1");
+	const int logoW = 8 + 2 + font->width("Github or BiliBiliMobile/MFSCelebrate_");
 	const int logoY = height - 10;
 	const int logoH = 10;
 	if (x >= logoX && x <= logoX + logoW && y >= logoY && y <= logoY + logoH)
-		minecraft->platform()->openURL("https://gitea.sffempire.ru/Kolyah35/minecraft-pe-0.6.1");
+		minecraft->platform()->openURL("https://github.com/MFSCelebrate/MCReference_NoiseFarlands/");
 	else
 		Screen::mouseClicked(x, y, buttonNum);
 }
