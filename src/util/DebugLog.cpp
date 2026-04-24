@@ -1,21 +1,25 @@
+// DebugLog.cpp 修复跨平台编译
+
 #include "DebugLog.h"
 #include <cstdarg>
 #include <ctime>
 #include <chrono>
 #include <iomanip>
 #include <sstream>
-#include <cstdio>
 #include <cstring>
-#include <android/log.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
-#include <sys/stat.h>
+#ifdef __ANDROID__
+    #include <android/log.h>
 #endif
 
-DebugLog::DebugLog() : m_initialized(false), m_file(nullptr) {
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <unistd.h>
+    #include <sys/stat.h>
+#endif
+
+DebugLog::DebugLog() : m_initialized(false), m_file(nullptr), m_minLevel(LEVEL_DEBUG) {
     m_categoryNames[CAT_GENERAL] = "GENERAL";
     m_categoryNames[CAT_RENDER]  = "RENDER ";
     m_categoryNames[CAT_WORLD]   = "WORLD  ";
@@ -45,27 +49,30 @@ void DebugLog::initialize(const std::string& logDir) {
     std::lock_guard<std::mutex> lock(m_mutex);
     if (m_initialized) return;
 
-    // 直接使用传入的目录（存档目录）
     if (!createDirectory(logDir)) {
-        __android_log_print(ANDROID_LOG_ERROR, "MinecraftPE", "Failed to create log directory: %s", logDir.c_str());
+        // 目录创建失败，输出到 stderr 作为降级
+        fprintf(stderr, "DebugLog: Failed to create log directory: %s\n", logDir.c_str());
     }
 
     auto now = std::chrono::system_clock::now();
     std::time_t t = std::chrono::system_clock::to_time_t(now);
     std::tm tm;
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
     localtime_r(&t, &tm);
+#endif
     char timeBuf[64];
     std::strftime(timeBuf, sizeof(timeBuf), "%Y%m%d_%H%M%S", &tm);
     m_logPath = logDir + "/debug_" + timeBuf + ".log";
 
-    // 关键：改用 fopen
     m_file = fopen(m_logPath.c_str(), "a");
     if (m_file) {
         m_initialized = true;
         info(CAT_GENERAL, "=== DebugLog initialized ===");
         info(CAT_GENERAL, "Log file: %s", m_logPath.c_str());
     } else {
-        __android_log_print(ANDROID_LOG_ERROR, "MinecraftPE", "FAILED to open log file: %s", m_logPath.c_str());
+        fprintf(stderr, "DebugLog: FAILED to open log file: %s\n", m_logPath.c_str());
     }
 }
 
@@ -84,7 +91,11 @@ std::string DebugLog::getTimestamp() {
     auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
     std::time_t t = std::chrono::system_clock::to_time_t(now);
     std::tm tm;
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
     localtime_r(&t, &tm);
+#endif
     char buf[32];
     std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm);
     std::ostringstream oss;
@@ -109,33 +120,30 @@ std::string DebugLog::getCategoryString(Category cat) {
 }
 
 void DebugLog::log(Category cat, Level level, const char* format, ...) {
-    // 级别过滤（可临时提高级别以加速）
     if (level < m_minLevel) return;
 
     va_list args;
     va_start(args, format);
 
-    // 如果未初始化或文件未打开，降级输出到 logcat
     if (!m_initialized || !m_file) {
-        int androidLevel = ANDROID_LOG_INFO;
-        if (level == LEVEL_DEBUG) androidLevel = ANDROID_LOG_DEBUG;
-        else if (level == LEVEL_WARN) androidLevel = ANDROID_LOG_WARN;
-        else if (level == LEVEL_ERROR) androidLevel = ANDROID_LOG_ERROR;
-        __android_log_vprint(androidLevel, "MinecraftPE", format, args);
+        // 降级输出到 stderr（所有平台通用）
+        fprintf(stderr, "[%s] [%s] [%s] ", getTimestamp().c_str(), getCategoryString(cat).c_str(), getLevelString(level).c_str());
+        vfprintf(stderr, format, args);
+        fprintf(stderr, "\n");
         va_end(args);
         return;
     }
 
-    // 正常写入文件
     std::string line = "[" + getTimestamp() + "] [" + getCategoryString(cat) + "] [" + getLevelString(level) + "] ";
     fprintf(m_file, "%s", line.c_str());
     vfprintf(m_file, format, args);
     fprintf(m_file, "\n");
     fflush(m_file);
 
-    // 同时输出到控制台（可选）
-    vprintf(format, args);
-    printf("\n");
+    // 同时输出到 stderr（方便观察）
+    fprintf(stderr, "%s", line.c_str());
+    vfprintf(stderr, format, args);
+    fprintf(stderr, "\n");
 
     va_end(args);
 }
