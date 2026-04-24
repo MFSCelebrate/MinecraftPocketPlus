@@ -302,7 +302,8 @@ void OptionsScreen::keyPressed(int eventKey) {
 void OptionsScreen::charPressed(char inputChar) {
     if (currentOptionsGroup)
         currentOptionsGroup->charPressed(minecraft, inputChar);
-    super::charPressed(inputChar);               // 正确调用父类 charPressed
+    // 不再调用 super::charPressed(inputChar);
+    // 因为 currentOptionsGroup 已经将事件分发给所有子控件
 }
 
 void OptionsScreen::tick() {
