@@ -115,6 +115,7 @@ void TouchscreenInput_TestFps::clear() {
     delete aDebugBG; aDebugBG = nullptr;
     for (auto* btn : _debugButtons) delete btn;
     _debugButtons.clear();
+    delete aDebug; aDebug = nullptr;
 }
 
 bool TouchscreenInput_TestFps::isButtonDown(int areaId) {
@@ -162,9 +163,9 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
     float btnSize = _minecraft->pixelCalc.millimetersToPixels(18 * Gui::GuiScale);
     _model.addArea(AREA_PAUSE, aPause = new RectangleArea(w - 4 - btnSize, 4, w - 4, 4 + btnSize));
     _model.addArea(AREA_CHAT, aChat = new RectangleArea(w - 8 - btnSize * 2, 4, w - 8 - btnSize, 4 + btnSize));
-    // 新增加密按钮入口
     aDebug = new RectangleArea(w - 8 - btnSize * 3 - 4, 4, w - 8 - btnSize * 2 - 4, 4 + btnSize);
     _model.addArea(AREA_DEBUG, aDebug);
+    // 新增加密按钮入口
 
     // 如果面板已打开，重新生成面板按钮网格
     if (_debugPanelVisible) {
