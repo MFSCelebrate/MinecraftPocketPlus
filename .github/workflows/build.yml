@@ -6,7 +6,7 @@ on:
       disable_build:
         description: 'Disable build and publish (only archive source)'
         required: false
-        default: false
+        default: true
         type: boolean
   pull_request:
   push:
