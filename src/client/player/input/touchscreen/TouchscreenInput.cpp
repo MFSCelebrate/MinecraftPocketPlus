@@ -10,12 +10,12 @@
 #include "../../../sound/SoundEngine.h"
 #include "client/gui/screens/ScreenChooser.h"
 #include "client/gui/Gui.h"
-#include "world/entity/MobFactory.h"
-#include "world/entity/MobSpawner.h"
+#include "world/entity/MobFactory.h"          // 刷怪工厂
+#include "world/level/MobSpawner.h"          // 刷怪辅助 (修正路径)
 #include "client/Options.h"
 #include "world/level/Level.h"
-#include "world/level/tile/Tile.h"  // 用于 PrerenderTilesScreen
-#include "client/gui/screens/PrerenderTilesScreen.h"  // KEY_H
+#include "world/level/tile/Tile.h"
+#include "client/gui/screens/PrerenderTilesScreen.h" // KEY_H
 #include "client/gamemode/GameMode.h"
 #include "world/entity/player/Inventory.h"
 #include "client/renderer/Textures.h"
@@ -23,6 +23,8 @@
 #include "client/renderer/LevelRenderer.h"
 #include "client/renderer/GameRenderer.h"
 #include <cmath>
+
+// ... 后续代码和之前完全相同，已修正 include，无其他改动 ...
 
 // 原有区域ID
 static const int AREA_DPAD_FIRST = 100;
