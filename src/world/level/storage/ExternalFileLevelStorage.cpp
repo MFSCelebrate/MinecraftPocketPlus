@@ -15,6 +15,7 @@
 #include "../../../raknet/GetTime.h"
 #include "../tile/entity/TileEntity.h"
 #include "../chunk/ChunkCache.h"
+#include "util/DebugLog.h"
 
 static const int ChunkVersion_Light = 1;
 static const int ChunkVersion_Entity = 2;
@@ -69,6 +70,10 @@ ExternalFileLevelStorage::ExternalFileLevelStorage(const std::string& levelId, c
     level(NULL),
     loadedStorageVersion(SharedConstants::StorageVersion)
 {
+if (!DebugLog::instance().isInitialized()) {
+    DebugLog::instance().initialize(levelPath);
+    DebugLog::instance().setMinLevel(DebugLog::LEVEL_INFO);
+}
     createFolderIfNotExists(levelPath.c_str());
 
     std::string datFileName   = levelPath + "/" + fnLevelDat;
