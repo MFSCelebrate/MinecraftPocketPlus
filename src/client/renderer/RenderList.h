@@ -20,7 +20,7 @@ public:
     void clear();
     void setUseRelativeTranslation(bool use) { m_useRelativeTranslation = use; }
 
-    float xOff, yOff, zOff;          // 兼容旧代码
+    double xOff, yOff, zOff;          // 兼容旧代码
     int* lists;
     RenderChunk* rlists;
     int listIndex;
