@@ -418,7 +418,7 @@ float GameRenderer::getFov(float a, bool applyEffects) {
 /*private*/
 void GameRenderer::moveCameraToPlayer(float a) {
     Entity* player = mc->cameraTargetPlayer;
-    double heightOffset = player->heightOffset - 1.62;              // ★ 变为 double
+    double heightOffset = player->heightOffset - 1.62;              // ★ double 高度偏移
     double x = player->xo + (player->x - player->xo) * (double)a;
     double y = player->yo + (player->y - player->yo) * (double)a - heightOffset;
     double z = player->zo + (player->z - player->zo) * (double)a;
@@ -477,7 +477,7 @@ void GameRenderer::moveCameraToPlayer(float a) {
         glRotatef2(player->xRotO + (player->xRot - player->xRotO) * a, 1.0f, 0.0f, 0.0f);
         glRotatef2(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, 1, 0);
     }
-    glTranslatef2((float)(-x), (float)(-y), (float)(-z));   // ★ 最终转换为 float 喂给 OpenGL
+    glTranslatef2(0, (float)heightOffset, 0);   // 恢复原来的高度平移，Double→Float 只在最后一步
 }
 
 /*private*/
