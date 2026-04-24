@@ -856,7 +856,7 @@ void Gui::renderDebugInfo() {
         noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);
     }
 
-    // 构建显示行 (共 22 行)
+    // 构建显示行 (共 22 行) 扩展 Char为1024
     static char ln[22][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
     sprintf(ln[1], "%.2f fps", fps);
