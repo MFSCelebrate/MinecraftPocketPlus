@@ -113,12 +113,12 @@ void JoinByIPScreen::render( int xm, int ym, float a )
 	Screen::render(xm, ym, a);
 }
 
-void JoinByIPScreen::keyPressed(int eventKey)
-{
-    if (eventKey == Keyboard::KEY_ESCAPE) {
+void JoinByIPScreen::keyPressed(int eventKey) {
+    // 只有当前没有任何文本框持焦点时，ESC 才返回
+    if (eventKey == Keyboard::KEY_ESCAPE && !tIP.focused) {
         minecraft->screenChooser.setScreen(SCREEN_STARTMENU);
         return;
     }
-    // let base class handle navigation and text box keys
-    Screen::keyPressed(eventKey);
+    // 手动将事件传给文本框，不调用父类默认遍历
+    tIP.keyPressed(minecraft, eventKey);
 }
