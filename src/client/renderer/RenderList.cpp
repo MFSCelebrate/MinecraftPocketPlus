@@ -18,15 +18,15 @@ RenderList::~RenderList() {
     delete[] rlists;
 }
 
-void RenderList::init(float xOff, float yOff, float zOff) {
+void RenderList::init(double xOff, double yOff, double zOff) {
     inited = true;
     listIndex = 0;
-    this->xOff = xOff;
+    this->xOff = xOff;          // xOff 改为 double 成员（原本是 float？检查一下：RenderList 有 float xOff, yOff, zOff 成员。需要同步改为 double）
     this->yOff = yOff;
     this->zOff = zOff;
-    m_camX = (double)xOff;
-    m_camY = (double)yOff;
-    m_camZ = (double)zOff;
+    m_camX = xOff;
+    m_camY = yOff;
+    m_camZ = zOff;
 }
 
 void RenderList::add(int list) {
