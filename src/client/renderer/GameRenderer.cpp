@@ -438,6 +438,9 @@ void GameRenderer::moveCameraToPlayer(float a) {
             glRotatef(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, -1, 0);
             glRotatef(player->xRotO + (player->xRot - player->xRotO) * a, -1, 0, 0);
         }
+        // 在睡觉状态下，直接以 double 世界坐标平移
+        glTranslatef2((float)-x, (float)-y, (float)-z);
+        return;
     } else if (mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW)) {
         double cameraDist = (double)thirdDistanceO + ((double)thirdDistance - (double)thirdDistanceO) * (double)a;
         if (mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
@@ -446,6 +449,9 @@ void GameRenderer::moveCameraToPlayer(float a) {
             glTranslatef2(0, 0, (float) -cameraDist);
             glRotatef2(xRot, 1, 0, 0);
             glRotatef2(rotationY, 0, 1, 0);
+            // 固定视角下依然用世界坐标反转
+            glTranslatef2((float)-x, (float)-y, (float)-z);
+            return;
         } else {
             float yRot = player->yRot;
             float xRot = player->xRot;
@@ -468,16 +474,19 @@ void GameRenderer::moveCameraToPlayer(float a) {
             glTranslatef2(0, 0, (float) -cameraDist);
             glRotatef2(yRot - player->yRot, 0, 1, 0);
             glRotatef2(xRot - player->xRot, 1, 0, 0);
+            // 第三人称自由视角也加世界平移
+            glTranslatef2((float)-x, (float)-y, (float)-z);
+            return;
         }
-    } else {
-        glTranslatef2(0, 0, -0.1f);
     }
 
+    // 以下是标准第一人称，不再用原来的 heightOffset 移动，直接用世界坐标反转
     if (!mc->options.getBooleanValue(OPTIONS_FIXED_CAMERA)) {
         glRotatef2(player->xRotO + (player->xRot - player->xRotO) * a, 1.0f, 0.0f, 0.0f);
         glRotatef2(player->yRotO + (player->yRot - player->yRotO) * a + 180, 0, 1, 0);
     }
-    glTranslatef2(0, (float)heightOffset, 0);   // 恢复原来的高度平移，Double→Float 只在最后一步
+    // ★ 第一人称最终平移：世界围绕摄像机反转（Double 转 Float 只在这一步）
+    glTranslatef2((float)-x, (float)-y, (float)-z);
 }
 
 /*private*/
