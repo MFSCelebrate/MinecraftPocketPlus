@@ -4,15 +4,27 @@
 #include "../../../gui/Gui.h"
 #include "../../../renderer/Tesselator.h"
 #include "../../../../world/entity/player/Player.h"
-
 #include "../../../Minecraft.h"
 #include "../../../../platform/log.h"
 #include "../../../renderer/Textures.h"
 #include "../../../sound/SoundEngine.h"
 #include "client/gui/screens/ScreenChooser.h"
+#include "client/gui/Gui.h"
+#include "world/entity/MobFactory.h"
+#include "world/entity/MobSpawner.h"
+#include "client/Options.h"
+#include "world/level/Level.h"
+#include "world/level/tile/Tile.h"  // 用于 PrerenderTilesScreen
+#include "client/gui/screens/PrerenderTilesScreen.h"  // KEY_H
+#include "client/gamemode/GameMode.h"
+#include "world/entity/player/Inventory.h"
+#include "client/renderer/Textures.h"
+#include "client/renderer/entity/EntityRenderDispatcher.h"
+#include "client/renderer/LevelRenderer.h"
+#include "client/renderer/GameRenderer.h"
+#include <cmath>
 
-
-// ARGHHHHHH WHY NOT FUCKING ENUM
+// 原有区域ID
 static const int AREA_DPAD_FIRST = 100;
 static const int AREA_DPAD_N = 100;
 static const int AREA_DPAD_S = 101;
@@ -21,504 +33,366 @@ static const int AREA_DPAD_E = 103;
 static const int AREA_DPAD_C = 104;
 static const int AREA_PAUSE = 105;
 static const int AREA_CHAT = 106;
+// 调试区域ID
+static const int AREA_DEBUG = 200;
+static const int AREA_DBG_BTN0 = 201;  // 调试按钮起始ID
 
-static int cPressed = 0;
-static int cReleased = 0;
-static int cDiscreet = 0;
-static int cPressedPause = 0;
-static int cReleasedPause = 0;
-//static const int AREA_DPAD_N_JUMP = 105;
+static int cPressed = 0, cReleased = 0, cDiscreet = 0, cPressedPause = 0, cReleasedPause = 0;
 
-//
-// TouchscreenInput_TestFps
-//
-
-static void Copy(int n, float* x, float* y, float* dx, float* dy) {
-	for (int i = 0; i < n; ++i) {
-		dx[i] = x[i];
-		dy[i] = y[i];
-	}
-}
-
-static void Translate(int n, float* x, float* y, float xt, float yt) {
-	for (int i = 0; i < n; ++i) {
-		x[i] += xt;
-		y[i] += yt;
-	}
-}
-
-static void Scale(int n, float* x, float* y, float xt, float yt) {
-	for (int i = 0; i < n; ++i) {
-		x[i] *= xt;
-		y[i] *= yt;
-	}
-}
-
-static void Transformed(int n, float* x, float* y, float* dx, float* dy, float xt, float yt, float sx=1.0f, float sy=1.0f) {
-	Copy(n, x, y, dx, dy);
-	Scale(n, dx, dy, sx, sy);
-	Translate(n, dx, dy, xt, yt);
-
-	//for (int i = 0; i < n; ++i) {
-	//	LOGI("%d. (%f, %f)\n", i, dx[i], dy[i]);
-	//}
-}
+// 调试按钮标签
+const char* TouchscreenInput_TestFps::DEBUG_LABELS[12] = {
+    "GodMode",     // 0: KEY_U
+    "Gamemode",    // 1: KEY_B
+    "Time+",       // 2: KEY_P
+    "Armor",       // 3: KEY_G
+    "Hurt+Reload", // 4: KEY_Y
+    "SpawnMob",    // 5: KEY_Z
+    "Massacre",    // 6: KEY_X
+    "ClearInv",    // 7: KEY_C
+    "PreRender",   // 8: KEY_H
+    "DropAll",     // 9: KEY_O
+    "SpeedUp",     // 10: KEY_M
+    "3rdPerson"    // 11: KEY_F5
+};
 
 TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* options )
-:	_minecraft(mc),
-	_options(options),
-	_northJump(false),
-	_forward(false),
-	_boundingRectangle(0, 0, 1, 1),
-	_pressedJump(false),
-	_pauseIsDown(false),
-	_sneakTapTime(-999),
-	aLeft(0),
-	aRight(0),
-	aUp(0),
-	aDown(0),
-	aJump(0),
-	aUpLeft(0),
-	aUpRight(0),
-	_allowHeightChange(false)
+    : _minecraft(mc),
+      _options(options),
+      _northJump(false),
+      _forward(false),
+      _boundingRectangle(0, 0, 1, 1),
+      _pressedJump(false),
+      _pauseIsDown(false),
+      _sneakTapTime(-999),
+      aLeft(0), aRight(0), aUp(0), aDown(0), aJump(0), aUpLeft(0), aUpRight(0),
+      aDebug(nullptr), aDebugBG(nullptr),
+      _debugPanelVisible(false)
 {
-	releaseAllKeys();
-	onConfigChanged( createConfig(mc) );
+    releaseAllKeys();
+    onConfigChanged( createConfig(mc) );
 
-	Tesselator& t = Tesselator::instance;
-	const int alpha = 128;
-	t.color( 0xc0c0c0, alpha); cPressed  = t.getColor();
-	t.color( 0xffffff, alpha); cReleased = t.getColor();
-	t.color( 0xffffff, alpha / 4); cDiscreet = t.getColor();
+    Tesselator& t = Tesselator::instance;
+    const int alpha = 128;
+    t.color( 0xc0c0c0, alpha); cPressed = t.getColor();
+    t.color( 0xffffff, alpha); cReleased = t.getColor();
+    t.color( 0xffffff, alpha / 4); cDiscreet = t.getColor();
     t.color( 0xc0c0c0, 80); cPressedPause=t.getColor();
     t.color( 0xffffff, 80); cReleasedPause=t.getColor();
 }
 
 TouchscreenInput_TestFps::~TouchscreenInput_TestFps() {
-	clear();
+    clear();
 }
 
 void TouchscreenInput_TestFps::clear() {
-	_model.clear();
-
-	delete aUpLeft; aUpLeft = NULL; // @todo: SAFEDEL
-	delete aUpRight; aUpRight = NULL;
+    _model.clear();
+    delete aUpLeft; aUpLeft = nullptr;
+    delete aUpRight; aUpRight = nullptr;
+    delete aDebug; aDebug = nullptr;
+    delete aDebugBG; aDebugBG = nullptr;
+    for (auto* btn : _debugButtons) delete btn;
+    _debugButtons.clear();
 }
-
-bool TouchscreenInput_TestFps::isButtonDown(int areaId) {
-	return _buttons[areaId - AREA_DPAD_FIRST];
-}
-
 
 void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
-	clear();
+    clear();
 
-	const float w = (float)c.width;
-	const float h = (float)c.height;
+    const float w = (float)c.width;
+    const float h = (float)c.height;
 
-	/*
-	// Code for "Move when touching left side of the screen"
-	float x0[] = {  0,  w * 0.3f,  w * 0.3f,     0 };
-	float y0[] = {	0,	       0,      h-32,  h-32 };
-
-	_model.addArea(AREA_MOVE, new RectangleArea(0, 0, w*0.3f, h-32));
-	*/
-
-	// Code for "D-pad with jump in center"
-	float Bw = w * 0.11f;//0.08f;
-	float Bh = Bw;//0.15f;
-    
-    // If too large (like playing on Tablet)
+    float Bw = w * 0.11f;
+    float Bh = Bw;
     PixelCalc& pc = _minecraft->pixelCalc;
-    if (pc.pixelsToMillimeters(Bw) > 200) { //14
-        Bw = Bh = pc.millimetersToPixels(200); //14
+    if (pc.pixelsToMillimeters(Bw) > 200) {
+        Bw = Bh = pc.millimetersToPixels(200);
     }
-	// temp data
-	float xx;
-	float yy;
 
-	const float BaseY = -8 + h - 3.0f * Bh;
-	const float BaseX = _options->getBooleanValue(OPTIONS_IS_LEFT_HANDED)? -8 + w - 3 * Bw
-											:	8 + 0;
-	// Setup the bounding rectangle
-	_boundingRectangle = RectangleArea(BaseX, BaseY, BaseX + 3 * Bw, BaseY + 3 * Bh);
+    const float BaseY = -8 + h - 3.0f * Bh;
+    const float BaseX = _options->getBooleanValue(OPTIONS_IS_LEFT_HANDED) ? -8 + w - 3 * Bw : 8 + 0;
+    _boundingRectangle = RectangleArea(BaseX, BaseY, BaseX + 3 * Bw, BaseY + 3 * Bh);
 
-	xx = BaseX + Bw; yy = BaseY;
-	_model.addArea(AREA_DPAD_N, aUp = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
-	xx = BaseX;
-	aUpLeft = new RectangleArea(xx, yy, xx+Bw, yy+Bh);
-	xx = BaseX + 2 * Bw;
-	aUpRight = new RectangleArea(xx, yy, xx+Bw, yy+Bh);
+    float xx = BaseX + Bw, yy = BaseY;
+    _model.addArea(AREA_DPAD_N, aUp = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
+    xx = BaseX;
+    aUpLeft = new RectangleArea(xx, yy, xx+Bw, yy+Bh);
+    xx = BaseX + 2 * Bw;
+    aUpRight = new RectangleArea(xx, yy, xx+Bw, yy+Bh);
 
-	xx = BaseX + Bw; yy = BaseY + Bh;
-	_model.addArea(AREA_DPAD_C, aJump = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
+    xx = BaseX + Bw; yy = BaseY + Bh;
+    _model.addArea(AREA_DPAD_C, aJump = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
 
-	xx = BaseX + Bw; yy = BaseY + 2 * Bh;
-	_model.addArea(AREA_DPAD_S, aDown = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
+    xx = BaseX + Bw; yy = BaseY + 2 * Bh;
+    _model.addArea(AREA_DPAD_S, aDown = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
 
-	xx = BaseX; yy = BaseY + Bh;
-	_model.addArea(AREA_DPAD_W, aLeft = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
+    xx = BaseX; yy = BaseY + Bh;
+    _model.addArea(AREA_DPAD_W, aLeft = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
 
-	xx = BaseX + 2 * Bw; yy = BaseY + Bh;
-	_model.addArea(AREA_DPAD_E, aRight = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
+    xx = BaseX + 2 * Bw; yy = BaseY + Bh;
+    _model.addArea(AREA_DPAD_E, aRight = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
 
     float maxPixels = _minecraft->pixelCalc.millimetersToPixels(10);
-    // float btnSize = Mth::Min(18 * Gui::GuiScale, maxPixels);
-	float btnSize = pc.millimetersToPixels(18 * Gui::GuiScale);
-	_model.addArea(AREA_PAUSE, aPause = new RectangleArea(w - 4 - btnSize, 4, w - 4, 4 + btnSize));
-	_model.addArea(AREA_CHAT,  aChat  = new RectangleArea(w - 8 - btnSize * 2, 4, w - 8 - btnSize, 4 + btnSize));
+    float btnSize = _minecraft->pixelCalc.millimetersToPixels(18 * Gui::GuiScale);
+    _model.addArea(AREA_PAUSE, aPause = new RectangleArea(w - 4 - btnSize, 4, w - 4, 4 + btnSize));
+    _model.addArea(AREA_CHAT, aChat = new RectangleArea(w - 8 - btnSize * 2, 4, w - 8 - btnSize, 4 + btnSize));
+    // 新增加密按钮入口
+    aDebug = new RectangleArea(w - 8 - btnSize * 3 - 4, 4, w - 8 - btnSize * 2 - 4, 4 + btnSize);
+    _model.addArea(AREA_DEBUG, aDebug);
 
-	//rebuild();
+    // 如果面板已打开，重新生成面板按钮网格
+    if (_debugPanelVisible) {
+        aDebugBG = new RectangleArea(50, 80, w - 50, h - 80);
+        for (auto* btn : _debugButtons) delete btn;
+        _debugButtons.clear();
+
+        int gridW = 64 * DEBUG_PANEL_COLS;  // 64是按钮宽度
+        int gridH = 64 * DEBUG_PANEL_ROWS;
+        int startX = (w - gridW) / 2;
+        int startY = (h - gridH) / 2;
+        for (int r = 0; r < DEBUG_PANEL_ROWS; ++r) {
+            for (int col = 0; col < DEBUG_PANEL_COLS; ++col) {
+                RectangleArea* btn = new RectangleArea(
+                    startX + col * 64, startY + r * 64,
+                    startX + (col+1) * 64, startY + (r+1) * 64 );
+                _debugButtons.push_back(btn);
+            }
+        }
+    }
 }
 
-void TouchscreenInput_TestFps::setKey(int key, bool state)
-{
-	#ifdef WIN32
-		//LOGI("key: %d, %d\n", key, state);
+void TouchscreenInput_TestFps::tick( Player* player ) {
+    xa = ya = 0;
+    jumping = false;
+    bool heldJump = false;
+    bool tmpForward = false;
+    bool tmpNorthJump = false;
 
-		int id = -1;
-		// theres no keyUp etc???
-		//if (key == _options->keyUp.key) id = KEY_UP;
-		//if (key == _options->keyDown.key) id = KEY_DOWN;
-		//if (key == _options->keyLeft.key) id = KEY_LEFT;
-		//if (key == _options->keyRight.key) id = KEY_RIGHT;
-		//if (key == _options->keyJump.key) id = KEY_JUMP;
-		//if (key == _options->keySneak.key) id = KEY_SNEAK;
-		//if (key == _options->keyCraft.key) id = KEY_CRAFT;
-		//if (id >= 0) {
-		//	_keys[id] = state;
-		//}
+    for (int i = 0; i < 6; ++i) _buttons[i] = false;
 
-		if (key == _options->getIntValue(OPTIONS_KEY_FORWARD)) id = KEY_UP;
-		if (key == _options->getIntValue(OPTIONS_KEY_BACK)) id = KEY_DOWN;
-		if (key == _options->getIntValue(OPTIONS_KEY_LEFT)) id = KEY_LEFT;
-		if (key == _options->getIntValue(OPTIONS_KEY_RIGHT)) id = KEY_RIGHT;
-		if (key == _options->getIntValue(OPTIONS_KEY_JUMP)) id = KEY_JUMP;
-		if (key == _options->getIntValue(OPTIONS_KEY_SNEAK)) id = KEY_SNEAK;
-		//if (key == _options->getIntValue(OPTIONS_KEY_CRAFT)) id = KEY_CRAFT;
-	#endif
-}
+    const int* pointerIds;
+    int pointerCount = Multitouch::getActivePointerIdsThisUpdate(&pointerIds);
+    for (int i = 0; i < pointerCount; ++i) {
+        int p = pointerIds[i];
+        int x = Multitouch::getX(p), y = Multitouch::getY(p);
 
-void TouchscreenInput_TestFps::releaseAllKeys()
-{
-	xa = 0;
-	ya = 0;
-
-	for (int i = 0; i<8; ++i)
-		_buttons[i] = false;
-#ifdef WIN32
-	for (int i = 0; i<NumKeys; ++i)
-		_keys[i] = false;
-#endif
-	_pressedJump = false;
-	_allowHeightChange = false;
-}
-
-void TouchscreenInput_TestFps::tick( Player* player )
-{
-	xa = 0;
-	ya = 0;
-	jumping = false;
-
-	//bool gotEvent = false;
-	bool heldJump = false;
-	bool tmpForward = false;
-	bool tmpNorthJump = false;
-
-	for (int i = 0; i < 6; ++i)
-		_buttons[i] = false;
-
-	const int* pointerIds;
-	int pointerCount = Multitouch::getActivePointerIdsThisUpdate(&pointerIds);
-	for (int i = 0; i < pointerCount; ++i) {
-		int p = pointerIds[i];
-		int x = Multitouch::getX(p);
-		int y = Multitouch::getY(p);
-
-		if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight)
-		{
-			float angle = Mth::PI + Mth::atan2(y - _boundingRectangle.centerY(), x - _boundingRectangle.centerX());
-			ya = Mth::sin(angle);
-			xa = Mth::cos(angle);
-			tmpForward = true;
-		}
-
-		int areaId = _model.getPointerId(x, y, p);
-		if (areaId < AREA_DPAD_FIRST)
-		{
-			continue;
-		}
-
-		bool setButton = false;
-
-		if (Multitouch::isPressed(p))
-			_allowHeightChange = (areaId == AREA_DPAD_C);
-
-        if (areaId == AREA_DPAD_C)
-		{
-			setButton = true;
-			heldJump = true;
-			// If we're in water or pressed down on the button: jump
-			if (player->isInWater()) {
-				jumping = true;
-			}
-			else if (Multitouch::isPressed(p)) {
-				jumping = true;
-			} // Or if we are walking forward, jump while going forward!
-			else if (_forward && !player->abilities.flying) {
-				areaId = AREA_DPAD_N;
-				tmpNorthJump = true;
-				//jumping = true;
-				ya += 1;
-			}
-		}
-
-		if	(areaId == AREA_DPAD_N)
-		{
-			setButton = true;
-			if (player->isInWater())
-				jumping = true;
-			else if (!isChangingFlightHeight)
-				tmpForward = true;
-			ya += 1;
-		}
-		else if (areaId == AREA_DPAD_S && !_forward)
-		{
-			setButton = true;
-            ya -= 1;
-			/*
+        // 调试按钮 (入口和面板内按钮)
+        int areaId2 = _model.getPointerId(x, y, p);
+        if (areaId2 == AREA_DEBUG) {
             if (Multitouch::isReleased(p)) {
-                float now = getTimeS();
-                if (now - _sneakTapTime < 0.4f) {
-                    ya += 1;
-                    sneaking = !sneaking;
-                    player->setSneaking(sneaking);
-                    _sneakTapTime = -1;
-                } else {
-                    _sneakTapTime = now;
+                _minecraft->soundEngine->playUI("random.click", 1, 1);
+                _debugPanelVisible = !_debugPanelVisible;
+                onConfigChanged( createConfig(_minecraft) );
+            }
+        }
+
+        if (_debugPanelVisible) {
+            int dbgIdx = areaId2 - AREA_DBG_BTN0;
+            if (dbgIdx >= 0 && dbgIdx < (int)_debugButtons.size()) {
+                if (Multitouch::isReleased(p)) {
+                    executeDebugAction(dbgIdx);
+                    _minecraft->soundEngine->playUI("random.click", 1, 1);
                 }
             }
-			*/
+            continue; // 面板打开时不处理移动/攻击
         }
-		else if (areaId == AREA_DPAD_W && !_forward)
-		{
-			setButton = true;
-			xa += 1;
-		}
-		else if (areaId == AREA_DPAD_E && !_forward)
-		{
-			setButton = true;
-			xa -= 1;
-		}
-		else if (areaId == AREA_PAUSE) {
-			if (Multitouch::isReleased(p)) {
-                _minecraft->soundEngine->playUI("random.click", 1, 1);
-				_minecraft->screenChooser.setScreen(SCREEN_PAUSE);
+
+        // 原有移动和按钮逻辑
+        if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight)
+        {
+            float angle = Mth::PI + Mth::atan2(y - _boundingRectangle.centerY(), x - _boundingRectangle.centerX());
+            ya = Mth::sin(angle);
+            xa = Mth::cos(angle);
+            tmpForward = true;
+        }
+
+        int areaId = _model.getPointerId(x, y, p);
+        if (areaId < AREA_DPAD_FIRST) continue;
+
+        bool setButton = false;
+        if (Multitouch::isPressed(p)) _allowHeightChange = (areaId == AREA_DPAD_C);
+
+        if (areaId == AREA_DPAD_C) {
+            setButton = true;
+            heldJump = true;
+            if (player->isInWater()) jumping = true;
+            else if (Multitouch::isPressed(p)) jumping = true;
+            else if (_forward && !player->abilities.flying) {
+                areaId = AREA_DPAD_N;
+                tmpNorthJump = true;
+                ya += 1;
             }
-		}
-		else if (areaId == AREA_CHAT) {
-			if (Multitouch::isReleased(p)) {
-                _minecraft->soundEngine->playUI("random.click", 1, 1);
-				_minecraft->screenChooser.setScreen(SCREEN_CONSOLE);
-				_minecraft->platform()->showKeyboard();
-            }
-		}
+        }
+        if (areaId == AREA_DPAD_N) { setButton = true; if (player->isInWater()) jumping = true; else if (!isChangingFlightHeight) tmpForward = true; ya += 1; }
+        else if (areaId == AREA_DPAD_S && !_forward) { setButton = true; ya -= 1; }
+        else if (areaId == AREA_DPAD_W && !_forward) { setButton = true; xa += 1; }
+        else if (areaId == AREA_DPAD_E && !_forward) { setButton = true; xa -= 1; }
+        else if (areaId == AREA_PAUSE) {
+            if (Multitouch::isReleased(p)) { _minecraft->soundEngine->playUI("random.click", 1, 1); _minecraft->screenChooser.setScreen(SCREEN_PAUSE); }
+        }
+        else if (areaId == AREA_CHAT) {
+            if (Multitouch::isReleased(p)) { _minecraft->soundEngine->playUI("random.click", 1, 1); _minecraft->screenChooser.setScreen(SCREEN_CONSOLE); _minecraft->platform()->showKeyboard(); }
+        }
+        _buttons[areaId - AREA_DPAD_FIRST] = setButton;
+    }
 
-		_buttons[areaId - AREA_DPAD_FIRST] = setButton;
-	}
+    if (_debugPanelVisible) return; // 重要：面板打开时不处理移动
 
-	_forward = tmpForward;
+    _forward = tmpForward;
+    if (tmpNorthJump) { if (!_northJump) jumping = true; _northJump = true; }
+    else _northJump = false;
 
-	// Only jump once at a time
-	if (tmpNorthJump) {
-		if (!_northJump)
-			jumping = true;
-		_northJump = true;
-	}
-	else _northJump = false;
+    isChangingFlightHeight = false;
+    wantUp = isButtonDown(AREA_DPAD_N) && (_allowHeightChange & (_pressedJump | wantUp));
+    wantDown = isButtonDown(AREA_DPAD_S) && (_allowHeightChange & (_pressedJump | wantDown));
+    if (player->abilities.flying && (wantUp || wantDown || (heldJump && !_forward))) { isChangingFlightHeight = true; ya = 0; }
+    _renderFlightImage = player->abilities.flying;
 
-	isChangingFlightHeight = false;
-	wantUp   = isButtonDown(AREA_DPAD_N) && (_allowHeightChange & (_pressedJump | wantUp));
-	wantDown = isButtonDown(AREA_DPAD_S) && (_allowHeightChange & (_pressedJump | wantDown));
-	if (player->abilities.flying && (wantUp || wantDown || (heldJump && !_forward)))
-	{
-		isChangingFlightHeight = true;
-		ya = 0;
-	}
-	_renderFlightImage = player->abilities.flying;
-
-#ifdef WIN32
-	if (_keys[KEY_UP]) ya++;
-	if (_keys[KEY_DOWN]) ya--;
-	if (_keys[KEY_LEFT]) xa++;
-	if (_keys[KEY_RIGHT]) xa--;
-	if (_keys[KEY_JUMP]) jumping = true;
-	//sneaking = _keys[KEY_SNEAK];
-	if (_keys[KEY_CRAFT])
-		player->startCrafting((int)player->x, (int)player->y, (int)player->z, Recipe::SIZE_2X2);
-#endif
-
-	if (sneaking) {
-		xa *= 0.3f;
-		ya *= 0.3f;
-	}
-	//printf("\n>- %f %f\n", xa, ya);
-	_pressedJump = heldJump;
-}
-
-static void drawRectangleArea(Tesselator& t, RectangleArea* a, int ux, int vy, float ssz = 64.0f) {
-	const float pm = 1.0f / 256.0f;
-	const float sz = ssz * pm;
-	const float uu = (float)(ux) * pm;
-	const float vv = (float)(vy) * pm;
-	const float x0 = a->_x0 * Gui::InvGuiScale;
-	const float x1 = a->_x1 * Gui::InvGuiScale;
-	const float y0 = a->_y0 * Gui::InvGuiScale;
-	const float y1 = a->_y1 * Gui::InvGuiScale;
-
-	t.vertexUV(x0, y1, 0, uu,	vv+sz);
-	t.vertexUV(x1, y1, 0, uu+sz,vv+sz);
-	t.vertexUV(x1, y0, 0, uu+sz,vv);
-	t.vertexUV(x0, y0, 0, uu,	vv);
-}
-
-static void drawPolygonArea(Tesselator& t, PolygonArea* a, int x, int y) {
-	float pm = 1.0f / 256.0f;
-	float sz = 64.0f * pm;
-	float uu = (float)(x) * pm;
-	float vv = (float)(y) * pm;
-
-	float uvs[] = {uu, vv, uu+sz, vv, uu+sz, vv+sz, uu, vv+sz};
-	const int o = 0;
-
-	for (int j = 0; j < a->_numPoints; ++j) {
-		t.vertexUV(a->_x[j] * Gui::InvGuiScale, a->_y[j] * Gui::InvGuiScale, 0, uvs[(o+j+j)&7], uvs[(o+j+j+1)&7]);
-	}
-}
-
-void TouchscreenInput_TestFps::render( float a ) {
-	//return;
-
-	//static Stopwatch sw;
-	//sw.start();
-
-
-	//glColor4f2(1, 0, 1, 1.0f);
-	//glDisable2(GL_CULL_FACE);
-	glDisable2(GL_ALPHA_TEST);
-
-	glEnable2(GL_BLEND);
-	glBlendFunc2(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	_minecraft->textures->loadAndBindTexture("gui/gui.png");
-	
-	//glDisable2(GL_TEXTURE_2D);
-
-	rebuild();
-	//drawArrayVTC(_bufferId, 5 * 2 * 3, 24);
-
-	glDisable2(GL_BLEND);
-	//glEnable2(GL_TEXTURE_2D);
-	//glEnable2(GL_CULL_FACE);
-
-	//sw.stop();
-	//sw.printEvery(100, "buttons");
-}
-
-const RectangleArea& TouchscreenInput_TestFps::getRectangleArea()
-{
-	return _boundingRectangle;
-}
-const RectangleArea& TouchscreenInput_TestFps::getPauseRectangleArea()
-{
-    return *aPause;
+    if (sneaking) { xa *= 0.3f; ya *= 0.3f; }
+    _pressedJump = heldJump;
 }
 
 void TouchscreenInput_TestFps::rebuild() {
-    if (_options->getBooleanValue(OPTIONS_HIDEGUI))
-        return;
-    
-	Tesselator& t = Tesselator::instance;
-	//LOGI("instance is: %p, %p, %p, %p, %p FOR %d\n", &t, aLeft, aRight, aUp, aDown, aJump, _bufferId);
-	//t.setAccessMode(Tesselator::ACCESS_DYNAMIC);
-	t.begin();
+    if (_options->getBooleanValue(OPTIONS_HIDEGUI)) return;
 
-	const int imageU = 0;
-	const int imageV = 107;
-	const int imageSize = 26;
+    Tesselator& t = Tesselator::instance;
+    t.begin();
 
-	bool northDiagonals = !isChangingFlightHeight && (_northJump || _forward);
+    const int imageU = 0, imageV = 107, imageSize = 26;
+    bool northDiagonals = !isChangingFlightHeight && (_northJump || _forward);
 
-	// render left button
-	if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
+    // 左按钮
+    if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_W)) t.colorABGR(cPressed);
-	else						   t.colorABGR(cReleased);
-	drawRectangleArea(t, aLeft, imageU + imageSize, imageV, (float)imageSize);
+    else t.colorABGR(cReleased);
+    drawRectangleArea(t, aLeft, imageU + imageSize, imageV, (float)imageSize);
 
-	// render right button
-	if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
-	else if (isButtonDown(AREA_DPAD_E)) t.colorABGR(cPressed);
-	else						   t.colorABGR(cReleased);
-	drawRectangleArea(t, aRight, imageU + imageSize * 3, imageV, (float)imageSize);
+    // 右按钮
+    if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
+    else if (isButtonDown(AREA_DPAD_E)) t.colorABGR(cPressed);
+    else t.colorABGR(cReleased);
+    drawRectangleArea(t, aRight, imageU + imageSize * 3, imageV, (float)imageSize);
 
-	// render forward button
-	if (isButtonDown(AREA_DPAD_N)) t.colorABGR(cPressed);
-	else						   t.colorABGR(cReleased);
-	if (isChangingFlightHeight)
-	{
-		drawRectangleArea(t, aUp, imageU + imageSize * 2, imageV + imageSize, (float)imageSize);
-	}
-	else
-	{
-		drawRectangleArea(t, aUp, imageU, imageV, (float)imageSize);
-	}
-	
-	// render diagonals, if available
-	if (northDiagonals)
-	{
-		t.colorABGR(cReleased);
-		drawRectangleArea(t, aUpLeft, imageU, imageV + imageSize, (float)imageSize);
-		drawRectangleArea(t, aUpRight, imageU + imageSize, imageV + imageSize, (float)imageSize);
-	}
+    // 上按钮
+    if (isButtonDown(AREA_DPAD_N)) t.colorABGR(cPressed);
+    else t.colorABGR(cReleased);
+    if (isChangingFlightHeight) drawRectangleArea(t, aUp, imageU + imageSize * 2, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aUp, imageU, imageV, (float)imageSize);
 
-	// render backwards button
-	if (northDiagonals) t.colorABGR(cDiscreet);
-	else if (isButtonDown(AREA_DPAD_S)) t.colorABGR(cPressed);
-	else						   t.colorABGR(cReleased);
-	if (isChangingFlightHeight)
-	{
-		drawRectangleArea(t, aDown, imageU + imageSize * 3, imageV + imageSize, (float)imageSize);
-	}
-	else
-	{
-		drawRectangleArea(t, aDown, imageU + imageSize * 2, imageV, (float)imageSize);
-	}
+    if (northDiagonals) {
+        t.colorABGR(cReleased);
+        drawRectangleArea(t, aUpLeft, imageU, imageV + imageSize, (float)imageSize);
+        drawRectangleArea(t, aUpRight, imageU + imageSize, imageV + imageSize, (float)imageSize);
+    }
 
-	// render jump / flight button
-	if (_renderFlightImage && northDiagonals) t.colorABGR(cDiscreet);
-	else if (isButtonDown(AREA_DPAD_C)) t.colorABGR(cPressed);
-	else						   t.colorABGR(cReleased);
-	if (_renderFlightImage)
-	{
-		drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV + imageSize, (float)imageSize);
-	}
-	else
-	{
-		drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV, (float)imageSize);
-	}
-	
-	if (!_minecraft->screen) {
-		t.colorABGR(0xFFFFFFFF);
-		// if (isButtonDown(AREA_PAUSE))  t.colorABGR(cPressedPause);
-		// else						   t.colorABGR(cReleasedPause);
-		
+    // 下按钮
+    if (northDiagonals) t.colorABGR(cDiscreet);
+    else if (isButtonDown(AREA_DPAD_S)) t.colorABGR(cPressed);
+    else t.colorABGR(cReleased);
+    if (isChangingFlightHeight) drawRectangleArea(t, aDown, imageU + imageSize * 3, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aDown, imageU + imageSize * 2, imageV, (float)imageSize);
+
+    // 跳跃/飞行按钮
+    if (_renderFlightImage && northDiagonals) t.colorABGR(cDiscreet);
+    else if (isButtonDown(AREA_DPAD_C)) t.colorABGR(cPressed);
+    else t.colorABGR(cReleased);
+    if (_renderFlightImage) drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV, (float)imageSize);
+
+    // 右上角HUD按钮
+    if (!_minecraft->screen) {
+        t.colorABGR(0xFFFFFFFF);
         drawRectangleArea(t, aPause, 200, 64, 18.0f);
-		drawRectangleArea(t, aChat,  200, 82, 18.0f);
-	}
-//t.end(true, _bufferId);
-	//return;
+        drawRectangleArea(t, aChat, 200, 82, 18.0f);
+        drawRectangleArea(t, aDebug, 200, 64, 18.0f); // 和暂停一样的图标
+    }
+    t.draw();
 
-	t.draw();
-	//RenderChunk _render = t.end(true, _bufferId);
-	//t.setAccessMode(Tesselator::ACCESS_STATIC);
-	//_bufferId = _render.vboId;
+    // 调试面板
+    if (_debugPanelVisible) {
+        float invScale = Gui::InvGuiScale;
+        fill(50.f * invScale, 80.f * invScale,
+             (_minecraft->width - 50) * invScale,
+             (_minecraft->height - 80) * invScale,
+             0x80000000);
+
+        t.begin();
+        t.colorABGR(0xFFFFFFFF);
+        for (int i = 0; i < NUM_DEBUG_BUTTONS; ++i) {
+            RectangleArea* btn = _debugButtons[i];
+            drawRectangleArea(t, btn, 0, 0, 64.0f);
+        }
+        t.draw();
+
+        for (int i = 0; i < NUM_DEBUG_BUTTONS; ++i) {
+            RectangleArea* btn = _debugButtons[i];
+            float cx = btn->centerX() * invScale;
+            float cy = btn->centerY() * invScale;
+            const char* label = DEBUG_LABELS[i];
+            _minecraft->font->drawShadow(label,
+                cx - _minecraft->font->width(label) * 0.5f,
+                cy - _minecraft->font->lineHeight * 0.5f,
+                0xFFFFFFFF);
+        }
+    }
+}
+
+void TouchscreenInput_TestFps::executeDebugAction(int btnIdx) {
+    Minecraft* mc = _minecraft;
+    switch (btnIdx) {
+        case 0: // GodMode (KEY_U)
+            mc->onGraphicsReset();
+            mc->player->heal(100);
+            break;
+        case 1: // Gamemode (KEY_B) 创造/生存切换
+            mc->setIsCreativeMode(!mc->isCreativeMode());
+            break;
+        case 2: // Time + (KEY_P)
+            if (mc->level) mc->level->setTime(mc->level->getTime() + 1000);
+            break;
+        case 3: // Armor (KEY_G)
+            mc->setScreen(new ArmorScreen());
+            break;
+        case 4: // Self hurt + reload textures (KEY_Y)
+            mc->textures->reloadAll();
+            mc->player->hurtTo(2);
+            break;
+        case 5: // Random spawn (KEY_Z)
+            for (int i = 0; i < 1; ++i) {
+                Mob* mob = nullptr;
+                int types[] = { MobTypes::Sheep, MobTypes::Pig, MobTypes::Chicken, MobTypes::Cow };
+                int mobType = types[Mth::random(4)];
+                mob = MobFactory::CreateMob(mobType, mc->level);
+                float dx = 4 - 8 * Mth::random() + 4 * Mth::sin(Mth::DEGRAD * mc->player->yRot);
+                float dz = 4 - 8 * Mth::random() + 4 * Mth::cos(Mth::DEGRAD * mc->player->yRot);
+                if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz, Mth::random()*360, 0, true))
+                    delete mob;
+            }
+            break;
+        case 6: // Kill all non-player entities (KEY_X)
+            {
+                const EntityList& entities = mc->level->getAllEntities();
+                for (int i = entities.size() - 1; i >= 0; --i) {
+                    Entity* e = entities[i];
+                    if (!e->isPlayer()) mc->level->removeEntity(e);
+                }
+            }
+            break;
+        case 7: // Clear inventory (KEY_C)
+            mc->player->inventory->clearInventoryWithDefault();
+            break;
+        case 8: // Prerender tiles (KEY_H)
+            mc->setScreen(new PrerenderTilesScreen());
+            break;
+        case 9: // Drop all items (KEY_O)
+            for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
+                if (mc->player->inventory->getItem(i))
+                    mc->player->inventory->dropSlot(i, false);
+            break;
+        case 10: // Speed up ticks (KEY_M)
+            for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i)
+                mc->level->tick();
+            break;
+        case 11: // 3rd person (KEY_F5)
+            mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
+            break;
+    }
 }
