@@ -289,19 +289,20 @@ void OptionsScreen::mouseWheel(int dx, int dy, int xm, int ym) {
 }
 
 void OptionsScreen::keyPressed(int eventKey) {
-	if (currentOptionsGroup)
-		currentOptionsGroup->keyPressed(minecraft, eventKey);
-	if (eventKey == Keyboard::KEY_ESCAPE) {
-		lostFocus();                 // 保存输入框
-		minecraft->options.save();
-	}
-	super::keyPressed(eventKey);
+    if (currentOptionsGroup)
+        currentOptionsGroup->keyPressed(minecraft, eventKey);
+    if (eventKey == Keyboard::KEY_ESCAPE) {
+        lostFocus();
+        minecraft->options.save();
+        minecraft->setScreen(NULL);
+    }
+    // 不再调用 super::keyPressed(eventKey)，避免二次分发
 }
 
 void OptionsScreen::charPressed(char inputChar) {
-	if (currentOptionsGroup)
-		currentOptionsGroup->charPressed(minecraft, inputChar);
-	super::keyPressed(inputChar);
+    if (currentOptionsGroup)
+        currentOptionsGroup->charPressed(minecraft, inputChar);
+    super::charPressed(inputChar);               // 正确调用父类 charPressed
 }
 
 void OptionsScreen::tick() {
