@@ -417,7 +417,6 @@ float GameRenderer::getFov(float a, bool applyEffects) {
 
 /*private*/
 void GameRenderer::moveCameraToPlayer(float a) {
-void GameRenderer::moveCameraToPlayer(float a) {
     Entity* player = mc->cameraTargetPlayer;
     double heightOffset = player->heightOffset - 1.62;              // ★ double 精度保持
     double x = player->xo + (player->x - player->xo) * (double)a;
