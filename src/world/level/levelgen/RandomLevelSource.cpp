@@ -97,7 +97,8 @@ RandomLevelSource::~RandomLevelSource() {
     delete[] fis;
 }
 
-void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned char* blocks, void* biomes, float* temperatures) {
+// 修改：xOffs, zOffs 改为 double 世界坐标
+void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures) {
     int waterHeight = customSeaLevel + 1;
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
@@ -168,7 +169,8 @@ void RandomLevelSource::prepareHeights(int64_t xOffs, int64_t zOffs, unsigned ch
     }
 }
 
-void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned char* blocks, Biome** biomes) {
+// 修改：xOffs, zOffs 改为 double 世界坐标
+void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char* blocks, Biome** biomes) {
     int waterHeight = customSeaLevel + 1;
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
@@ -176,11 +178,12 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     float sx = (1.0f / 32.0f) * m_worldScaleX;
     float sz = (1.0f / 32.0f) * m_worldScaleZ;
 
-    float xf = (float)((xOffs + m_worldOffsetX) / 4.0);
-    float zf = (float)((zOffs + m_worldOffsetZ) / 4.0);
-    perlinNoise2.getRegion(sandBuffer, xf, zf, 0, 16, 16, 1, sx, sz, 1.0f);
-    perlinNoise2.getRegion(gravelBuffer, xf, 109.01340f, zf, 16, 1, 16, sx, 1.0f, sz);
-    perlinNoise3.getRegion(depthBuffer, xf, zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f);
+    // 直接使用世界坐标缩放，不再添加偏移（偏移已在传入前叠加）
+    double xf = xOffs / 4.0;
+    double zf = zOffs / 4.0;
+    perlinNoise2.getRegion(sandBuffer, (float)xf, (float)zf, 0, 16, 16, 1, sx, sz, 1.0f);
+    perlinNoise2.getRegion(gravelBuffer, (float)xf, 109.01340f, (float)zf, 16, 1, 16, sx, 1.0f, sz);
+    perlinNoise3.getRegion(depthBuffer, (float)xf, (float)zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f);
 
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
@@ -247,9 +250,10 @@ void RandomLevelSource::buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned cha
     }
 }
 
+// 修改：xt, zt 仍是区块坐标 int64_t（不变），内部世界坐标升级为 double
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
-    int64_t worldBlockX = xt * 16 + (int64_t)m_worldOffsetX;
-    int64_t worldBlockZ = zt * 16 + (int64_t)m_worldOffsetZ;
+    double worldBlockX = xt * 16.0 + m_worldOffsetX;
+    double worldBlockZ = zt * 16.0 + m_worldOffsetZ;
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
 
@@ -267,7 +271,8 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     random.setSeed(((xt * xScale) + (zt * zScale)) ^ level->getSeed());
 
     // 以下所有使用 xo, zo 的地方不变，因为它们已经是 int 范围内的世界坐标
-    // ... 原有代码（生成树、矿石、花朵等）保持不变 ...
+    // 当偏移极大导致 xo/zo 溢出时，这些生成物将出错，但这是保持 32 位生态的已知限制
+    // ...（原有生成树、矿石等代码保持不变）
     
 	// //@todo: hide those chunks if they are aren't visible
 //    if (random.nextInt(4) == 0) {
@@ -383,13 +388,12 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     int forests = 0;//1; (java: 0)
     if (random.nextInt(10) == 0) forests += 1;
 
-    if (biome == Biome::forest) forests += oFor + 2; // + 5
-    if (biome == Biome::rainForest) forests += oFor + 2; //+ 5
-    if (biome == Biome::seasonalForest) forests += oFor + 1; // 2
+    if (biome == Biome::forest) forests += oFor + 2;
+    if (biome == Biome::rainForest) forests += oFor + 2;
+    if (biome == Biome::seasonalForest) forests += oFor + 1;
     if (biome == Biome::taiga) {
-		forests += oFor + 1; // + 5
-		//LOGI("Biome is taiga!\n");
-	}
+		forests += oFor + 1;
+    }
 
     if (biome == Biome::desert) forests -= 20;
     if (biome == Biome::tundra) forests -= 20;
@@ -405,7 +409,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 		    tree->place(level, &random, x, y, z);
 			delete tree;
 		}
-		//printf("placing tree at %d, %d, %d\n", x, y, z);
     }
 
     for (int i = 0; i < 2; i++) {
@@ -439,17 +442,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         FlowerFeature feature(Tile::mushroom2->id);
 		feature.place(level, &random, x, y, z);
     }
-	/*int grassCount = 1;
-	for (int i = 0; i < grassCount; i++) {
-		int x = xo + random.nextInt(16) + 8;
-		int y = random.nextInt(Level::genDepth);
-		int z = zo + random.nextInt(16) + 8;
-		Feature* grassFeature = biome->getGrassFeature(&random);
-		if (grassFeature) {
-			grassFeature->place(level, &random, x, y, z);
-			delete grassFeature;
-		}
-	}*/
+
     for (int i = 0; i < 10; i++) {
         int x = xo + random.nextInt(16) + 8;
         int y = random.nextInt(128);
@@ -457,14 +450,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         ReedsFeature feature;
 		feature.place(level, &random, x, y, z);
     }
-	
-
-    //if (random.nextInt(32) == 0) {
-    //    int x = xo + random.nextInt(16) + 8;
-    //    int y = random.nextInt(128);
-    //    int z = zo + random.nextInt(16) + 8;
-    //    PumpkinFeature().place(level, random, x, y, z);
-    //}
 
     int cacti = 0;
     if (biome == Biome::desert) cacti += 5;
@@ -474,7 +459,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         int y = random.nextInt(128);
         int z = zo + random.nextInt(16) + 8;
         CactusFeature feature;
-        //LOGI("Tried creating a cactus at %d, %d, %d\n", x, y, z);
         feature.place(level, &random, x, y, z);
     }
 
@@ -497,9 +481,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 	if (spawnMobs && !level->isClientSide)
 		MobSpawner::postProcessSpawnMobs(level, biome, xo + 8, zo + 8, 16, 16, &random);
 
-    // 注意：所有对 level->getHeightmap 等函数的调用，参数使用 xo + offset 等，但 xo, zo 本身已经是世界坐标，不需要额外转换。
-
-    // 最后处理雪
+    // 雪处理
     float* temperatures = level->getBiomeSource()->getTemperatureBlock(xo + 8, zo + 8, 16, 16);
     for (int x = xo + 8; x < xo + 8 + 16; x++)
         for (int z = zo + 8; z < zo + 8 + 16; z++) {
@@ -534,9 +516,11 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    int64_t worldBlockX = xOffs * 16 + (int64_t)m_worldOffsetX;
-    int64_t worldBlockZ = zOffs * 16 + (int64_t)m_worldOffsetZ;
+    // ★ 世界坐标改用 double，偏移仅在此叠加一次
+    double worldBlockX = xOffs * 16.0 + m_worldOffsetX;
+    double worldBlockZ = zOffs * 16.0 + m_worldOffsetZ;
 
+    // 临时截断为 int 传给仍需要 int 的外部接口（当偏移极大时这些会失效，但噪声生成链已 double 化）
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
     float* temperatures = level->getBiomeSource()->temperatures;
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
@@ -548,7 +532,8 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     return levelChunk;
 }
 
-float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize) {
+// 修改：x, z 改为 double 世界坐标，y 仍为 int
+float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize) {
     float farlandsScale = 1.0f;
 
     float sx = 684.412f * farlandsScale * m_worldScaleX;
@@ -563,16 +548,19 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
     float* temperatures = level->getBiomeSource()->temperatures;
     float* downfalls = level->getBiomeSource()->downfalls;
 
-    // 应用 Y 偏移
-    double noiseX = (x + m_worldOffsetX) / 4.0;
-    double noiseY = (y + m_worldOffsetY) / 8.0;
-    double noiseZ = (z + m_worldOffsetZ) / 4.0;
+    // X/Z 偏移已在传入的 worldBlock 中包含，此处仅缩放，不再加偏移
+    double noiseX = x / 4.0;
+    double noiseY = (y + m_worldOffsetY) / 8.0;   // Y 偏移在此应用（唯一位置）
+    double noiseZ = z / 4.0;
 
-    int64_t scaleX = (int64_t)noiseX;
-    int64_t scaleZ = (int64_t)noiseZ;
-    sr = scaleNoise.getRegion(sr, (int)scaleX, (int)scaleZ, xSize, zSize, 1.121f * m_worldScaleX, 1.121f * m_worldScaleZ, 0.5f);
-    dr = depthNoise.getRegion(dr, (int)scaleX, (int)scaleZ, xSize, zSize, 200.0f * m_worldScaleX, 200.0f * m_worldScaleZ, 0.5f);
+    // 为了给 scaleNoise 和 depthNoise 提供 int 输入，我们截断 double
+    // 这是 32 位生成器的固有妥协：当坐标超出 int 范围时，噪声将不准确，但不会崩溃
+    int intNoiseX = (int)noiseX;
+    int intNoiseZ = (int)noiseZ;
+    sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize, 1.121f * m_worldScaleX, 1.121f * m_worldScaleZ, 0.5f);
+    dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize, 200.0f * m_worldScaleX, 200.0f * m_worldScaleZ, 0.5f);
 
+    // 主噪声调用：转为 float 喂给 32 位生成器
     float xf = (float)noiseX;
     float yf = (float)noiseY;
     float zf = (float)noiseZ;
@@ -639,9 +627,8 @@ float* RandomLevelSource::getHeights(float* buffer, int64_t x, int y, int64_t z,
 }
 
 void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt) {
-    // 注意：此函数使用世界坐标，应应用偏移
-    int64_t worldX = xt * 16 + m_worldOffsetX;
-    int64_t worldZ = zt * 16 + m_worldOffsetZ;
+    double worldX = xt * 16.0 + m_worldOffsetX;
+    double worldZ = zt * 16.0 + m_worldOffsetZ;
     int xo = (int)worldX;
     int zo = (int)worldZ;
     for (int x = 0; x < 16; x++) {
@@ -661,7 +648,6 @@ void RandomLevelSource::calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t
                         for (int x2 = -5; x2 <= 5; x2++) {
                             for (int z2 = -5; z2 <= 5; z2++) {
                                 int d = (x2 > 0 ? x2 : -x2) + (z2 > 0 ? z2 : -z2);
-
                                 if (d <= 5) {
                                     d = 6 - d;
                                     if (level->getTile(xp + x2, y, zp + z2) == Tile::calmWater->id) {
