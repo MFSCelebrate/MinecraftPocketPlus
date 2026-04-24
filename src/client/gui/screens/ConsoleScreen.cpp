@@ -34,10 +34,15 @@ bool ConsoleScreen::handleBackEvent(bool /*isDown*/)
     return true;
 }
 
-void ConsoleScreen::keyPressed(int eventKey)
-{
+void ConsoleScreen::keyPressed(int eventKey) {
     if (eventKey == Keyboard::KEY_ESCAPE) {
-        minecraft->setScreen(NULL);
+        if (!_input.empty()) {
+            _input.clear();            // 先清空输入
+            return;
+        }
+        minecraft->setScreen(NULL);   // 输入为空时才关闭
+        return;
+    // ... 其余代码不变
     } else if (eventKey == Keyboard::KEY_RETURN) {
         execute();
     } else if (eventKey == Keyboard::KEY_BACKSPACE) {
