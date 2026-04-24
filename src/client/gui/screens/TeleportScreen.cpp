@@ -34,11 +34,10 @@ void TeleportScreen::keyPressed(int key) {
     if (key == Keyboard::KEY_RETURN) {
         teleport();
         minecraft->setScreen(nullptr);
-    } else if (key == Keyboard::KEY_ESCAPE) {
-        minecraft->setScreen(nullptr);
     } else if (textBox) {
         textBox->keyPressed(minecraft, key);
     }
+    // 不再拦截 KEY_ESCAPE，由系统处理
 }
 
 void TeleportScreen::charPressed(char inputChar) {
