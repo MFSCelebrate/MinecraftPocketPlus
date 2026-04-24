@@ -292,13 +292,18 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
     }
 }
 
-void SimpleChooseLevelScreen::keyPressed(int eventKey)
-{
+void SimpleChooseLevelScreen::keyPressed(int eventKey) {
+    // ESC 键：只有两个输入框都未聚焦时才允许退出
     if (eventKey == Keyboard::KEY_ESCAPE) {
-        minecraft->screenChooser.setScreen(SCREEN_STARTMENU);
+        if (tLevelName.focused || tSeed.focused) {
+            tLevelName.loseFocus(minecraft);
+            tSeed.loseFocus(minecraft);
+        } else {
+            minecraft->screenChooser.setScreen(SCREEN_STARTMENU);
+        }
         return;
     }
-    // let base class handle navigation and text box keys
+    // 其他键正常交给父类（会分发给 textBoxes）
     Screen::keyPressed(eventKey);
 }
 
