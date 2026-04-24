@@ -71,8 +71,8 @@ private:
 	//    SmoothFloat smoothTilt = /*new*/ SmoothFloat();
 	//    SmoothFloat smoothRoll = /*new*/ SmoothFloat();
 
-	float thirdDistance;
-	float thirdDistanceO;
+	double thirdDistance;
+double thirdDistanceO;
 	float thirdRotation;
 	float thirdRotationO;
 	float thirdTilt;
