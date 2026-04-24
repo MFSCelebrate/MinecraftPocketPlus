@@ -37,8 +37,8 @@ public:
     bool hasChunk(int64_t x, int64_t y) override;
     LevelChunk* create(int64_t x, int64_t z) override;
     LevelChunk* getChunk(int64_t xOffs, int64_t zOffs) override;
-    void prepareHeights(int64_t xOffs, int64_t zOffs, unsigned char* blocks, void* biomes, float* temperatures);
-    void buildSurfaces(int64_t xOffs, int64_t zOffs, unsigned char* blocks, Biome** biomes);
+    void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures);
+void buildSurfaces(double xOffs, double zOffs, unsigned char* blocks, Biome** biomes);
     void postProcess(ChunkSource* parent, int64_t xt, int64_t zt) override;
 
     bool tick() override;
@@ -60,7 +60,7 @@ public:
     float getWorldScaleZ() const { return m_worldScaleZ; }
 
 private:
-    float* getHeights(float* buffer, int64_t x, int y, int64_t z, int xSize, int ySize, int zSize);
+    float* getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize);
     void calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt);
 
 public:
@@ -125,3 +125,4 @@ public:
 };
 
 #endif
+
