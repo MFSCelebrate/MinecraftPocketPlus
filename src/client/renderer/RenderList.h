@@ -11,7 +11,7 @@ public:
     RenderList();
     ~RenderList();
 
-    void init(float xOff, float yOff, float zOff);
+    void init(double xOff, double yOff, double zOff);
     void add(int list);
     void addR(const RenderChunk& chunk);
     void next() { ++listIndex; }
