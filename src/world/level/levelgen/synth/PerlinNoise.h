@@ -17,6 +17,7 @@ public:
 
     float getValue(float x, float y);
     float getValue(float x, float y, float z);
+float getValue(double x, double y, double z);
 
 	//float[] getRegion(float[] buffer, float x, float y, float z, int xSize, int ySize, int zSize, float xScale, float yScale, float zScale) {
     float* getRegion(float* buffer, float x, float y, float z, int xSize, int ySize, int zSize, float xScale, float yScale, float zScale);
