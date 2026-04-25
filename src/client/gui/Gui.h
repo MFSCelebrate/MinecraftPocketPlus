@@ -85,6 +85,9 @@ public:
 	static float floorAlignToScreenPixel(float);
 	static int itemCountItoa(char* buf, int count);
 private:
+    // 右下方调试按钮区域
+RectangleArea _debugBtnRect;
+bool _debugBtnPressed;
 	void renderVignette(float br, int w, int h);
 	void renderSlot(int slot, int x, int y, float a);
 	void tickItemDrop();
