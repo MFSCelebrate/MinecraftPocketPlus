@@ -67,8 +67,7 @@ private:
     float _sneakTapTime;
     bool _buttons[8];
 
-    // 调试齿轮（极小改动）
-    bool _debugPanelVisible;
+    // 新增调试齿轮按钮
     RectangleArea* aDebug;
     static const int AREA_DEBUG = 200;
 };
