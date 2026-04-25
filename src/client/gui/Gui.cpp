@@ -754,170 +754,7 @@ void Gui::onLevelGenerated() {
     }
 }
 
-void Gui::renderDebugInfo() {
-    // FPS counter (updates once per second)
-    static float fps = 0.0f;
-    static float fpsLastTime = 0.0f;
-    static int   fpsFrames = 0;
-    float now = getTimeS();
-    fpsFrames++;
-    if (now - fpsLastTime >= 1.0f) {
-        fps = fpsFrames / (now - fpsLastTime);
-        fpsFrames = 0;
-        fpsLastTime = now;
-    }
-
-    LocalPlayer* p   = minecraft->player;
-    Level*       lvl = minecraft->level;
-
-    // 获取世界偏移 (double) 和缩放 (float)
-    double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
-    float worldScaleX = 1.0f, worldScaleY = 1.0f, worldScaleZ = 1.0f;
-    RandomLevelSource* rls = nullptr;
-    if (lvl && lvl->getChunkSource()) {
-        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-        if (cache) {
-            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-            if (rls) {
-                terrainOffsetX = rls->getWorldOffsetX();
-                terrainOffsetY = rls->getWorldOffsetY();
-                terrainOffsetZ = rls->getWorldOffsetZ();
-                worldScaleX   = rls->getWorldScaleX();
-                worldScaleY   = rls->getWorldScaleY();
-                worldScaleZ   = rls->getWorldScaleZ();
-            }
-        }
-    }
-
-    // 获取海平面高度
-    int seaLevel = 63;
-    if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
-        std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
-        if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
-    }
-
-    // 玩家原始坐标 (double 精度)
-    double px = p->x;
-    double py = p->y - p->heightOffset;
-    double pz = p->z;
-
-    // 应用位置偏移 (OffsetPosTranslator) —— 直接使用 double 版本
-    posTranslator.to(px, py, pz);
-
-    // 计算显示用的“偏移后世界坐标”：(原始坐标 + 偏移) * 缩放
-    double pxo = (px + terrainOffsetX) * worldScaleX;
-    double pyo = (py + terrainOffsetY) * worldScaleY;
-    double pzo = (pz + terrainOffsetZ) * worldScaleZ;
-
-    int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
-    int cx = bx >> 4, cz = bz >> 4;
-
-    // Facing direction
-    float yMod = fmodf(p->yRot, 360.0f);
-    if (yMod < 0) yMod += 360.0f;
-    const char* facing;
-    const char* axis;
-    if      (yMod < 45  || yMod >= 315) { facing = "South"; axis = "+Z"; }
-    else if (yMod < 135)                 { facing = "West";  axis = "-X"; }
-    else if (yMod < 225)                 { facing = "North"; axis = "-Z"; }
-    else                                 { facing = "East";  axis = "+X"; }
-
-    // Biome
-    const char* biomeName = "unknown";
-    if (lvl) {
-        Biome* biome = lvl->getBiome(bx, bz);
-        if (biome) biomeName = biome->name.c_str();
-    }
-
-    // Time
-    long worldTime = lvl ? lvl->getTime() : 0;
-    long dayTime   = worldTime % Level::TICKS_PER_DAY;
-    long day       = worldTime / Level::TICKS_PER_DAY;
-    long seed      = lvl ? lvl->getSeed() : 0;
-
-    // 获取 64-bit Farlands 选项状态
-    bool fringeEnabled = false;
-    if (minecraft->options.getOpt(OPTIONS_SIXTYFOUR_FARLANDS)) {
-        fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
-    }
-
-    // 调试屏幕缩放
-    float debugScale = 1.0f;
-    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
-    if (!scaleStr.empty()) {
-        debugScale = (float)atof(scaleStr.c_str());
-        if (debugScale < 0.5f) debugScale = 0.5f;
-        if (debugScale > 3.0f) debugScale = 3.0f;
-    }
-
-    // --- 噪声值计算 (Double 精度，应用偏移和缩放) ---
-    double noiseVals[8] = {0.0};
-double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
-if (rls) {
-    double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
-    double sampleWorldY = (py + terrainOffsetY) * worldScaleY;   // Y 轴世界坐标
-    double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
-
-    // ---- 基本地形噪声（真 3D 采样） ----
-    const double s = 684.412;
-    const double scale_large_XZ = s / 80.0;      // X / Z 轴采样间距
-    const double scale_large_Y  = s / 160.0;     // ★ Y 轴采样间距（来自源码 sy / 160.0）
-
-    nx_large = sampleWorldX * scale_large_XZ;
-    ny_large = sampleWorldY * scale_large_Y;     // ★ 完整的 3D 输入
-    nz_large = sampleWorldZ * scale_large_XZ;
-
-    // 使用 PerlinNoise::getValue(x, y, z) 进行真正的 3D 采样
-    noiseVals[0] = rls->getLPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 低噪声 (3D)
-    noiseVals[1] = rls->getLPerlinNoise2().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 高噪声 (3D)
-    noiseVals[2] = rls->getPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 选择器噪声 (3D)
-
-    // ---- 地表材质噪声（2D，纯水平） ----
-    const double scale_sand       = 1.0 / 32.0;
-    const double scale_depth      = 1.0 / 64.0;
-    const double scale_scale      = 1.0 / 80.0;
-    const double scale_depth_noise= 1.0 / 200.0;
-    const double scale_forest     = 0.5;
-
-    double nx_sand = sampleWorldX * scale_sand;
-    double nz_sand = sampleWorldZ * scale_sand;
-    noiseVals[3] = rls->getPerlinNoise2((float)nx_sand, (float)nz_sand);    // 沙子噪声 (2D)
-
-    double nx_depth = sampleWorldX * scale_depth;
-    double nz_depth = sampleWorldZ * scale_depth;
-    noiseVals[4] = rls->getPerlinNoise3((float)nx_depth, (float)nz_depth);   // 沙砾噪声 (2D)
-
-    double nx_scale = sampleWorldX * scale_scale;
-    double nz_scale = sampleWorldZ * scale_scale;
-    noiseVals[5] = rls->getScaleNoise((float)nx_scale, (float)nz_scale);     // 比例噪声 (2D)
-
-    double nx_depnoise = sampleWorldX * scale_depth_noise;
-    double nz_depnoise = sampleWorldZ * scale_depth_noise;
-    noiseVals[6] = rls->getDepthNoise((float)nx_depnoise, (float)nz_depnoise); // 深度噪声 (2D)
-
-    double nx_forest = sampleWorldX * scale_forest;
-    double nz_forest = sampleWorldZ * scale_forest;
-    noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);  // 树密度噪声 (2D)
-}
-	
-    // 构建显示行 (共 22 行) 扩展 Char为1024
-    static char ln[22][1024];
-    sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
-    sprintf(ln[1], "%.2f fps", fps);
-    ln[2][0] = '\0';
-    sprintf(ln[3], "--- Local Server Position ---");
-    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-    sprintf(ln[5], "X(World): %.15f", pxo);
-    sprintf(ln[6], "Y(World): %.15f", pyo);
-    sprintf(ln[7], "Z(World): %.15f", pzo);
-    sprintf(ln[8], "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
-            terrainOffsetX, terrainOffsetY, terrainOffsetZ,
-            worldScaleX, worldScaleY, worldScaleZ);
-    ln[9][0] = '\0';
-    sprintf(ln[10], "--- World Generator ---");
-    sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
-    sprintf(ln[12], "Sea Level: %d", seaLevel);
-
+    
 void Gui::renderDebugInfo() {
     // FPS counter (updates once per second)
     static float fps = 0.0f;
@@ -965,10 +802,10 @@ void Gui::renderDebugInfo() {
     double py = p->y - p->heightOffset;
     double pz = p->z;
 
-    // 应用位置偏移 (OffsetPosTranslator) —— 直接使用 double 版本
+    // 应用位置偏移 (OffsetPosTranslator)
     posTranslator.to(px, py, pz);
 
-    // 计算显示用的“偏移后世界坐标”：(原始坐标 + 偏移) * 缩放
+    // 计算显示用的“偏移后世界坐标”
     double pxo = (px + terrainOffsetX) * worldScaleX;
     double pyo = (py + terrainOffsetY) * worldScaleY;
     double pzo = (pz + terrainOffsetZ) * worldScaleZ;
@@ -1014,7 +851,7 @@ void Gui::renderDebugInfo() {
         if (debugScale > 3.0f) debugScale = 3.0f;
     }
 
-    // ===================== 噪声计算（完整 3D 支持） =====================
+    // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
     double noiseVals[8] = {0.0};
     double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
     if (rls) {
@@ -1022,21 +859,20 @@ void Gui::renderDebugInfo() {
         double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
         double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
 
-        // ---- 基本地形噪声（真 3D 采样） ----
+        // ---- 基本地形噪声 (3D) ----
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
-        const double scale_large_Y  = s / 160.0;   // 与源码 getHeights 中 sy 一致
+        const double scale_large_Y  = s / 160.0;
 
         nx_large = sampleWorldX * scale_large_XZ;
         ny_large = sampleWorldY * scale_large_Y;
         nz_large = sampleWorldZ * scale_large_XZ;
 
-        // 使用 PerlinNoise::getValue(x, y, z) 做真 3D 采样
         noiseVals[0] = rls->getLPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 低噪声
         noiseVals[1] = rls->getLPerlinNoise2().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 高噪声
         noiseVals[2] = rls->getPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 选择器噪声
 
-        // ---- 地表材质噪声（纯 2D） ----
+        // ---- 地表材质噪声 (2D) ----
         const double scale_sand       = 1.0 / 32.0;
         const double scale_depth      = 1.0 / 64.0;
         const double scale_scale      = 1.0 / 80.0;
@@ -1064,8 +900,54 @@ void Gui::renderDebugInfo() {
         noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);  // 树密度噪声
     }
 
-    // ===================== 构建显示行 =====================
-    static char ln[22][1024];
+    // ===================== 噪声计算（Float 精度） =====================
+    float noiseValsF[8] = {0.0f};
+    if (rls) {
+        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
+        double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
+        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+
+        const double s = 684.412;
+        const double scale_large_XZ = s / 80.0;
+        const double scale_large_Y  = s / 160.0;
+
+        float fx_large = (float)(sampleWorldX * scale_large_XZ);
+        float fy_large = (float)(sampleWorldY * scale_large_Y);
+        float fz_large = (float)(sampleWorldZ * scale_large_XZ);
+
+        noiseValsF[0] = rls->getLPerlinNoise1().getValue(fx_large, fy_large, fz_large);
+        noiseValsF[1] = rls->getLPerlinNoise2().getValue(fx_large, fy_large, fz_large);
+        noiseValsF[2] = rls->getPerlinNoise1().getValue(fx_large, fy_large, fz_large);
+
+        const double scale_sand       = 1.0 / 32.0;
+        const double scale_depth      = 1.0 / 64.0;
+        const double scale_scale      = 1.0 / 80.0;
+        const double scale_depth_noise= 1.0 / 200.0;
+        const double scale_forest     = 0.5;
+
+        float fx_sand = (float)(sampleWorldX * scale_sand);
+        float fz_sand = (float)(sampleWorldZ * scale_sand);
+        noiseValsF[3] = rls->getPerlinNoise2(fx_sand, fz_sand);
+
+        float fx_depth = (float)(sampleWorldX * scale_depth);
+        float fz_depth = (float)(sampleWorldZ * scale_depth);
+        noiseValsF[4] = rls->getPerlinNoise3(fx_depth, fz_depth);
+
+        float fx_scale = (float)(sampleWorldX * scale_scale);
+        float fz_scale = (float)(sampleWorldZ * scale_scale);
+        noiseValsF[5] = rls->getScaleNoise(fx_scale, fz_scale);
+
+        float fx_depnoise = (float)(sampleWorldX * scale_depth_noise);
+        float fz_depnoise = (float)(sampleWorldZ * scale_depth_noise);
+        noiseValsF[6] = rls->getDepthNoise(fx_depnoise, fz_depnoise);
+
+        float fx_forest = (float)(sampleWorldX * scale_forest);
+        float fz_forest = (float)(sampleWorldZ * scale_forest);
+        noiseValsF[7] = rls->getForestNoise(fx_forest, fz_forest);
+    }
+
+    // ===================== 构建显示行 (24 行) =====================
+    static char ln[25][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -1082,7 +964,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
 
-    // 噪声标签（Wiki 对其）
+    // 噪声标签 (Wiki 对齐)
     const char* labels[8] = {
     "Low-Noise",      // 低噪声    (Low Noise)
     "High-Noise",     // 高噪声    (High Noise)
@@ -1093,44 +975,60 @@ void Gui::renderDebugInfo() {
     "Depth-Noise",    // 深度噪声  (Depth Noise)
     "Tree-Density-Noise"    // 树密度噪声 (Tree Density Noise)
 };
-
-    char firstPart[1024] = "";
-    char secondPart[1024] = "";
+    // Double 噪声行
+    char firstPartD[1024] = "";
+    char secondPartD[1024] = "";
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ",
-                 bad ? "*" : "", labels[i], noiseVals[i]);
-        strcat(firstPart, tmp);
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
+        strcat(firstPartD, tmp);
     }
     for (int i = 4; i < 8; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ",
-                 bad ? "*" : "", labels[i], noiseVals[i]);
-        strcat(secondPart, tmp);
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
+        strcat(secondPartD, tmp);
     }
-    snprintf(ln[13], sizeof(ln[13]), "Terrain  Noise: %s", firstPart);
-    snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPart);
+    snprintf(ln[13], sizeof(ln[13]), "Terrain Noise: %s", firstPartD);
+    snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPartD);
+
+    // Float 噪声行
+    char firstPartF[1024] = "";
+    char secondPartF[1024] = "";
+    for (int i = 0; i < 4; i++) {
+        char tmp[64];
+        bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
+        strcat(firstPartF, tmp);
+    }
+    for (int i = 4; i < 8; i++) {
+        char tmp[64];
+        bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
+        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
+        strcat(secondPartF, tmp);
+    }
+	ln[15][0] = '\0';
+    snprintf(ln[16], sizeof(ln[15]), "Terrain Noise(Float): %s", firstPartF);
+    snprintf(ln[17], sizeof(ln[16]), "Surface Noise(Float): %s", secondPartF);
 
     // 噪声输入坐标
     if (rls) {
-        snprintf(ln[15], sizeof(ln[15]), "Noise Input: %.1f / %.1f / %.1f", nx_large, ny_large, nz_large);
+        snprintf(ln[18], sizeof(ln[17]), "Noise Input: %.1f / %.1f / %.1f", nx_large, ny_large, nz_large);
     } else {
-        ln[15][0] = '\0';
+        ln[18][0] = '\0';
     }
 
-    ln[16][0] = '\0';
-    sprintf(ln[17], "--- Other Information ---");
-    sprintf(ln[18], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
-    sprintf(ln[19], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
+    ln[19][0] = '\0';
+    sprintf(ln[20], "--- Other Information ---");
+    sprintf(ln[21], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[22], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
             facing, axis, p->yRot, p->xRot, biomeName);
-    sprintf(ln[20], "Day %ld  Time: %ld  Seed: %ld",
-            day, dayTime, seed);
-    ln[21][0] = '\0';
+    sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
+    ln[24][0] = '\0';
 
     // ===================== 渲染 =====================
-    const int N = 22;
+    const int N = 25;
     const float LH  = (float)Font::DefaultLineHeight;
     const float MGN = 2.0f;
     const float PAD = 2.0f;
@@ -1156,10 +1054,15 @@ void Gui::renderDebugInfo() {
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
-        int col = (i == 0) ? 0xffFFFF55 : 0xffffffff;
-        if (i == 11) {
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;
-        }
+        int col = 0xffffffff;                       // 默认白色
+
+        if (i == 0)
+            col = 0xffFFFF55;                       // 标题黄色
+        else if (i == 11)
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // 64Bit 绿色/红色
+        else if (i == 16 || i == 17)
+            col = 0xFFFF8080;                       // Float 噪声行 浅红色
+
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
