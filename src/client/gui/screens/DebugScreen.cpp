@@ -14,7 +14,10 @@
 #include "../../Options.h"
 #include <cmath>
 
-DebugScreen::DebugScreen(Minecraft* mc) : mc(mc) {
+DebugScreen::DebugScreen(Minecraft* mc)
+    : mc(mc), scrollY(0.0f), maxScroll(0.0f), lastTouchY(0.0f), dragging(false),
+      contentHeight(0), viewportHeight(0)
+{
 }
 
 DebugScreen::~DebugScreen() {
@@ -22,24 +25,28 @@ DebugScreen::~DebugScreen() {
 }
 
 void DebugScreen::init() {
-    addButton(BTN_GODMODE,    "God Mode");
-    addButton(BTN_GAMEMODE,   "Gamemode");
-    addButton(BTN_TIME,       "Time +");
-    addButton(BTN_ARMOR,      "Armor");
+    // 12 个调试按钮
+    addButton(BTN_GODMODE,     "God Mode");
+    addButton(BTN_GAMEMODE,    "Gamemode");
+    addButton(BTN_TIME,        "Time +");
+    addButton(BTN_ARMOR,       "Armor");
     addButton(BTN_HURT_RELOAD, "Hurt+Reload");
-    addButton(BTN_SPAWNMOB,   "Spawn Mob");
-    addButton(BTN_MASSACRE,   "Massacre");
-    addButton(BTN_CLEARINV,   "Clear Inv");
-    addButton(BTN_PRERENDER,  "PreRender");
-    addButton(BTN_DROPALL,    "Drop All");
-    addButton(BTN_SPEEDUP,    "Speed Up");
-    addButton(BTN_3RDPERSON,  "3rd Person");
+    addButton(BTN_SPAWNMOB,    "Spawn Mob");
+    addButton(BTN_MASSACRE,    "Massacre");
+    addButton(BTN_CLEARINV,    "Clear Inv");
+    addButton(BTN_PRERENDER,   "PreRender");
+    addButton(BTN_DROPALL,     "Drop All");
+    addButton(BTN_SPEEDUP,     "Speed Up");
+    addButton(BTN_3RDPERSON,   "3rd Person");
 
     // 关闭按钮
     Button* closeBtn = new Button(99, "Close");
     closeBtn->width  = 120;
     closeBtn->height = 30;
     buttons.push_back(closeBtn);
+
+    // 让屏幕接收所有输入事件
+    passEvents = false;
 }
 
 void DebugScreen::addButton(int id, const std::string& text) {
@@ -52,52 +59,116 @@ void DebugScreen::addButton(int id, const std::string& text) {
 
 void DebugScreen::setupPositions() {
     const int buttonPadding = 4;
-    int buttonCount = (int)buttons.size();
-    int buttonHeight = 30;                      // 固定高度，清晰易点
-    int totalHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonPadding;
+    const int btnH = 30;
 
-    // 垂直居中，并保证至少 10 像素上边距
-    int startY = (height - totalHeight) / 2;
-    if (startY < 10) startY = 10;
+    // 按钮宽度取屏幕宽度的 70%，最大 400 像素
+    int btnW = (int)(width * 0.7f);
+    if (btnW > 400) btnW = 400;
+    int startX = (width - btnW) / 2;
 
-    // 按钮宽度取屏幕宽度的 70%，最大不超过 400 像素
-    int buttonWidth = (int)(width * 0.7f);
-    if (buttonWidth > 400) buttonWidth = 400;
-    int startX = (width - buttonWidth) / 2;
-
+    // 为所有按钮统一设置大小，Y 坐标从 0 开始（后续通过滚动偏移绘制）
     for (size_t i = 0; i < buttons.size(); ++i) {
         buttons[i]->x      = startX;
-        buttons[i]->y      = startY + i * (buttonHeight + buttonPadding);
-        buttons[i]->width  = buttonWidth;
-        buttons[i]->height = buttonHeight;
+        buttons[i]->y      = (int)(i * (btnH + buttonPadding));   // 逻辑位置，滚动偏移在 render 中处理
+        buttons[i]->width  = btnW;
+        buttons[i]->height = btnH;
+    }
+
+    // 计算内容总高度及可滚动范围
+    contentHeight = (int)(buttons.size() * (btnH + buttonPadding) - buttonPadding);
+    viewportHeight = height - 70;            // 顶部留标题 30，底部留 20
+    updateScrollLimits();
+}
+
+void DebugScreen::updateScrollLimits() {
+    maxScroll = contentHeight - viewportHeight;
+    if (maxScroll < 0) maxScroll = 0;
+    if (scrollY > maxScroll) scrollY = maxScroll;
+    if (scrollY < 0) scrollY = 0;
+}
+
+void DebugScreen::tick() {
+    // 拖拽惯性已经在 mouseEvent 中直接更新 scrollY，这里不用额外处理
+}
+
+// ---------- 触摸 / 鼠标滚动支持 ----------
+void DebugScreen::mouseClicked(int x, int y, int buttonNum) {
+    if (buttonNum == MouseAction::ACTION_LEFT) {
+        // 先检查是否点在按钮上（按钮坐标需要加上滚动偏移）
+        for (auto* btn : buttons) {
+            if (btn->active && x >= btn->x && x < btn->x + btn->width &&
+                y >= (btn->y - scrollY) && y < (btn->y - scrollY) + btn->height) {
+                // 按钮点击交给父类处理
+                Screen::mouseClicked(x, y, buttonNum);
+                dragging = false;
+                return;
+            }
+        }
+        // 否则开始拖拽
+        dragging = true;
+        lastTouchY = (float)y + scrollY;      // 记录触摸点对应的内容坐标
     }
 }
 
+void DebugScreen::mouseReleased(int x, int y, int buttonNum) {
+    if (dragging) {
+        dragging = false;
+        return;
+    }
+    Screen::mouseReleased(x, y, buttonNum);
+}
+
+void DebugScreen::mouseEvent() {
+    // 优先处理按钮 click，否则滚动
+    Screen::mouseEvent();
+    if (dragging) {
+        const MouseAction& e = Mouse::getEvent();
+        if (e.action == MouseAction::ACTION_MOVE) {
+            float touchY = (float)e.y + scrollY;    // 因为 scrollY 还未更新，需保持和 mouseClicked 相同基准
+            float delta = lastTouchY - touchY;
+            scrollY += delta;
+            lastTouchY = touchY;
+            updateScrollLimits();
+        }
+    }
+}
+
+// ---------- 渲染（裁剪区域） ----------
 void DebugScreen::render(int xm, int ym, float a) {
+    // 半透明背景
     fill(0, 0, width, height, 0x80000000);
 
-    // 标题位置动态适配
-    int buttonCount = (int)buttons.size();
-    int totalHeight = buttonCount * 30 + (buttonCount - 1) * 4;
-    int topY = (height - totalHeight) / 2 - 20;
-    if (topY < 10) topY = 10;
-    drawCenteredString(mc->font, "Debug Panel", width / 2, topY, 0xFFFFFFFF);
+    // 标题（固定位置）
+    drawCenteredString(mc->font, "Debug Panel", width / 2, 10, 0xFFFFFFFF);
 
-    Screen::render(xm, ym, a);
+    // 裁剪区域
+    glEnable2(GL_SCISSOR_TEST);
+    glScissor(Gui::GuiScale * 10,                                         // x
+              mc->height - Gui::GuiScale * (height - 30),                 // y (底部留 20)
+              Gui::GuiScale * (width - 20),                               // 宽
+              Gui::GuiScale * (height - 70));                             // 高（顶部留 30，底部留 20）
+
+    // 绘制所有按钮，Y 坐标减去 scrollY
+    glPushMatrix();
+    glTranslatef(0, -scrollY, 0);
+    Screen::render(xm, ym + (int)scrollY, a);     // 调整鼠标坐标，保证按钮点击正常
+    glPopMatrix();
+
+    glDisable2(GL_SCISSOR_TEST);
 }
 
 void DebugScreen::buttonClicked(Button* button) {
     if (button->id == 99) {
-        mc->setScreen(NULL);                // 关闭面板
+        mc->setScreen(NULL);
         return;
     }
     executeAction(button->id);
-    // Armor 和 Prerender 会打开新 Screen，自己不要关闭
     if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER) {
         mc->setScreen(NULL);
     }
 }
 
+// ---------- 12 个调试功能（保持不变） ----------
 void DebugScreen::executeAction(int id) {
     switch (id) {
         case BTN_GODMODE:
