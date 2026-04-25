@@ -19,9 +19,10 @@ class RandomLevelSource: public ChunkSource
     static const float SNOW_SCALE;
 
 public:
-    double getLPerlinNoise1(float x, float z) { return lperlinNoise1.getValue(x, z); }
-    double getLPerlinNoise2(float x, float z) { return lperlinNoise2.getValue(x, z); }
-    double getPerlinNoise1(float x, float z) { return perlinNoise1.getValue(x, z); }
+    // 3D 噪声访问器（传入 XYZ）
+double getLPerlinNoise1(float x, float y, float z) { return lperlinNoise1.getValue(x, y, z); }
+double getLPerlinNoise2(float x, float y, float z) { return lperlinNoise2.getValue(x, y, z); }
+double getPerlinNoise1(float x, float y, float z) { return perlinNoise1.getValue(x, y, z); }
     double getPerlinNoise2(float x, float z) { return perlinNoise2.getValue(x, z); }
     double getPerlinNoise3(float x, float z) { return perlinNoise3.getValue(x, z); }
     double getScaleNoise(float x, float z) { return scaleNoise.getValue(x, z); }
