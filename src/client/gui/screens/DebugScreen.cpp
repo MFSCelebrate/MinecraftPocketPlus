@@ -2,16 +2,16 @@
 #include "../components/Button.h"
 #include "../../Minecraft.h"
 #include "../../player/LocalPlayer.h"
-#include "../../world/level/Level.h"
-#include "../../world/item/ItemInstance.h"
-#include "../../world/entity/MobFactory.h"
-#include "../../world/level/MobSpawner.h"
-#include "../../world/entity/player/Inventory.h"
+#include "../../../world/level/Level.h"
+#include "../../../world/item/ItemInstance.h"
+#include "../../../world/entity/MobFactory.h"
+#include "../../../world/level/MobSpawner.h"
+#include "../../../world/entity/player/Inventory.h"
 #include "PrerenderTilesScreen.h"
 #include "ArmorScreen.h"
-#include "client/gamemode/GameMode.h"
-#include "client/renderer/Textures.h"
-#include "client/Options.h"
+#include "../../gamemode/GameMode.h"             // 修正路径
+#include "../../renderer/Textures.h"             // 修正路径
+#include "../../Options.h"                       // 修正路径
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc) : mc(mc) {
