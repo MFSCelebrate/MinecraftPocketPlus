@@ -535,7 +535,7 @@ void Gui::onConfigChanged( const Config& c ) {
     // 右上角暂停按钮下方，大小 80×30（逻辑坐标）
 // 原本可能是 _debugBtnRect = RectangleArea(width - 85, 40, width - 5, 70)
 // 改成
-_debugBtnRect = RectangleArea(minecraft->width - 85, 40, minecraft->width - 5, 70);
+_debugBtnRect = RectangleArea(minecraft->width - 85, 70, minecraft->width - 5, 100);
 }
 
 float Gui::floorAlignToScreenPixel(float v) {
