@@ -55,6 +55,16 @@ float PerlinNoise::getValue( float x, float y, float z )
 	return value;
 }
 
+float PerlinNoise::getValue(double x, double y, double z) {
+    float value = 0;
+    float pow = 1;
+    for (int i = 0; i < levels; i++) {
+        value += noiseLevels[i]->getValue(x * pow, y * pow, z * pow) / pow;
+        pow /= 2;
+    }
+    return value;
+}
+
 float* PerlinNoise::getRegion( float* buffer, float x, float y, float z, int xSize, int ySize, int zSize, float xScale, float yScale, float zScale )
 {
 	const int size = xSize * ySize * zSize;
