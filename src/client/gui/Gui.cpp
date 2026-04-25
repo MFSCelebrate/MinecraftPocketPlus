@@ -25,6 +25,7 @@
 #include "../../world/level/Level.h"
 #include "../../world/PosTranslator.h"
 #include "../../platform/time.h"
+#include "../sound/SoundEngine.h"
 #include <cmath>
 #include <algorithm>
 #include <sstream>
@@ -56,10 +57,10 @@ Gui::Gui(Minecraft* minecraft)
 	_currentDropSlot(-1),
 	MAX_MESSAGE_WIDTH(240),
 	itemNameOverlayTime(2),
+    _debugBtnRect(0.0f, 0.0f, 0.0f, 0.0f),   // 显式初始化
     _debugBtnPressed(false),
 	_openInventorySlot(minecraft->useTouchscreen())
 {
-    _debugBtnRect = RectangleArea(0, 0, 0, 0);
 	glGenBuffers2(1, &_inventoryRc.vboId);
 	glGenBuffers2(1, &rcFeedbackInner.vboId);
 	glGenBuffers2(1, &rcFeedbackOuter.vboId);
