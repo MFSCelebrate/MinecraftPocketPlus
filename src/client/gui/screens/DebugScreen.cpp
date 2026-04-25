@@ -13,7 +13,7 @@
 #include "../../Options.h"
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
-#include "../sound/SoundEngine.h"
+#include "../../sound/SoundEngine.h"
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
