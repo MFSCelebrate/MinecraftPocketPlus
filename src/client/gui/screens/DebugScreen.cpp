@@ -14,7 +14,7 @@
 #include "../../Options.h"
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
-#include "../../sound/SoundEngine.h"       // 注意：路径已经修正
+#include "../../sound/SoundEngine.h"
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
@@ -28,9 +28,10 @@ DebugScreen::~DebugScreen()
     for (auto* b : debugButtons) delete b;
 }
 
+// ---------- 初始化 ----------
 void DebugScreen::init()
 {
-    // 原有 12 个按钮
+    // 12 原有按钮
     addButton(BTN_GODMODE,      "God Mode");
     addButton(BTN_GAMEMODE,     "Gamemode");
     addButton(BTN_TIME,         "Time +");
@@ -44,7 +45,7 @@ void DebugScreen::init()
     addButton(BTN_SPEEDUP,      "Speed Up");
     addButton(BTN_3RDPERSON,    "3rd Person");
 
-    // 新增 6 个按钮（规则切换 + 粒子测试）
+    // 6 新增按钮
     addButton(BTN_NOPVP,        "NoPvP Toggle");
     addButton(BTN_NOPVM,        "NoPvM Toggle");
     addButton(BTN_NOMVP,        "NoMvP Toggle");
@@ -70,6 +71,7 @@ void DebugScreen::addButton(int id, const std::string& text)
     debugButtons.push_back(btn);
 }
 
+// ---------- 布局 ----------
 void DebugScreen::setupPositions()
 {
     const int buttonPadding = 4;
@@ -78,7 +80,6 @@ void DebugScreen::setupPositions()
     if (btnW > 400) btnW = 400;
     int startX = (width - btnW) / 2;
 
-    // 按钮从 Y=30 开始，避免遮挡标题
     for (size_t i = 0; i < buttons.size(); ++i)
     {
         buttons[i]->x = startX;
@@ -88,7 +89,7 @@ void DebugScreen::setupPositions()
     }
 
     contentHeight = (int)(buttons.size() * (btnH + buttonPadding) - buttonPadding);
-    viewportHeight = height - 50;    // 标题 30 + 下边距 20
+    viewportHeight = height - 50;       // 标题 30，下边距 20
 
     // 强制从顶部开始
     scrollY = 0.0f;
@@ -106,60 +107,68 @@ void DebugScreen::updateScrollLimits()
     if (scrollY < 0) scrollY = 0;
 }
 
-void DebugScreen::tick() {
+// ---------- Tick：专用于拖拽滚动 ----------
+void DebugScreen::tick()
+{
     if (!dragging) return;
 
-    // 获取当前触摸/鼠标位置（屏幕像素）
     int x = Mouse::getX();
     int y = Mouse::getY();
-    toGUICoordinate(x, y);                    // 转为 Gui 逻辑坐标
+    toGUICoordinate(x, y);                       // 屏幕 → Gui 坐标
 
-    float currentLogicY = (float)y + scrollY; // 当前触摸点在内容空间中的 Y 坐标
-
-    float delta = lastTouchY - currentLogicY; // 向上拖拽时 delta 为正（手指上推，内容下移）
+    float currentLogicY = (float)y + scrollY;   // 当前触摸点在内容空间中的 Y
+    float delta = lastTouchY - currentLogicY;   // 手指上推 delta 为正
     scrollY += delta;
     lastTouchY = currentLogicY;
 
-    updateScrollLimits();                     // 钳位，但不会导致回弹（delta 驱动）
+    updateScrollLimits();
 }
 
-// ---------- 鼠标事件实现 ----------
-
-void DebugScreen::mouseClicked(int x, int y, int buttonNum) {
+// ---------- 鼠标按下 ----------
+void DebugScreen::mouseClicked(int x, int y, int buttonNum)
+{
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
-    toGUICoordinate(x, y);                    // 转换
-    int logicalY = y + (int)scrollY;          // 按钮比较用逻辑 Y
+    toGUICoordinate(x, y);                       // 屏幕 → Gui 坐标
+    int logicalY = y + (int)scrollY;            // 转换为按钮列表中的逻辑 Y
 
-    for (auto* btn : buttons) {
+    for (auto* btn : buttons)
+    {
         if (btn->active &&
             x >= btn->x && x < btn->x + btn->width &&
-            logicalY >= btn->y && logicalY < btn->y + btn->height) {
+            logicalY >= btn->y && logicalY < btn->y + btn->height)
+        {
             _pressedButton = btn;
             _pressedButton->setPressed();
-            return;                           // 点到按钮，不启动拖拽
+            return;                              // 千万别漏掉，保证不启动拖拽
         }
     }
 
-    // 未命中按钮，开始拖拽
+    // 没命中按钮 → 开始拖拽
     dragging = true;
-    lastTouchY = (float)(y + scrollY);        // y 已经是 Gui 坐标，加上当前滚动得到内容坐标
+    lastTouchY = (float)(y + scrollY);          // 记录内容坐标中的触摸起点
 }
 
-void DebugScreen::mouseReleased(int x, int y, int buttonNum) {
+// ---------- 鼠标释放 ----------
+void DebugScreen::mouseReleased(int x, int y, int buttonNum)
+{
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
     toGUICoordinate(x, y);
 
-    if (dragging) {
+    if (dragging)
+    {
         dragging = false;
         return;
     }
 
-    if (_pressedButton) {
+    if (_pressedButton)
+    {
         int logicalY = y + (int)scrollY;
-        if (x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
-            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height) {
+        if (_pressedButton->active &&
+            x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
+            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
+        {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
         }
@@ -172,10 +181,9 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum) {
 void DebugScreen::render(int xm, int ym, float a)
 {
     fill(0, 0, width, height, 0x80000000);
-
     drawCenteredString(mc->font, "Debug Panel", width / 2, 10, 0xFFFFFFFF);
 
-    // 裁剪区域
+    // 裁剪区域（上边距 30，左右各留 10，下边距 20）
     glEnable2(GL_SCISSOR_TEST);
     int clipX = 10;
     int clipY = 30;
@@ -188,51 +196,39 @@ void DebugScreen::render(int xm, int ym, float a)
         Gui::GuiScale * clipH
     );
 
+    // 平移内容
     glPushMatrix();
     glTranslatef(0, -scrollY, 0);
-    Screen::render(xm, ym + (int)scrollY, a);
+    // 注意：传给基类的鼠标坐标不需要加上 scrollY，因为基类只是用来画按钮，不执行点击逻辑
+    Screen::render(xm, ym, a);
     glPopMatrix();
+
     glDisable2(GL_SCISSOR_TEST);
 }
 
 void DebugScreen::buttonClicked(Button* button)
 {
-    if (button->id == 99)
-    {
-        mc->setScreen(NULL);
-        return;
-    }
+    if (button->id == 99) { mc->setScreen(NULL); return; }
     executeAction(button->id);
-    // 除 Armor 和 PreRender 外，执行后关闭面板
     if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER)
-    {
         mc->setScreen(NULL);
-    }
 }
 
-// ---------- 12+ 旧功能 + 新功能 ----------
+// ---------- 功能实现（含发包） ----------
 void DebugScreen::executeAction(int id)
 {
     switch (id)
     {
     case BTN_GODMODE:
-        mc->onGraphicsReset();
-        mc->player->heal(100);
-        break;
+        mc->onGraphicsReset(); mc->player->heal(100); break;
     case BTN_GAMEMODE:
-        mc->setIsCreativeMode(!mc->isCreativeMode());
-        break;
+        mc->setIsCreativeMode(!mc->isCreativeMode()); break;
     case BTN_TIME:
-        if (mc->level)
-            mc->level->setTime(mc->level->getTime() + 1000);
-        break;
+        if (mc->level) mc->level->setTime(mc->level->getTime() + 1000); break;
     case BTN_ARMOR:
-        mc->setScreen(new ArmorScreen());
-        break;
+        mc->setScreen(new ArmorScreen()); break;
     case BTN_HURT_RELOAD:
-        mc->textures->reloadAll();
-        mc->player->hurtTo(2);
-        break;
+        mc->textures->reloadAll(); mc->player->hurtTo(2); break;
     case BTN_SPAWNMOB:
     {
         Mob* mob = nullptr;
@@ -241,98 +237,64 @@ void DebugScreen::executeAction(int id)
         mob = MobFactory::CreateMob(mobType, mc->level);
         float dx = 4 - 8 * Mth::random() + 4 * Mth::sin(Mth::DEGRAD * mc->player->yRot);
         float dz = 4 - 8 * Mth::random() + 4 * Mth::cos(Mth::DEGRAD * mc->player->yRot);
-        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz, Mth::random() * 360, 0, true))
+        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz,
+                                       Mth::random() * 360, 0, true))
             delete mob;
         break;
     }
     case BTN_MASSACRE:
     {
         const EntityList& entities = mc->level->getAllEntities();
-        for (int i = entities.size() - 1; i >= 0; --i)
-        {
+        for (int i = entities.size() - 1; i >= 0; --i) {
             Entity* e = entities[i];
-            if (!e->isPlayer())
-                mc->level->removeEntity(e);
+            if (!e->isPlayer()) mc->level->removeEntity(e);
         }
         break;
     }
     case BTN_CLEARINV:
-        mc->player->inventory->clearInventoryWithDefault();
-        break;
+        mc->player->inventory->clearInventoryWithDefault(); break;
     case BTN_PRERENDER:
-        mc->setScreen(new PrerenderTilesScreen());
-        break;
+        mc->setScreen(new PrerenderTilesScreen()); break;
     case BTN_DROPALL:
         for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
-            if (mc->player->inventory->getItem(i))
-                mc->player->inventory->dropSlot(i, false);
+            if (mc->player->inventory->getItem(i)) mc->player->inventory->dropSlot(i, false);
         break;
     case BTN_SPEEDUP:
-        for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i)
-            mc->level->tick();
+        for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i) mc->level->tick();
         break;
     case BTN_3RDPERSON:
-        mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
-        break;
+        mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW); break;
 
-    // ---- 新功能：通过 AdventureSettingsPacket 发包 ----
-    case BTN_NOPVP:
-    {
-        auto& as = mc->level->adventureSettings;
-        as.noPvP = !as.noPvP;
-        AdventureSettingsPacket p(as);
-        mc->raknetInstance->send(p);
-        break;
+    case BTN_NOPVP: {
+        auto& as = mc->level->adventureSettings; as.noPvP = !as.noPvP;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
-    case BTN_NOPVM:
-    {
-        auto& as = mc->level->adventureSettings;
-        as.noPvM = !as.noPvM;
-        AdventureSettingsPacket p(as);
-        mc->raknetInstance->send(p);
-        break;
+    case BTN_NOPVM: {
+        auto& as = mc->level->adventureSettings; as.noPvM = !as.noPvM;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
-    case BTN_NOMVP:
-    {
-        auto& as = mc->level->adventureSettings;
-        as.noMvP = !as.noMvP;
-        AdventureSettingsPacket p(as);
-        mc->raknetInstance->send(p);
-        break;
+    case BTN_NOMVP: {
+        auto& as = mc->level->adventureSettings; as.noMvP = !as.noMvP;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
-    case BTN_IMMUTABLE:
-    {
-        auto& as = mc->level->adventureSettings;
-        as.immutableWorld = !as.immutableWorld;
-        AdventureSettingsPacket p(as);
-        mc->raknetInstance->send(p);
-        break;
+    case BTN_IMMUTABLE: {
+        auto& as = mc->level->adventureSettings; as.immutableWorld = !as.immutableWorld;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
-    case BTN_NAMETAGS:
-    {
-        auto& as = mc->level->adventureSettings;
-        as.showNameTags = !as.showNameTags;
-        AdventureSettingsPacket p(as);
-        mc->raknetInstance->send(p);
-        break;
+    case BTN_NAMETAGS: {
+        auto& as = mc->level->adventureSettings; as.showNameTags = !as.showNameTags;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
-    case BTN_PARTICLES:
-    {
-        Level* lvl = mc->level;
-        if (!lvl) break;
-        float px = mc->player->x;
-        float py = mc->player->y;
-        float pz = mc->player->z;
-        for (int i = 0; i < 50; ++i)
-        {
+    case BTN_PARTICLES: {
+        Level* lvl = mc->level; if (!lvl) break;
+        float px = mc->player->x, py = mc->player->y, pz = mc->player->z;
+        for (int i = 0; i < 50; ++i) {
             lvl->addParticle("explode", px, py + 1.0f, pz,
-                0.02f * (rand() % 100 - 50),
-                0.02f * (rand() % 100),
-                0.02f * (rand() % 100 - 50));
+                             0.02f * (rand() % 100 - 50), 0.02f * (rand() % 100),
+                             0.02f * (rand() % 100 - 50));
             lvl->addParticle("largesmoke", px, py + 1.0f, pz,
-                0.04f * (rand() % 100 - 50),
-                0.04f * (rand() % 100),
-                0.04f * (rand() % 100 - 50));
+                             0.04f * (rand() % 100 - 50), 0.04f * (rand() % 100),
+                             0.04f * (rand() % 100 - 50));
         }
         break;
     }
