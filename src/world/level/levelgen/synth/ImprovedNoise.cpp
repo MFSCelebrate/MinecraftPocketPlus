@@ -111,21 +111,19 @@ const float ImprovedNoise::grad( int hash, float x, float y, float z )
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
-float ImprovedNoise::getValue( float x, float y )
-{
+float ImprovedNoise::getValue( float x, float y ) const {
     return noise(x, y, 0);
 }
 
-float ImprovedNoise::getValue( float x, float y, float z )
-{
+float ImprovedNoise::getValue( float x, float y, float z ) const {
     return noise(x, y, z);
 }
 
-float ImprovedNoise::getValue(double x, double y) {
+float ImprovedNoise::getValue(double x, double y) const {
     return getValue(x, y, 0.0);
 }
 
-float ImprovedNoise::getValue(double x, double y, double z) {
+float ImprovedNoise::getValue(double x, double y, double z) const {
     // 使用与 add_double 相同的 double 坐标处理，避免 int 截断
     double xd = x + xo;
     double yd = y + yo;
