@@ -137,6 +137,18 @@ float ImprovedNoise::getValue(double x, double y, double z) {
     zd -= floor(zd);
 
     // 保持原有边界 clamp（如果开启了 POSTPONED_FRINGE）
+    bool doClamp = false;
+    if (Minecraft::instance) {
+        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+    if (doClamp) {
+        if (x < 0.0) x = 0.0;
+        if (x > 1.0) x = 1.0;
+        if (y < 0.0) y = 0.0;
+        if (y > 1.0) y = 1.0;
+        if (z < 0.0) z = 0.0;
+        if (z > 1.0) z = 1.0;
+    }
     // … 这里省略 clamp 代码，可直接调用原先的 noise 逻辑但改为 double 参数
     // 为简便，直接调用 grad 和 lerp，它们已经是 float 操作，坐标部分已用 double 避免溢出
     float u = xd * xd * xd * (xd * (xd * 6 - 15) + 10);
