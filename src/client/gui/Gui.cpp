@@ -226,19 +226,20 @@ RectangleArea Gui::getRectangleArea(int extendSide) {
 }
 
 void Gui::handleClick(int button, int x, int y) {
-	if (button != MouseAction::ACTION_LEFT)	return;
+    if (button != MouseAction::ACTION_LEFT) return;
 
-// 转换为 Gui 逻辑坐标
-int guiX = (int)(x * InvGuiScale);
-int guiY = (int)(y * InvGuiScale);
+    // Debug 按钮直接用屏幕坐标检测（不用转换成 Gui 逻辑坐标）
+    if (x >= _debugBtnRect._x0 && x < _debugBtnRect._x1 &&
+        y >= _debugBtnRect._y0 && y < _debugBtnRect._y1) {
+        minecraft->soundEngine->playUI("random.click", 1, 1);
+        minecraft->screenChooser.setScreen(SCREEN_DEBUG);
+        return;
+    }
 
-// 检测是否点击了左上角的 Debug 按钮
-if (guiX >= _debugBtnRect._x0 && guiX < _debugBtnRect._x1 &&
-    guiY >= _debugBtnRect._y0 && guiY < _debugBtnRect._y1) {
-    minecraft->soundEngine->playUI("random.click", 1, 1);
-    minecraft->screenChooser.setScreen(SCREEN_DEBUG);
-    return;
-}
+    // 其他 Gui 元素才需要转换为逻辑坐标
+    int guiX = (int)(x * InvGuiScale);
+    int guiY = (int)(y * InvGuiScale);
+    // ... 后面的代码不变 ...
 
 	int slot = getSlotIdAt(x, y);
 	if (slot != -1) {
