@@ -25,6 +25,11 @@
 
 #include "../../client/player/LocalPlayer.h"
 
+// ---------- 新增：偏移/区块缓存/地形源 头文件 ----------
+#include "../../world/level/chunk/ChunkCache.h"
+#include "../../world/level/levelgen/RandomLevelSource.h"
+// ----------------------------------------------------
+
 #ifdef GFX_SMALLER_CHUNKS
 /* static */ const int LevelRenderer::CHUNK_SIZE = 8;
 #else
@@ -918,7 +923,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     Entity* player = mc->cameraTargetPlayer;
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
-    // ========== 获取世界偏移（与 Gui::renderDebugInfo 相同方式） ==========
+    // ========== 获取世界偏移 ==========
     double worldOffX = 0.0, worldOffY = 0.0, worldOffZ = 0.0;
     RandomLevelSource* rls = nullptr;
     if (level && level->getChunkSource()) {
@@ -933,7 +938,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         }
     }
 
-    // 相机偏移（玩家位置，已应用偏移）
+    // 相机偏移
     if (useRepair) {
         double xOff = player->xOld + (player->x - player->xOld) * a;
         double yOff = player->yOld + (player->y - player->yOld) * a;
@@ -959,16 +964,21 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             Entity* entity = entities[i];
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
 
-            // ========== 为实体计算临时坐标（应用偏移） ==========
+            // ========== 为实体计算世界坐标（本地坐标 + 偏移） ==========
             double ex = entity->x + worldOffX;
             double ey = entity->y + worldOffY;
             double ez = entity->z + worldOffZ;
 
-            // 构造一个临时的 Vec3 用于距离检查
-            if (!entity->shouldRender(Vec3(ex, ey, ez))) continue;
-            if (!culler->isVisible(entity->bb.move(worldOffX, worldOffY, worldOffZ))) continue;
+            // 构造左值 Vec3 以供 shouldRender
+            Vec3 entityWorldPos((float)ex, (float)ey, (float)ez);
+            if (!entity->shouldRender(entityWorldPos)) continue;
 
-            // 检查偏移后的区块是否存在
+            // 拷贝并移动 AABB，用于 culler 检查
+            AABB movedBB = entity->bb;
+            movedBB.move((float)worldOffX, (float)worldOffY, (float)worldOffZ);
+            if (!culler->isVisible(movedBB)) continue;
+
+            // 检查偏移后的区块是否存在（使用 double 坐标，保证精度）
             if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) continue;
 
             // 跳过第一人称下的本地玩家
@@ -981,7 +991,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
             for (int i = 0; i < renderedEntities; ++i) {
                 EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
-                // 渲染时仍传入实体的原始坐标
                 disp->render(toRender[i], a);
             }
         }
@@ -997,7 +1006,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
     TIMER_POP();
 }
-
 std::string LevelRenderer::gatherStats1() {
 	std::stringstream ss;
 	ss << "C: " << renderedChunks << "/" << totalChunks << ". F: " << offscreenChunks << ", O: " << occludedChunks << ", E: " << emptyChunks << "\n";
