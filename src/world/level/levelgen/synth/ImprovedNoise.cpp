@@ -34,8 +34,7 @@ void ImprovedNoise::init( Random* random )
     }
 }
 
-float ImprovedNoise::noise( float _x, float _y, float _z )
-{
+float ImprovedNoise::noise( float _x, float _y, float _z ) const {
     float x = _x + xo;
     float y = _y + yo;
     float z = _z + zo;
@@ -95,16 +94,14 @@ const float ImprovedNoise::lerp( float t, float a, float b )
     return a + t * (b - a);
 }
 
-const float ImprovedNoise::grad2( int hash, float x, float z )
-{
+const float ImprovedNoise::grad2( int hash, float x, float z ) const {
     int h = hash & 15;
     float u = (1-((h&8)>>3))*x,
           v = h < 4 ? 0 : h == 12 || h == 14 ? x : z;
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
-const float ImprovedNoise::grad( int hash, float x, float y, float z )
-{
+const float ImprovedNoise::grad( int hash, float x, float y, float z ) const {
     int h = hash & 15;
     float u = h < 8 ? x : y,
           v = h < 4 ? y : h == 12 || h == 14 ? x : z;
