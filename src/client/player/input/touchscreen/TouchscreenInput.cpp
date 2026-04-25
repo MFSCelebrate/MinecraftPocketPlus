@@ -12,7 +12,7 @@
 #include "client/gui/Gui.h"
 #include <cmath>
 
-// 原有区域ID
+// 区域ID
 static const int AREA_DPAD_FIRST = 100;
 static const int AREA_DPAD_N = 100;
 static const int AREA_DPAD_S = 101;
@@ -24,6 +24,7 @@ static const int AREA_CHAT = 106;
 
 static int cPressed = 0, cReleased = 0, cDiscreet = 0, cPressedPause = 0, cReleasedPause = 0;
 
+// 辅助绘制函数
 static void drawRectangleArea(Tesselator& t, RectangleArea* a, int ux, int vy, float ssz = 64.0f) {
     const float pm = 1.0f / 256.0f;
     const float sz = ssz * pm;
@@ -52,7 +53,7 @@ static void drawPolygonArea(Tesselator& t, PolygonArea* a, int x, int y) {
     }
 }
 
-// 构造函数
+// ---------- 构造与析构 ----------
 TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* options )
     : _minecraft(mc),
       _options(options),
@@ -63,8 +64,7 @@ TouchscreenInput_TestFps::TouchscreenInput_TestFps( Minecraft* mc, Options* opti
       _pauseIsDown(false),
       _sneakTapTime(-999),
       aLeft(0), aRight(0), aUp(0), aDown(0), aJump(0), aUpLeft(0), aUpRight(0),
-      aDebug(nullptr),                // 新增初始化
-      _debugPanelVisible(false)       // 新增初始化
+      aDebug(nullptr)          // 新增加
 {
     releaseAllKeys();
     onConfigChanged( createConfig(mc) );
@@ -86,13 +86,14 @@ void TouchscreenInput_TestFps::clear() {
     _model.clear();
     delete aUpLeft; aUpLeft = nullptr;
     delete aUpRight; aUpRight = nullptr;
-    delete aDebug; aDebug = nullptr;   // 新增清理
+    delete aDebug; aDebug = nullptr;   // 新增加
 }
 
 bool TouchscreenInput_TestFps::isButtonDown(int areaId) {
     return _buttons[areaId - AREA_DPAD_FIRST];
 }
 
+// ---------- onConfigChanged (添加齿轮区域) ----------
 void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
     clear();
 
@@ -134,11 +135,12 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
     _model.addArea(AREA_PAUSE, aPause = new RectangleArea(w - 4 - btnSize, 4, w - 4, 4 + btnSize));
     _model.addArea(AREA_CHAT, aChat = new RectangleArea(w - 8 - btnSize * 2, 4, w - 8 - btnSize, 4 + btnSize));
 
-    // 新增齿轮按钮区域（在聊天和暂停之间）
+    // 新增齿轮区域（在聊天左侧）
     aDebug = new RectangleArea(w - 8 - btnSize * 3 - 4, 4, w - 8 - btnSize * 2 - 4, 4 + btnSize);
     _model.addArea(AREA_DEBUG, aDebug);
 }
 
+// ---------- tick (添加 AREA_DEBUG 处理) ----------
 void TouchscreenInput_TestFps::tick( Player* player ) {
     xa = ya = 0;
     jumping = false;
@@ -154,8 +156,7 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
         int p = pointerIds[i];
         int x = Multitouch::getX(p), y = Multitouch::getY(p);
 
-        if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight)
-        {
+        if (_boundingRectangle.isInside((float)x, (float)y) && _forward && !isChangingFlightHeight) {
             float angle = Mth::PI + Mth::atan2(y - _boundingRectangle.centerY(), x - _boundingRectangle.centerX());
             ya = Mth::sin(angle);
             xa = Mth::cos(angle);
@@ -173,39 +174,20 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
         if (areaId == AREA_DPAD_C) {
             setButton = true;
             heldJump = true;
-            if (player->isInWater()) {
-                jumping = true;
-            }
-            else if (Multitouch::isPressed(p)) {
-                jumping = true;
-            }
-            else if (_forward && !player->abilities.flying) {
-                areaId = AREA_DPAD_N;
-                tmpNorthJump = true;
-                ya += 1;
-            }
+            if (player->isInWater()) jumping = true;
+            else if (Multitouch::isPressed(p)) jumping = true;
+            else if (_forward && !player->abilities.flying) { areaId = AREA_DPAD_N; tmpNorthJump = true; ya += 1; }
         }
 
         if (areaId == AREA_DPAD_N) {
             setButton = true;
-            if (player->isInWater())
-                jumping = true;
-            else if (!isChangingFlightHeight)
-                tmpForward = true;
+            if (player->isInWater()) jumping = true;
+            else if (!isChangingFlightHeight) tmpForward = true;
             ya += 1;
         }
-        else if (areaId == AREA_DPAD_S && !_forward) {
-            setButton = true;
-            ya -= 1;
-        }
-        else if (areaId == AREA_DPAD_W && !_forward) {
-            setButton = true;
-            xa += 1;
-        }
-        else if (areaId == AREA_DPAD_E && !_forward) {
-            setButton = true;
-            xa -= 1;
-        }
+        else if (areaId == AREA_DPAD_S && !_forward) { setButton = true; ya -= 1; }
+        else if (areaId == AREA_DPAD_W && !_forward) { setButton = true; xa += 1; }
+        else if (areaId == AREA_DPAD_E && !_forward) { setButton = true; xa -= 1; }
         else if (areaId == AREA_PAUSE) {
             if (Multitouch::isReleased(p)) {
                 _minecraft->soundEngine->playUI("random.click", 1, 1);
@@ -219,32 +201,24 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
                 _minecraft->platform()->showKeyboard();
             }
         }
-        else if (areaId == AREA_DEBUG) {          // 新增齿轮点击
+        // 新增：齿轮打开调试屏幕
+        else if (areaId == AREA_DEBUG) {
             if (Multitouch::isReleased(p)) {
                 _minecraft->soundEngine->playUI("random.click", 1, 1);
-                _debugPanelVisible = !_debugPanelVisible;   // 只切换，无动作
+                _minecraft->screenChooser.setScreen(SCREEN_DEBUG);
             }
         }
 
         _buttons[areaId - AREA_DPAD_FIRST] = setButton;
     }
 
-    // 注意：这里不处理 _debugPanelVisible 导致的任何面板行为
-
     _forward = tmpForward;
-    if (tmpNorthJump) {
-        if (!_northJump) jumping = true;
-        _northJump = true;
-    }
-    else _northJump = false;
+    if (tmpNorthJump) { if (!_northJump) jumping = true; _northJump = true; } else _northJump = false;
 
     isChangingFlightHeight = false;
     wantUp = isButtonDown(AREA_DPAD_N) && (_allowHeightChange & (_pressedJump | wantUp));
     wantDown = isButtonDown(AREA_DPAD_S) && (_allowHeightChange & (_pressedJump | wantDown));
-    if (player->abilities.flying && (wantUp || wantDown || (heldJump && !_forward))) {
-        isChangingFlightHeight = true;
-        ya = 0;
-    }
+    if (player->abilities.flying && (wantUp || wantDown || (heldJump && !_forward))) { isChangingFlightHeight = true; ya = 0; }
     _renderFlightImage = player->abilities.flying;
 
 #ifdef WIN32
@@ -255,14 +229,11 @@ void TouchscreenInput_TestFps::tick( Player* player ) {
     if (_keys[KEY_JUMP]) jumping = true;
 #endif
 
-    if (sneaking) {
-        xa *= 0.3f;
-        ya *= 0.3f;
-    }
+    if (sneaking) { xa *= 0.3f; ya *= 0.3f; }
     _pressedJump = heldJump;
 }
 
-// 原有 render 函数
+// ---------- render, setKey, releaseAllKeys, getRectangleArea, getPauseRectangleArea (不变) ----------
 void TouchscreenInput_TestFps::render( float a ) {
     glDisable2(GL_ALPHA_TEST);
     glEnable2(GL_BLEND);
@@ -302,6 +273,7 @@ const RectangleArea& TouchscreenInput_TestFps::getPauseRectangleArea() {
     return *aPause;
 }
 
+// ---------- rebuild (添加齿轮图标绘制) ----------
 void TouchscreenInput_TestFps::rebuild() {
     if (_options->getBooleanValue(OPTIONS_HIDEGUI)) return;
 
@@ -314,60 +286,45 @@ void TouchscreenInput_TestFps::rebuild() {
 
     bool northDiagonals = !isChangingFlightHeight && (_northJump || _forward);
 
-    // left
     if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_W)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     drawRectangleArea(t, aLeft, imageU + imageSize, imageV, (float)imageSize);
 
-    // right
     if (northDiagonals || isChangingFlightHeight) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_E)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
     drawRectangleArea(t, aRight, imageU + imageSize * 3, imageV, (float)imageSize);
 
-    // forward
     if (isButtonDown(AREA_DPAD_N)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
-    if (isChangingFlightHeight) {
-        drawRectangleArea(t, aUp, imageU + imageSize * 2, imageV + imageSize, (float)imageSize);
-    } else {
-        drawRectangleArea(t, aUp, imageU, imageV, (float)imageSize);
-    }
+    if (isChangingFlightHeight) drawRectangleArea(t, aUp, imageU + imageSize * 2, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aUp, imageU, imageV, (float)imageSize);
 
-    // diagonals
     if (northDiagonals) {
         t.colorABGR(cReleased);
         drawRectangleArea(t, aUpLeft, imageU, imageV + imageSize, (float)imageSize);
         drawRectangleArea(t, aUpRight, imageU + imageSize, imageV + imageSize, (float)imageSize);
     }
 
-    // backward
     if (northDiagonals) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_S)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
-    if (isChangingFlightHeight) {
-        drawRectangleArea(t, aDown, imageU + imageSize * 3, imageV + imageSize, (float)imageSize);
-    } else {
-        drawRectangleArea(t, aDown, imageU + imageSize * 2, imageV, (float)imageSize);
-    }
+    if (isChangingFlightHeight) drawRectangleArea(t, aDown, imageU + imageSize * 3, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aDown, imageU + imageSize * 2, imageV, (float)imageSize);
 
-    // jump / flight
     if (_renderFlightImage && northDiagonals) t.colorABGR(cDiscreet);
     else if (isButtonDown(AREA_DPAD_C)) t.colorABGR(cPressed);
     else t.colorABGR(cReleased);
-    if (_renderFlightImage) {
-        drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV + imageSize, (float)imageSize);
-    } else {
-        drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV, (float)imageSize);
-    }
+    if (_renderFlightImage) drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV + imageSize, (float)imageSize);
+    else drawRectangleArea(t, aJump, imageU + imageSize * 4, imageV, (float)imageSize);
 
-    // pause / chat / debug 齿轮
+    // 右上角按钮（暂停、聊天、调试）
     if (!_minecraft->screen) {
         t.colorABGR(0xFFFFFFFF);
         drawRectangleArea(t, aPause, 200, 64, 18.0f);
         drawRectangleArea(t, aChat, 200, 82, 18.0f);
-        drawRectangleArea(t, aDebug, 200, 64, 18.0f);   // 齿轮图标，复用暂停纹理
+        drawRectangleArea(t, aDebug, 200, 64, 18.0f);   // 齿轮图标
     }
 
     t.draw();
