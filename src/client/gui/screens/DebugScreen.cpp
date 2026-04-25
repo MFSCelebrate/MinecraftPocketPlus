@@ -9,9 +9,9 @@
 #include "../../../world/entity/player/Inventory.h"
 #include "PrerenderTilesScreen.h"
 #include "ArmorScreen.h"
-#include "../../gamemode/GameMode.h"             // 修正路径
-#include "../../renderer/Textures.h"             // 修正路径
-#include "../../Options.h"                       // 修正路径
+#include "../../gamemode/GameMode.h"
+#include "../../renderer/Textures.h"
+#include "../../Options.h"
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc) : mc(mc) {
@@ -22,61 +22,77 @@ DebugScreen::~DebugScreen() {
 }
 
 void DebugScreen::init() {
-    // 创建12个调试按钮
-    addButton(BTN_GODMODE, "God Mode");
-    addButton(BTN_GAMEMODE, "Gamemode");
-    addButton(BTN_TIME, "Time +");
-    addButton(BTN_ARMOR, "Armor");
+    addButton(BTN_GODMODE,    "God Mode");
+    addButton(BTN_GAMEMODE,   "Gamemode");
+    addButton(BTN_TIME,       "Time +");
+    addButton(BTN_ARMOR,      "Armor");
     addButton(BTN_HURT_RELOAD, "Hurt+Reload");
-    addButton(BTN_SPAWNMOB, "Spawn Mob");
-    addButton(BTN_MASSACRE, "Massacre");
-    addButton(BTN_CLEARINV, "Clear Inv");
-    addButton(BTN_PRERENDER, "PreRender");
-    addButton(BTN_DROPALL, "Drop All");
-    addButton(BTN_SPEEDUP, "Speed Up");
-    addButton(BTN_3RDPERSON, "3rd Person");
+    addButton(BTN_SPAWNMOB,   "Spawn Mob");
+    addButton(BTN_MASSACRE,   "Massacre");
+    addButton(BTN_CLEARINV,   "Clear Inv");
+    addButton(BTN_PRERENDER,  "PreRender");
+    addButton(BTN_DROPALL,    "Drop All");
+    addButton(BTN_SPEEDUP,    "Speed Up");
+    addButton(BTN_3RDPERSON,  "3rd Person");
 
-    // 加入关闭按钮
+    // 关闭按钮
     Button* closeBtn = new Button(99, "Close");
-    closeBtn->width = 120;
+    closeBtn->width  = 120;
+    closeBtn->height = 30;
     buttons.push_back(closeBtn);
 }
 
 void DebugScreen::addButton(int id, const std::string& text) {
     Button* btn = new Button(id, text);
-    btn->width = 120;
+    btn->width  = 120;
     btn->height = 30;
     buttons.push_back(btn);
     debugButtons.push_back(btn);
 }
 
 void DebugScreen::setupPositions() {
-    int startX = width / 2 - 130;
-    int startY = height / 2 - (buttons.size() * 35) / 2;
+    const int buttonPadding = 4;
+    int buttonCount = (int)buttons.size();
+    int buttonHeight = 30;                      // 固定高度，清晰易点
+    int totalHeight = buttonCount * buttonHeight + (buttonCount - 1) * buttonPadding;
+
+    // 垂直居中，并保证至少 10 像素上边距
+    int startY = (height - totalHeight) / 2;
+    if (startY < 10) startY = 10;
+
+    // 按钮宽度取屏幕宽度的 70%，最大不超过 400 像素
+    int buttonWidth = (int)(width * 0.7f);
+    if (buttonWidth > 400) buttonWidth = 400;
+    int startX = (width - buttonWidth) / 2;
+
     for (size_t i = 0; i < buttons.size(); ++i) {
-        buttons[i]->x = startX;
-        buttons[i]->y = startY + i * 35;
-        buttons[i]->width = 260;
-        buttons[i]->height = 30;
+        buttons[i]->x      = startX;
+        buttons[i]->y      = startY + i * (buttonHeight + buttonPadding);
+        buttons[i]->width  = buttonWidth;
+        buttons[i]->height = buttonHeight;
     }
 }
 
 void DebugScreen::render(int xm, int ym, float a) {
-    // 半透明背景
     fill(0, 0, width, height, 0x80000000);
-    // 标题
-    drawCenteredString(mc->font, "Debug Panel", width / 2, 
-                       height / 2 - (buttons.size() * 35) / 2 - 20, 0xFFFFFFFF);
+
+    // 标题位置动态适配
+    int buttonCount = (int)buttons.size();
+    int totalHeight = buttonCount * 30 + (buttonCount - 1) * 4;
+    int topY = (height - totalHeight) / 2 - 20;
+    if (topY < 10) topY = 10;
+    drawCenteredString(mc->font, "Debug Panel", width / 2, topY, 0xFFFFFFFF);
+
     Screen::render(xm, ym, a);
 }
 
 void DebugScreen::buttonClicked(Button* button) {
     if (button->id == 99) {
-        mc->setScreen(NULL); // 关闭面板
+        mc->setScreen(NULL);                // 关闭面板
         return;
     }
     executeAction(button->id);
-    // 部分操作会打开新 Screen，不需要关闭面板；其余操作关闭面板
+    // Armor 和 Prerender 会打开新 Screen，自己不要关闭
     if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER) {
         mc->setScreen(NULL);
     }
@@ -84,25 +100,24 @@ void DebugScreen::buttonClicked(Button* button) {
 
 void DebugScreen::executeAction(int id) {
     switch (id) {
-        case BTN_GODMODE: // GodMode (KEY_U)
+        case BTN_GODMODE:
             mc->onGraphicsReset();
             mc->player->heal(100);
             break;
-        case BTN_GAMEMODE: // Gamemode toggle (KEY_B)
+        case BTN_GAMEMODE:
             mc->setIsCreativeMode(!mc->isCreativeMode());
             break;
-        case BTN_TIME: // Time + (KEY_P)
+        case BTN_TIME:
             if (mc->level) mc->level->setTime(mc->level->getTime() + 1000);
             break;
-        case BTN_ARMOR: // Armor (KEY_G)
+        case BTN_ARMOR:
             mc->setScreen(new ArmorScreen());
             break;
-        case BTN_HURT_RELOAD: // Hurt+Reload (KEY_Y)
+        case BTN_HURT_RELOAD:
             mc->textures->reloadAll();
             mc->player->hurtTo(2);
             break;
-        case BTN_SPAWNMOB: // Spawn mob (KEY_Z)
-        {
+        case BTN_SPAWNMOB: {
             Mob* mob = nullptr;
             int types[] = { MobTypes::Sheep, MobTypes::Pig, MobTypes::Chicken, MobTypes::Cow };
             int mobType = types[Mth::random(4)];
@@ -113,8 +128,7 @@ void DebugScreen::executeAction(int id) {
                 delete mob;
             break;
         }
-        case BTN_MASSACRE: // Kill all non-players (KEY_X)
-        {
+        case BTN_MASSACRE: {
             const EntityList& entities = mc->level->getAllEntities();
             for (int i = entities.size() - 1; i >= 0; --i) {
                 Entity* e = entities[i];
@@ -122,22 +136,22 @@ void DebugScreen::executeAction(int id) {
             }
             break;
         }
-        case BTN_CLEARINV: // Clear inventory (KEY_C)
+        case BTN_CLEARINV:
             mc->player->inventory->clearInventoryWithDefault();
             break;
-        case BTN_PRERENDER: // Prerender tiles (KEY_H)
+        case BTN_PRERENDER:
             mc->setScreen(new PrerenderTilesScreen());
             break;
-        case BTN_DROPALL: // Drop all (KEY_O)
+        case BTN_DROPALL:
             for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
                 if (mc->player->inventory->getItem(i))
                     mc->player->inventory->dropSlot(i, false);
             break;
-        case BTN_SPEEDUP: // Speed up ticks (KEY_M)
+        case BTN_SPEEDUP:
             for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i)
                 mc->level->tick();
             break;
-        case BTN_3RDPERSON: // 3rd person (KEY_F5)
+        case BTN_3RDPERSON:
             mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
             break;
     }
