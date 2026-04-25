@@ -106,77 +106,60 @@ void DebugScreen::updateScrollLimits()
     if (scrollY < 0) scrollY = 0;
 }
 
-void DebugScreen::tick()
-{
-    // 不做任何额外的事情，拖拽已在 mouseEvent 中处理
+void DebugScreen::tick() {
+    if (!dragging) return;
+
+    // 获取当前触摸/鼠标位置（屏幕像素）
+    int x = Mouse::getX();
+    int y = Mouse::getY();
+    toGUICoordinate(x, y);                    // 转为 Gui 逻辑坐标
+
+    float currentLogicY = (float)y + scrollY; // 当前触摸点在内容空间中的 Y 坐标
+
+    float delta = lastTouchY - currentLogicY; // 向上拖拽时 delta 为正（手指上推，内容下移）
+    scrollY += delta;
+    lastTouchY = currentLogicY;
+
+    updateScrollLimits();                     // 钳位，但不会导致回弹（delta 驱动）
 }
 
 // ---------- 鼠标事件实现 ----------
-void DebugScreen::mouseEvent()
-{
-    // 先让基类处理标准点击（按钮按下/释放）
-    Screen::mouseEvent();
 
-    // 拖拽滚动（仅在 dragging 为 true 时处理移动）
-    if (dragging)
-    {
-        const MouseAction& e = Mouse::getEvent();
-        if (e.action == MouseAction::ACTION_MOVE)
-        {
-            int x = e.x, y = e.y;
-            toGUICoordinate(x, y);                  // 转换为 Gui 坐标
-            float touchY = (float)y + scrollY;      // 计算内容坐标中的 Y
-            float delta = lastTouchY - touchY;
-            scrollY += delta;
-            lastTouchY = touchY;
-            updateScrollLimits();
-        }
-    }
-}
-
-void DebugScreen::mouseClicked(int x, int y, int buttonNum)
-{
+void DebugScreen::mouseClicked(int x, int y, int buttonNum) {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
-    toGUICoordinate(x, y);
-    int logicalY = y + (int)scrollY;
+    toGUICoordinate(x, y);                    // 转换
+    int logicalY = y + (int)scrollY;          // 按钮比较用逻辑 Y
 
-    for (auto* btn : buttons)
-    {
+    for (auto* btn : buttons) {
         if (btn->active &&
             x >= btn->x && x < btn->x + btn->width &&
-            logicalY >= btn->y && logicalY < btn->y + btn->height)
-        {
+            logicalY >= btn->y && logicalY < btn->y + btn->height) {
             _pressedButton = btn;
             _pressedButton->setPressed();
-            return;     // 命中了按钮，不触发拖拽
+            return;                           // 点到按钮，不启动拖拽
         }
     }
 
-    // 没有命中任何按钮，开始拖拽
+    // 未命中按钮，开始拖拽
     dragging = true;
-    lastTouchY = (float)logicalY;
+    lastTouchY = (float)(y + scrollY);        // y 已经是 Gui 坐标，加上当前滚动得到内容坐标
 }
 
-void DebugScreen::mouseReleased(int x, int y, int buttonNum)
-{
+void DebugScreen::mouseReleased(int x, int y, int buttonNum) {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
     toGUICoordinate(x, y);
 
-    if (dragging)
-    {
+    if (dragging) {
         dragging = false;
         return;
     }
 
-    if (_pressedButton)
-    {
+    if (_pressedButton) {
         int logicalY = y + (int)scrollY;
-        if (_pressedButton->active &&
-            x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
-            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
-        {
+        if (x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
+            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height) {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
         }
