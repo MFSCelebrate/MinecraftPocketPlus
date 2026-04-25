@@ -19,6 +19,7 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/Performance.cpp \
 ../../../src/SharedConstants.cpp \
 ../../../src/util/DebugLog.cpp \
+../../../src/client/gui/screens/DebugScreen.cpp \
 ../../../src/client/IConfigListener.cpp \
 ../../../src/client/Minecraft.cpp \
 ../../../src/client/MouseHandler.cpp \
