@@ -1014,7 +1014,7 @@ void Gui::renderDebugInfo() {
 
     // 噪声输入坐标
     if (rls) {
-        snprintf(ln[18], sizeof(ln[17]), "Noise Input: %.1f / %.1f / %.1f", nx_large, ny_large, nz_large);
+        snprintf(ln[18], sizeof(ln[18]), "Noise Input: %.1f / %.1f / %.1f", nx_large, ny_large, nz_large);
     } else {
         ln[18][0] = '\0';
     }
