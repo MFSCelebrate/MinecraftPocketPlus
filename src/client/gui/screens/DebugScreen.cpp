@@ -3,6 +3,7 @@
 #include "../../Minecraft.h"
 #include "../../player/LocalPlayer.h"
 #include "../../../world/level/Level.h"
+#include "../../../world/item/ItemInstance.h"
 #include "../../../world/entity/MobFactory.h"
 #include "../../../world/level/MobSpawner.h"
 #include "../../../world/entity/player/Inventory.h"
@@ -13,7 +14,7 @@
 #include "../../Options.h"
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
-#include "../../sound/SoundEngine.h"
+#include "../../sound/SoundEngine.h"       // 注意：路径已经修正
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
@@ -29,6 +30,7 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
+    // 原有 12 个按钮
     addButton(BTN_GODMODE,      "God Mode");
     addButton(BTN_GAMEMODE,     "Gamemode");
     addButton(BTN_TIME,         "Time +");
@@ -42,6 +44,7 @@ void DebugScreen::init()
     addButton(BTN_SPEEDUP,      "Speed Up");
     addButton(BTN_3RDPERSON,    "3rd Person");
 
+    // 新增 6 个按钮（规则切换 + 粒子测试）
     addButton(BTN_NOPVP,        "NoPvP Toggle");
     addButton(BTN_NOPVM,        "NoPvM Toggle");
     addButton(BTN_NOMVP,        "NoMvP Toggle");
@@ -49,6 +52,7 @@ void DebugScreen::init()
     addButton(BTN_NAMETAGS,     "NameTags Toggle");
     addButton(BTN_PARTICLES,    "Test Particles");
 
+    // 关闭按钮
     Button* closeBtn = new Button(99, "Close");
     closeBtn->width = 120;
     closeBtn->height = 30;
@@ -74,6 +78,7 @@ void DebugScreen::setupPositions()
     if (btnW > 400) btnW = 400;
     int startX = (width - btnW) / 2;
 
+    // 按钮从 Y=30 开始，避免遮挡标题
     for (size_t i = 0; i < buttons.size(); ++i)
     {
         buttons[i]->x = startX;
@@ -83,8 +88,9 @@ void DebugScreen::setupPositions()
     }
 
     contentHeight = (int)(buttons.size() * (btnH + buttonPadding) - buttonPadding);
-    viewportHeight = height - 50;
+    viewportHeight = height - 50;    // 标题 30 + 下边距 20
 
+    // 强制从顶部开始
     scrollY = 0.0f;
     maxScroll = contentHeight - viewportHeight;
     if (maxScroll < 0) maxScroll = 0;
@@ -102,12 +108,37 @@ void DebugScreen::updateScrollLimits()
 
 void DebugScreen::tick()
 {
+    // 不做任何额外的事情，拖拽已在 mouseEvent 中处理
+}
+
+// ---------- 鼠标事件实现 ----------
+void DebugScreen::mouseEvent()
+{
+    // 先让基类处理标准点击（按钮按下/释放）
+    Screen::mouseEvent();
+
+    // 拖拽滚动（仅在 dragging 为 true 时处理移动）
+    if (dragging)
+    {
+        const MouseAction& e = Mouse::getEvent();
+        if (e.action == MouseAction::ACTION_MOVE)
+        {
+            int x = e.x, y = e.y;
+            toGUICoordinate(x, y);                  // 转换为 Gui 坐标
+            float touchY = (float)y + scrollY;      // 计算内容坐标中的 Y
+            float delta = lastTouchY - touchY;
+            scrollY += delta;
+            lastTouchY = touchY;
+            updateScrollLimits();
+        }
+    }
 }
 
 void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
+    toGUICoordinate(x, y);
     int logicalY = y + (int)scrollY;
 
     for (auto* btn : buttons)
@@ -118,17 +149,20 @@ void DebugScreen::mouseClicked(int x, int y, int buttonNum)
         {
             _pressedButton = btn;
             _pressedButton->setPressed();
-            return;
+            return;     // 命中了按钮，不触发拖拽
         }
     }
 
+    // 没有命中任何按钮，开始拖拽
     dragging = true;
-    lastTouchY = (float)y + scrollY;
+    lastTouchY = (float)logicalY;
 }
 
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
+
+    toGUICoordinate(x, y);
 
     if (dragging)
     {
@@ -151,25 +185,14 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum)
     }
 }
 
-void DebugScreen::mouseEvent()
-{
-    const MouseAction& e = Mouse::getEvent();
-    if (dragging && e.action == MouseAction::ACTION_MOVE)
-    {
-        float touchY = (float)e.y + scrollY;
-        float delta = lastTouchY - touchY;
-        scrollY += delta;
-        lastTouchY = touchY;
-        updateScrollLimits();
-    }
-}
-
+// ---------- 渲染 ----------
 void DebugScreen::render(int xm, int ym, float a)
 {
     fill(0, 0, width, height, 0x80000000);
 
     drawCenteredString(mc->font, "Debug Panel", width / 2, 10, 0xFFFFFFFF);
 
+    // 裁剪区域
     glEnable2(GL_SCISSOR_TEST);
     int clipX = 10;
     int clipY = 30;
@@ -197,12 +220,14 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
     executeAction(button->id);
+    // 除 Armor 和 PreRender 外，执行后关闭面板
     if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER)
     {
         mc->setScreen(NULL);
     }
 }
 
+// ---------- 12+ 旧功能 + 新功能 ----------
 void DebugScreen::executeAction(int id)
 {
     switch (id)
@@ -267,6 +292,7 @@ void DebugScreen::executeAction(int id)
         mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
         break;
 
+    // ---- 新功能：通过 AdventureSettingsPacket 发包 ----
     case BTN_NOPVP:
     {
         auto& as = mc->level->adventureSettings;
