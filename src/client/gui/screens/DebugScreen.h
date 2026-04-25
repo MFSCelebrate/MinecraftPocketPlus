@@ -32,8 +32,7 @@ private:
 
     virtual void mouseClicked(int x, int y, int buttonNum) override;
     virtual void mouseReleased(int x, int y, int buttonNum) override;
-    virtual void mouseEvent() override;               // 保持这一行，稍后在 cpp 中实现
-
+    
     Minecraft* mc;
     std::vector<Button*> debugButtons;
 
