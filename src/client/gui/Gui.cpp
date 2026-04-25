@@ -228,9 +228,13 @@ RectangleArea Gui::getRectangleArea(int extendSide) {
 void Gui::handleClick(int button, int x, int y) {
 	if (button != MouseAction::ACTION_LEFT)	return;
 
-	// 检查是否点击了调试按钮
-if (x >= _debugBtnRect._x0 && x < _debugBtnRect._x1 &&
-    y >= _debugBtnRect._y0 && y < _debugBtnRect._y1) {
+// 转换为 Gui 逻辑坐标
+int guiX = (int)(x * InvGuiScale);
+int guiY = (int)(y * InvGuiScale);
+
+// 检测是否点击了左上角的 Debug 按钮
+if (guiX >= _debugBtnRect._x0 && guiX < _debugBtnRect._x1 &&
+    guiY >= _debugBtnRect._y0 && guiY < _debugBtnRect._y1) {
     minecraft->soundEngine->playUI("random.click", 1, 1);
     minecraft->screenChooser.setScreen(SCREEN_DEBUG);
     return;
@@ -527,11 +531,8 @@ void Gui::onConfigChanged( const Config& c ) {
 		_numSlots = Inventory::MAX_SELECTION_SIZE; // Xperia Play
 	}
 	MAX_MESSAGE_WIDTH = c.guiWidth;
-	// 调试按钮位于屏幕右下角，大小 80x30
-    _debugBtnRect = RectangleArea(
-        c.guiWidth - 85, c.guiHeight - 35,
-        c.guiWidth - 5,  c.guiHeight - 5
-    );
+	// 调试按钮位于左上角，大小 80×30（Gui 逻辑坐标）
+    _debugBtnRect = RectangleArea(5, 5, 85, 35);
 }
 
 float Gui::floorAlignToScreenPixel(float v) {
