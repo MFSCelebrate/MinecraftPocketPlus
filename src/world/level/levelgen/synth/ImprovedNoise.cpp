@@ -107,6 +107,10 @@ const float ImprovedNoise::grad( int hash, float x, float y, float z ) const {
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
+float ImprovedNoise::getValue(float x, float y) {
+    return static_cast<const ImprovedNoise*>(this)->getValue(x, y);
+}
+
 float ImprovedNoise::getValue( float x, float y ) const {
     return noise(x, y, 0);
 }
