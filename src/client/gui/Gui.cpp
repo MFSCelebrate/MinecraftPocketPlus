@@ -56,8 +56,10 @@ Gui::Gui(Minecraft* minecraft)
 	_currentDropSlot(-1),
 	MAX_MESSAGE_WIDTH(240),
 	itemNameOverlayTime(2),
+    _debugBtnPressed(false),
 	_openInventorySlot(minecraft->useTouchscreen())
 {
+    _debugBtnRect = RectangleArea(0, 0, 0, 0);
 	glGenBuffers2(1, &_inventoryRc.vboId);
 	glGenBuffers2(1, &rcFeedbackInner.vboId);
 	glGenBuffers2(1, &rcFeedbackOuter.vboId);
@@ -148,6 +150,24 @@ void Gui::render(float a, bool mouseFree, int xMouse, int yMouse) {
 		renderDebugInfo();
 	}
 
+	// 绘制调试按钮（右下角）
+if (!minecraft->screen) {
+    float invScale = InvGuiScale;
+    float x0 = _debugBtnRect._x0 * invScale;
+    float y0 = _debugBtnRect._y0 * invScale;
+    float x1 = _debugBtnRect._x1 * invScale;
+    float y1 = _debugBtnRect._y1 * invScale;
+
+    // 半透明背景
+    fillGradient(x0, y0, x1, y1, 0x800044FF, 0x800022AA);
+    // 文字
+    const char* label = "Debug";
+    Font* font = minecraft->font;
+    float tx = (x0 + x1 - font->width(label)) / 2.0f;
+    float ty = (y0 + y1 - font->lineHeight) / 2.0f;
+    font->drawShadow(label, tx, ty, 0xFFFFFFFF);
+}
+
     glDisable(GL_BLEND);
 	glEnable2(GL_ALPHA_TEST);
 }
@@ -206,6 +226,14 @@ RectangleArea Gui::getRectangleArea(int extendSide) {
 
 void Gui::handleClick(int button, int x, int y) {
 	if (button != MouseAction::ACTION_LEFT)	return;
+
+	// 检查是否点击了调试按钮
+if (x >= _debugBtnRect._x0 && x < _debugBtnRect._x1 &&
+    y >= _debugBtnRect._y0 && y < _debugBtnRect._y1) {
+    minecraft->soundEngine->playUI("random.click", 1, 1);
+    minecraft->screenChooser.setScreen(SCREEN_DEBUG);
+    return;
+}
 
 	int slot = getSlotIdAt(x, y);
 	if (slot != -1) {
@@ -498,6 +526,11 @@ void Gui::onConfigChanged( const Config& c ) {
 		_numSlots = Inventory::MAX_SELECTION_SIZE; // Xperia Play
 	}
 	MAX_MESSAGE_WIDTH = c.guiWidth;
+	// 调试按钮位于屏幕右下角，大小 80x30
+    _debugBtnRect = RectangleArea(
+        c.guiWidth - 85, c.guiHeight - 35,
+        c.guiWidth - 5,  c.guiHeight - 5
+    );
 }
 
 float Gui::floorAlignToScreenPixel(float v) {
