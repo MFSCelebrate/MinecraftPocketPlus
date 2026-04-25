@@ -17,7 +17,7 @@ public:
 
     float noise(float _x, float _y, float _z) const;
 
-    const float lerp(float t, float a, float b);
+    const float lerp(float t, float a, float b) const;
 
     const float grad2(int hash, float x, float z) const;
     const float grad(int hash, float x, float y, float z) const;
