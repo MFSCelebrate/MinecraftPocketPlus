@@ -24,6 +24,8 @@ public:
 
     float getValue(float x, float y);
     float getValue(float x, float y, float z);
+float getValue(double x, double y);          // 2D double 版本
+float getValue(double x, double y, double z); // 3D double 版本
 
     void add(float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow);
 
