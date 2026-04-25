@@ -531,11 +531,10 @@ void Gui::onConfigChanged( const Config& c ) {
 		_numSlots = Inventory::MAX_SELECTION_SIZE; // Xperia Play
 	}
 	MAX_MESSAGE_WIDTH = c.guiWidth;
-	// 调试按钮位于左上角，大小 80×30（Gui 逻辑坐标）
-    // 右上角暂停按钮下方，大小 80×30（逻辑坐标）
-// 原本可能是 _debugBtnRect = RectangleArea(width - 85, 40, width - 5, 70)
-// 改成
-_debugBtnRect = RectangleArea(minecraft->width - 85, 70, minecraft->width - 5, 100);
+// 原来
+//_debugBtnRect = RectangleArea(minecraft->width - 115, 70, minecraft->width - 25, 100);
+// 改为
+_debugBtnRect = RectangleArea(minecraft->width - 115, 90, minecraft->width - 25, 120);
 }
 
 float Gui::floorAlignToScreenPixel(float v) {
