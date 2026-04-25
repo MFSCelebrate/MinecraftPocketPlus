@@ -918,6 +918,22 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     Entity* player = mc->cameraTargetPlayer;
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
+    // ========== 获取世界偏移（与 Gui::renderDebugInfo 相同方式） ==========
+    double worldOffX = 0.0, worldOffY = 0.0, worldOffZ = 0.0;
+    RandomLevelSource* rls = nullptr;
+    if (level && level->getChunkSource()) {
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(level->getChunkSource());
+        if (cache) {
+            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            if (rls) {
+                worldOffX = rls->getWorldOffsetX();
+                worldOffY = rls->getWorldOffsetY();
+                worldOffZ = rls->getWorldOffsetZ();
+            }
+        }
+    }
+
+    // 相机偏移（玩家位置，已应用偏移）
     if (useRepair) {
         double xOff = player->xOld + (player->x - player->xOld) * a;
         double yOff = player->yOld + (player->y - player->yOld) * a;
@@ -942,18 +958,30 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         for (int i = 0; i < totalEntities; i++) {
             Entity* entity = entities[i];
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-            if (entity->shouldRender(cam) && culler->isVisible(entity->bb))
-            {
-                if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
-                if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
-                if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
-                toRender[renderedEntities++] = entity;
-            }
+
+            // ========== 为实体计算临时坐标（应用偏移） ==========
+            double ex = entity->x + worldOffX;
+            double ey = entity->y + worldOffY;
+            double ez = entity->z + worldOffZ;
+
+            // 构造一个临时的 Vec3 用于距离检查
+            if (!entity->shouldRender(Vec3(ex, ey, ez))) continue;
+            if (!culler->isVisible(entity->bb.move(worldOffX, worldOffY, worldOffZ))) continue;
+
+            // 检查偏移后的区块是否存在
+            if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) continue;
+
+            // 跳过第一人称下的本地玩家
+            if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
+            if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+
+            toRender[renderedEntities++] = entity;
         }
         if (renderedEntities > 0) {
             std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
             for (int i = 0; i < renderedEntities; ++i) {
                 EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+                // 渲染时仍传入实体的原始坐标
                 disp->render(toRender[i], a);
             }
         }
