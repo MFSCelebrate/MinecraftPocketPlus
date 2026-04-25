@@ -20,14 +20,17 @@ class RandomLevelSource: public ChunkSource
 
 public:
     // 3D 噪声访问器（传入 XYZ）
-double getLPerlinNoise1(float x, float y, float z) { return lperlinNoise1.getValue(x, y, z); }
-double getLPerlinNoise2(float x, float y, float z) { return lperlinNoise2.getValue(x, y, z); }
-double getPerlinNoise1(float x, float y, float z) { return perlinNoise1.getValue(x, y, z); }
-    double getPerlinNoise2(float x, float z) { return perlinNoise2.getValue(x, z); }
-    double getPerlinNoise3(float x, float z) { return perlinNoise3.getValue(x, z); }
-    double getScaleNoise(float x, float z) { return scaleNoise.getValue(x, z); }
-    double getDepthNoise(float x, float z) { return depthNoise.getValue(x, z); }
-    double getForestNoise(float x, float z) { return forestNoise.getValue(x, z); }
+inline double getLPerlinNoise1(double x, double y, double z) const { return lperlinNoise1.getValue(x, y, z); }
+inline double getLPerlinNoise2(double x, double y, double z) const { return lperlinNoise2.getValue(x, y, z); }
+inline double getPerlinNoise1 (double x, double y, double z) const { return perlinNoise1.getValue(x, y, z); }
+
+// 2D 版也提供 double 版
+inline double getPerlinNoise2(double x, double z) const { return perlinNoise2.getValue(x, z); }
+// … 其他 2D 噪声类似，如果需要的话
+    inline double getPerlinNoise3(double x, double z) { return perlinNoise3.getValue(x, z); }
+    inline double getScaleNoise(double x, double z) { return scaleNoise.getValue(x, z); }
+    inline double getDepthNoise(double x, double z) { return depthNoise.getValue(x, z); }
+    inline double getForestNoise(double x, double z) { return forestNoise.getValue(x, z); }
 
     static const int CHUNK_HEIGHT = 8;
     static const int CHUNK_WIDTH = 4;
