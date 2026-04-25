@@ -29,8 +29,7 @@ PerlinNoise::PerlinNoise( Random* random, int levels )
 	init(levels);
 }
 
-float PerlinNoise::getValue( float x, float y )
-{
+float PerlinNoise::getValue( float x, float y ) const {
 	float value = 0;
 	float pow = 1;
 
@@ -42,8 +41,7 @@ float PerlinNoise::getValue( float x, float y )
 	return value;
 }
 
-float PerlinNoise::getValue( float x, float y, float z )
-{
+float PerlinNoise::getValue( float x, float y, float z ) const {
 	float value = 0;
 	float pow = 1;
 
@@ -55,7 +53,7 @@ float PerlinNoise::getValue( float x, float y, float z )
 	return value;
 }
 
-float PerlinNoise::getValue(double x, double y, double z) {
+float PerlinNoise::getValue(double x, double y, double z) const {
     float value = 0;
     float pow = 1;
     for (int i = 0; i < levels; i++) {
