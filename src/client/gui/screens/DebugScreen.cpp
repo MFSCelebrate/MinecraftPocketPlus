@@ -3,7 +3,6 @@
 #include "../../Minecraft.h"
 #include "../../player/LocalPlayer.h"
 #include "../../../world/level/Level.h"
-#include "../../../world/item/ItemInstance.h"
 #include "../../../world/entity/MobFactory.h"
 #include "../../../world/level/MobSpawner.h"
 #include "../../../world/entity/player/Inventory.h"
@@ -12,11 +11,13 @@
 #include "../../gamemode/GameMode.h"
 #include "../../renderer/Textures.h"
 #include "../../Options.h"
+#include "../../../network/packet/AdventureSettingsPacket.h"
+#include "../../../network/RakNetInstance.h"
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
     : mc(mc), scrollY(0.0f), maxScroll(0.0f), lastTouchY(0.0f), dragging(false),
-      contentHeight(0), viewportHeight(0)
+      contentHeight(0), viewportHeight(0), _pressedButton(nullptr)
 {
 }
 
@@ -27,27 +28,31 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
-    // 12 个调试按钮
-    addButton(BTN_GODMODE, "God Mode");
-    addButton(BTN_GAMEMODE, "Gamemode");
-    addButton(BTN_TIME, "Time +");
-    addButton(BTN_ARMOR, "Armor");
-    addButton(BTN_HURT_RELOAD, "Hurt+Reload");
-    addButton(BTN_SPAWNMOB, "Spawn Mob");
-    addButton(BTN_MASSACRE, "Massacre");
-    addButton(BTN_CLEARINV, "Clear Inv");
-    addButton(BTN_PRERENDER, "PreRender");
-    addButton(BTN_DROPALL, "Drop All");
-    addButton(BTN_SPEEDUP, "Speed Up");
-    addButton(BTN_3RDPERSON, "3rd Person");
+    addButton(BTN_GODMODE,      "God Mode");
+    addButton(BTN_GAMEMODE,     "Gamemode");
+    addButton(BTN_TIME,         "Time +");
+    addButton(BTN_ARMOR,        "Armor");
+    addButton(BTN_HURT_RELOAD,  "Hurt+Reload");
+    addButton(BTN_SPAWNMOB,     "Spawn Mob");
+    addButton(BTN_MASSACRE,     "Massacre");
+    addButton(BTN_CLEARINV,     "Clear Inv");
+    addButton(BTN_PRERENDER,    "PreRender");
+    addButton(BTN_DROPALL,      "Drop All");
+    addButton(BTN_SPEEDUP,      "Speed Up");
+    addButton(BTN_3RDPERSON,    "3rd Person");
 
-    // 关闭按钮
+    addButton(BTN_NOPVP,        "NoPvP Toggle");
+    addButton(BTN_NOPVM,        "NoPvM Toggle");
+    addButton(BTN_NOMVP,        "NoMvP Toggle");
+    addButton(BTN_IMMUTABLE,    "Immutable Toggle");
+    addButton(BTN_NAMETAGS,     "NameTags Toggle");
+    addButton(BTN_PARTICLES,    "Test Particles");
+
     Button* closeBtn = new Button(99, "Close");
     closeBtn->width = 120;
     closeBtn->height = 30;
     buttons.push_back(closeBtn);
 
-    // 让屏幕接收所有输入事件
     passEvents = false;
 }
 
@@ -64,25 +69,21 @@ void DebugScreen::setupPositions()
 {
     const int buttonPadding = 4;
     const int btnH = 30;
-    // 按钮宽度取屏幕宽度的 70%，最大 400 像素
     int btnW = (int)(width * 0.7f);
     if (btnW > 400) btnW = 400;
     int startX = (width - btnW) / 2;
 
-    // 为所有按钮统一设置大小，Y 坐标从 0 开始（后续通过滚动偏移绘制）
     for (size_t i = 0; i < buttons.size(); ++i)
     {
         buttons[i]->x = startX;
-        buttons[i]->y = (int)(i * (btnH + buttonPadding)); // 逻辑位置，滚动偏移在 render 中处理
+        buttons[i]->y = 30 + (int)(i * (btnH + buttonPadding));
         buttons[i]->width = btnW;
         buttons[i]->height = btnH;
     }
 
-    // 计算内容总高度及可滚动范围
     contentHeight = (int)(buttons.size() * (btnH + buttonPadding) - buttonPadding);
-    viewportHeight = height - 50;  // 顶部留标题 30，底部留 20
+    viewportHeight = height - 50;
 
-    // 强制从顶部开始显示
     scrollY = 0.0f;
     maxScroll = contentHeight - viewportHeight;
     if (maxScroll < 0) maxScroll = 0;
@@ -100,76 +101,79 @@ void DebugScreen::updateScrollLimits()
 
 void DebugScreen::tick()
 {
-    // 拖拽惯性已经在 mouseEvent 中直接更新 scrollY，这里不用额外处理
 }
 
-// ---------- 触摸 / 鼠标滚动支持 ----------
 void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
-    if (buttonNum == MouseAction::ACTION_LEFT)
+    if (buttonNum != MouseAction::ACTION_LEFT) return;
+
+    int logicalY = y + (int)scrollY;
+
+    for (auto* btn : buttons)
     {
-        // 先检查是否点在按钮上（按钮坐标需要加上滚动偏移）
-        for (auto* btn : buttons)
+        if (btn->active &&
+            x >= btn->x && x < btn->x + btn->width &&
+            logicalY >= btn->y && logicalY < btn->y + btn->height)
         {
-            if (btn->active &&
-                x >= btn->x && x < btn->x + btn->width &&
-                y >= (btn->y - scrollY) && y < (btn->y - scrollY) + btn->height)
-            {
-                // 按钮点击交给父类处理
-                Screen::mouseClicked(x, y, buttonNum);
-                dragging = false;
-                return;
-            }
+            _pressedButton = btn;
+            _pressedButton->setPressed();
+            return;
         }
-        // 否则开始拖拽
-        dragging = true;
-        lastTouchY = (float)y + scrollY; // 记录触摸点对应的内容坐标
     }
+
+    dragging = true;
+    lastTouchY = (float)y + scrollY;
 }
 
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 {
+    if (buttonNum != MouseAction::ACTION_LEFT) return;
+
     if (dragging)
     {
         dragging = false;
         return;
     }
-    Screen::mouseReleased(x, y, buttonNum);
+
+    if (_pressedButton)
+    {
+        int logicalY = y + (int)scrollY;
+        if (_pressedButton->active &&
+            x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
+            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
+        {
+            buttonClicked(_pressedButton);
+            mc->soundEngine->playUI("random.click", 1, 1);
+        }
+        _pressedButton->released(x, y);
+        _pressedButton = nullptr;
+    }
 }
 
 void DebugScreen::mouseEvent()
 {
-    // 优先处理按钮 click，否则滚动
-    Screen::mouseEvent();
-    if (dragging)
+    const MouseAction& e = Mouse::getEvent();
+    if (dragging && e.action == MouseAction::ACTION_MOVE)
     {
-        const MouseAction& e = Mouse::getEvent();
-        if (e.action == MouseAction::ACTION_MOVE)
-        {
-            float touchY = (float)e.y + scrollY; // 因为 scrollY 还未更新，需保持和 mouseClicked 相同基准
-            float delta = lastTouchY - touchY;
-            scrollY += delta;
-            lastTouchY = touchY;
-            updateScrollLimits();
-        }
+        float touchY = (float)e.y + scrollY;
+        float delta = lastTouchY - touchY;
+        scrollY += delta;
+        lastTouchY = touchY;
+        updateScrollLimits();
     }
 }
 
-// ---------- 渲染（裁剪区域） ----------
 void DebugScreen::render(int xm, int ym, float a)
 {
-    // 半透明背景
     fill(0, 0, width, height, 0x80000000);
 
-    // 标题（固定位置）
     drawCenteredString(mc->font, "Debug Panel", width / 2, 10, 0xFFFFFFFF);
 
-    // 裁剪区域（修正的 scissor）
     glEnable2(GL_SCISSOR_TEST);
     int clipX = 10;
-    int clipY = 30;                       // 上边距
-    int clipW = width - 20;               // 左右各留 10
-    int clipH = height - clipY - 20;      // 下边距 20，所以高度 = height - 50
+    int clipY = 30;
+    int clipW = width - 20;
+    int clipH = height - clipY - 20;
     glScissor(
         Gui::GuiScale * clipX,
         mc->height - Gui::GuiScale * (clipY + clipH),
@@ -177,10 +181,9 @@ void DebugScreen::render(int xm, int ym, float a)
         Gui::GuiScale * clipH
     );
 
-    // 绘制所有按钮，Y 坐标减去 scrollY
     glPushMatrix();
     glTranslatef(0, -scrollY, 0);
-    Screen::render(xm, ym + (int)scrollY, a); // 调整鼠标坐标，保证按钮点击正常
+    Screen::render(xm, ym + (int)scrollY, a);
     glPopMatrix();
     glDisable2(GL_SCISSOR_TEST);
 }
@@ -199,7 +202,6 @@ void DebugScreen::buttonClicked(Button* button)
     }
 }
 
-// ---------- 12 个调试功能（保持不变） ----------
 void DebugScreen::executeAction(int id)
 {
     switch (id)
@@ -263,5 +265,66 @@ void DebugScreen::executeAction(int id)
     case BTN_3RDPERSON:
         mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW);
         break;
+
+    case BTN_NOPVP:
+    {
+        auto& as = mc->level->adventureSettings;
+        as.noPvP = !as.noPvP;
+        AdventureSettingsPacket p(as);
+        mc->raknetInstance->send(p);
+        break;
+    }
+    case BTN_NOPVM:
+    {
+        auto& as = mc->level->adventureSettings;
+        as.noPvM = !as.noPvM;
+        AdventureSettingsPacket p(as);
+        mc->raknetInstance->send(p);
+        break;
+    }
+    case BTN_NOMVP:
+    {
+        auto& as = mc->level->adventureSettings;
+        as.noMvP = !as.noMvP;
+        AdventureSettingsPacket p(as);
+        mc->raknetInstance->send(p);
+        break;
+    }
+    case BTN_IMMUTABLE:
+    {
+        auto& as = mc->level->adventureSettings;
+        as.immutableWorld = !as.immutableWorld;
+        AdventureSettingsPacket p(as);
+        mc->raknetInstance->send(p);
+        break;
+    }
+    case BTN_NAMETAGS:
+    {
+        auto& as = mc->level->adventureSettings;
+        as.showNameTags = !as.showNameTags;
+        AdventureSettingsPacket p(as);
+        mc->raknetInstance->send(p);
+        break;
+    }
+    case BTN_PARTICLES:
+    {
+        Level* lvl = mc->level;
+        if (!lvl) break;
+        float px = mc->player->x;
+        float py = mc->player->y;
+        float pz = mc->player->z;
+        for (int i = 0; i < 50; ++i)
+        {
+            lvl->addParticle("explode", px, py + 1.0f, pz,
+                0.02f * (rand() % 100 - 50),
+                0.02f * (rand() % 100),
+                0.02f * (rand() % 100 - 50));
+            lvl->addParticle("largesmoke", px, py + 1.0f, pz,
+                0.04f * (rand() % 100 - 50),
+                0.04f * (rand() % 100),
+                0.04f * (rand() % 100 - 50));
+        }
+        break;
+    }
     }
 }
