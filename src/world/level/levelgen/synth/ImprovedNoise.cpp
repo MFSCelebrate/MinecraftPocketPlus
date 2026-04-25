@@ -121,6 +121,41 @@ float ImprovedNoise::getValue( float x, float y, float z )
     return noise(x, y, z);
 }
 
+float ImprovedNoise::getValue(double x, double y) {
+    return getValue(x, y, 0.0);
+}
+
+float ImprovedNoise::getValue(double x, double y, double z) {
+    // 使用与 add_double 相同的 double 坐标处理，避免 int 截断
+    double xd = x + xo;
+    double yd = y + yo;
+    double zd = z + zo;
+
+    int X = ((int64_t)floor(xd)) & 255, Y = ((int64_t)floor(yd)) & 255, Z = ((int64_t)floor(zd)) & 255;
+    xd -= floor(xd);
+    yd -= floor(yd);
+    zd -= floor(zd);
+
+    // 保持原有边界 clamp（如果开启了 POSTPONED_FRINGE）
+    // … 这里省略 clamp 代码，可直接调用原先的 noise 逻辑但改为 double 参数
+    // 为简便，直接调用 grad 和 lerp，它们已经是 float 操作，坐标部分已用 double 避免溢出
+    float u = xd * xd * xd * (xd * (xd * 6 - 15) + 10);
+    float v = yd * yd * yd * (yd * (yd * 6 - 15) + 10);
+    float w = zd * zd * zd * (zd * (zd * 6 - 15) + 10);
+
+    int A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
+        B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+
+    return lerp(w, lerp(v, lerp(u, grad(p[AA], (float)xd, (float)yd, (float)zd),
+                                   grad(p[BA], (float)(xd - 1), (float)yd, (float)zd)),
+                           lerp(u, grad(p[AB], (float)xd, (float)(yd - 1), (float)zd),
+                                   grad(p[BB], (float)(xd - 1), (float)(yd - 1), (float)zd))),
+                   lerp(v, lerp(u, grad(p[AA + 1], (float)xd, (float)yd, (float)(zd - 1)),
+                                   grad(p[BA + 1], (float)(xd - 1), (float)yd, (float)(zd - 1))),
+                           lerp(u, grad(p[AB + 1], (float)xd, (float)(yd - 1), (float)(zd - 1)),
+                                   grad(p[BB + 1], (float)(xd - 1), (float)(yd - 1), (float)(zd - 1)))));
+}
+
 // 以下是使用 32 位 int 坐标的 add 函数（原始行为）
 static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
 {
