@@ -868,10 +868,10 @@ void Gui::renderDebugInfo() {
         ny_large = sampleWorldY * scale_large_Y;
         nz_large = sampleWorldZ * scale_large_XZ;
 
-        noiseVals[0] = rls->getLPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 低噪声
-        noiseVals[1] = rls->getLPerlinNoise2().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 高噪声
-        noiseVals[2] = rls->getPerlinNoise1().getValue((float)nx_large, (float)ny_large, (float)nz_large); // 选择器噪声
-
+        noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large); // 低噪声 (3D)
+noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)ny_large, (float)nz_large); // 高噪声 (3D)
+noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large); // 选择器噪声 (3D)
+		
         // ---- 地表材质噪声 (2D) ----
         const double scale_sand       = 1.0 / 32.0;
         const double scale_depth      = 1.0 / 64.0;
@@ -915,10 +915,10 @@ void Gui::renderDebugInfo() {
         float fy_large = (float)(sampleWorldY * scale_large_Y);
         float fz_large = (float)(sampleWorldZ * scale_large_XZ);
 
-        noiseValsF[0] = rls->getLPerlinNoise1().getValue(fx_large, fy_large, fz_large);
-        noiseValsF[1] = rls->getLPerlinNoise2().getValue(fx_large, fy_large, fz_large);
-        noiseValsF[2] = rls->getPerlinNoise1().getValue(fx_large, fy_large, fz_large);
-
+        noiseValsF[0] = rls->getLPerlinNoise1(fx_large, fy_large, fz_large);
+noiseValsF[1] = rls->getLPerlinNoise2(fx_large, fy_large, fz_large);
+noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
+		
         const double scale_sand       = 1.0 / 32.0;
         const double scale_depth      = 1.0 / 64.0;
         const double scale_scale      = 1.0 / 80.0;
