@@ -1246,7 +1246,9 @@ void LevelRenderer::entityAdded(Entity* entity) {
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
-    mc->onEntityRemoved(entity); // 从安全列表移除
+    if (mc) {
+        mc->onEntityRemoved(entity);
+    }
 }
 
 int _t_keepPic = -1;
