@@ -908,28 +908,18 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 	return a->entityRendererId < b->entityRendererId;
 }
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    // 只信任参数和已知强指针
     if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
     if (!player) return;
-    if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
-        DLOG_C("renderEntities: camera pos is NaN, skipping frame");
-        return;
-    }
 
+    // 简单准备（暂时不用 Off 和 Prepare 的复杂逻辑，直接给坐标）
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
-    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
-    // 设置相机偏移（直接计算，不依赖任何成员）
-    double xOff, yOff, zOff;
-    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
-        xOff = player->xOld + (player->x - player->xOld) * a;
-        yOff = player->yOld + (player->y - player->yOld) * a;
-        zOff = player->zOld + (player->z - player->zOld) * a;
-    } else {
-        xOff = yOff = zOff = 0.0;
-    }
+    // 直接用玩家位置计算相对偏移
+    double xOff = player->xOld + (player->x - player->xOld) * a;
+    double yOff = player->yOld + (player->y - player->yOld) * a;
+    double zOff = player->zOld + (player->z - player->zOld) * a;
     disp->xOff = xOff;
     disp->yOff = yOff;
     disp->zOff = zOff;
@@ -937,13 +927,10 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    DLOG_C("renderEntities: ONLY render player id=%d, pos=(%.2f,%.2f,%.2f)",
-           player->entityId, player->x, player->y, player->z);
-
-    // 直接渲染玩家（无论第几人称，暂时不隐藏，仅为验证管线）
+    // 直接画
     disp->render(player, a);
 
-    // 方块实体（箱子等）照旧，它们目前还稳定
+    // 画方块实体
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
@@ -951,7 +938,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glDisableClientState2(GL_VERTEX_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
-
 std::string LevelRenderer::gatherStats1() {
 	std::stringstream ss;
 	ss << "C: " << renderedChunks << "/" << totalChunks << ". F: " << offscreenChunks << ", O: " << occludedChunks << ", E: " << emptyChunks << "\n";
@@ -1223,11 +1209,9 @@ void LevelRenderer::onGraphicsReset()
 }
 
 void LevelRenderer::entityAdded(Entity* entity) {
-    if (mc) mc->onEntityAdded(entity);
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
-    if (mc) mc->onEntityRemoved(entity);
 }
 
 int _t_keepPic = -1;
