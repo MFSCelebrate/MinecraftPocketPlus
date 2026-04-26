@@ -14,13 +14,14 @@
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
 #include "../../sound/SoundEngine.h"
-#include "../../../util/DebugLog.h"
-#include <cmath>
+// 不再使用 DebugLog 和任何日志，避免初始化顺序问题
+
+// 固定缩放因子：1 逻辑单位 = 3 物理像素
+#define PIXEL_SCALE 3
 
 DebugScreen::DebugScreen(Minecraft* mc)
     : mc(mc), _pressedButton(nullptr), columns(0), btnWidth(0), btnHeight(0)
 {
-    DLOG_C("DebugScreen constructed, mc=%p", mc);
 }
 
 DebugScreen::~DebugScreen()
@@ -30,20 +31,6 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
-    DLOG_C("DebugScreen::init() start, width=%d, height=%d, InvGuiScale=%.3f, GuiScale=%.3f",
-           width, height, Gui::InvGuiScale, Gui::GuiScale);
-
-    // 防御性修正：如果 Screen::width/height 无效，从 Minecraft 实例重新计算
-    if (mc && mc->width > 0 && mc->height > 0 && Gui::InvGuiScale > 0.0f) {
-        width  = (int)(mc->width  * Gui::InvGuiScale);
-        height = (int)(mc->height * Gui::InvGuiScale);
-        DLOG_C("Corrected width=%d, height=%d from mc->width=%d, mc->height=%d, InvGuiScale=%.3f",
-               width, height, mc->width, mc->height, Gui::InvGuiScale);
-    } else {
-        DLOG_ERROR(CLIENT, "mc or Gui::InvGuiScale invalid! mc=%p, mc->width=%d, mc->height=%d, InvGuiScale=%.3f",
-                   (void*)mc, mc ? mc->width : -1, mc ? mc->height : -1, Gui::InvGuiScale);
-    }
-
     addButton(BTN_GODMODE,      "God");
     addButton(BTN_GAMEMODE,     "Gamemode");
     addButton(BTN_TIME,         "Time +");
@@ -64,15 +51,9 @@ void DebugScreen::init()
     addButton(BTN_PARTICLES,    "Particles");
 
     Button* closeBtn = new Button(99, "Close");
-    closeBtn->width = 120;
-    closeBtn->height = 30;
     buttons.push_back(closeBtn);
 
     passEvents = false;
-
-    DLOG_C("DebugScreen::init(): %d buttons total", (int)buttons.size());
-
-    setupPositions();
 }
 
 void DebugScreen::addButton(int id, const std::string& text)
@@ -84,42 +65,50 @@ void DebugScreen::addButton(int id, const std::string& text)
 
 void DebugScreen::setupPositions()
 {
-    if (!mc || mc->width <= 0 || mc->height <= 0) {
-        DLOG_ERROR(CLIENT, "setupPositions called with invalid mc dimensions");
-        return;
+    // 完全不依赖 width/height，使用固定物理尺寸，在 render 里动态计算
+    // 这里仅占位，实际计算放在 render 中确保安全
+}
+
+void DebugScreen::render(int xm, int ym, float a)
+{
+    // 动态获取物理屏幕大小（相信此时已初始化）
+    int physW = 854, physH = 480;
+    if (mc && mc->width > 0 && mc->height > 0) {
+        physW = mc->width;
+        physH = mc->height;
     }
 
+    // 用固定缩放因子转换为逻辑坐标
+    int logicW = physW / PIXEL_SCALE;
+    int logicH = physH / PIXEL_SCALE;
+
+    // 更新基类 width/height（渲染背景需要）
+    width = logicW;
+    height = logicH;
+
+    // 绘制半透明背景
+    fill(0, 0, width, height, 0x80000000);
+    drawCenteredString(mc->font, "Debug Panel", width / 2, 8, 0xFFFFFFFF);
+
+    // 动态计算按钮布局
     const int totalBtns = (int)debugButtons.size();
-    btnWidth = 100;
-    btnHeight = 24;
+    btnWidth = 80;            // 逻辑单位
+    btnHeight = 20;
     const int padding = 4;
 
-    // 逻辑宽度 = 物理宽度 * InvGuiScale
-    int logicalWidth  = (int)(mc->width  * Gui::InvGuiScale);
-    int logicalHeight = (int)(mc->height * Gui::InvGuiScale);
-
-    DLOG_C("setupPositions: physical=%dx%d, InvGuiScale=%.3f, logical=%dx%d",
-           mc->width, mc->height, Gui::InvGuiScale, logicalWidth, logicalHeight);
-
-    int maxColumns = (logicalWidth - 20) / (btnWidth + padding);
+    int maxColumns = (logicW - 20) / (btnWidth + padding);
     if (maxColumns < 1) maxColumns = 1;
 
-    if (totalBtns <= 6) {
-        columns = 3;
-    } else if (totalBtns <= 12) {
-        columns = 4;
-    } else {
-        columns = 5;
-    }
+    if (totalBtns <= 6) columns = 3;
+    else if (totalBtns <= 12) columns = 4;
+    else columns = 5;
     if (columns > maxColumns) columns = maxColumns;
 
-    int gridWidth = columns * btnWidth + (columns - 1) * padding;
-    int startX = (logicalWidth - gridWidth) / 2;
-    int startY = 35;
+    int gridW = columns * btnWidth + (columns - 1) * padding;
+    int startX = (logicW - gridW) / 2;
+    int startY = 30;
 
-    DLOG_C("columns=%d, startX=%d, startY=%d, btnW=%d, btnH=%d",
-           columns, startX, startY, btnWidth, btnHeight);
-
+    // 设置每个功能按钮的位置（逻辑坐标）
     for (size_t i = 0; i < debugButtons.size(); ++i) {
         int row = (int)i / columns;
         int col = (int)i % columns;
@@ -127,39 +116,37 @@ void DebugScreen::setupPositions()
         debugButtons[i]->y = startY + row * (btnHeight + padding);
         debugButtons[i]->width = btnWidth;
         debugButtons[i]->height = btnHeight;
-
-        DLOG_C(" Btn[%d] '%s' at (%d,%d) %dx%d", (int)i, debugButtons[i]->msg.c_str(),
-               debugButtons[i]->x, debugButtons[i]->y, btnWidth, btnHeight);
     }
 
+    // 关闭按钮
     Button* closeBtn = nullptr;
     for (auto* b : buttons) {
         if (b->id == 99) { closeBtn = b; break; }
     }
     if (closeBtn) {
-        closeBtn->x = (logicalWidth - closeBtn->width) / 2;
+        closeBtn->width = 120;
+        closeBtn->height = 30;
+        closeBtn->x = (logicW - closeBtn->width) / 2;
         int lastRow = (totalBtns - 1) / columns;
         int lastY = startY + lastRow * (btnHeight + padding) + btnHeight;
         closeBtn->y = lastY + 20;
-        DLOG_C(" CloseBtn at (%d,%d) %dx%d", closeBtn->x, closeBtn->y, closeBtn->width, closeBtn->height);
     }
-}
 
-void DebugScreen::render(int xm, int ym, float a)
-{
-    fill(0, 0, width, height, 0x80000000);
-    drawCenteredString(mc->font, "Debug Panel", width / 2, 8, 0xFFFFFFFF);
-    Screen::render(xm, ym, a);
+    // 现在按钮坐标已经按逻辑坐标设定好，调用基类渲染（基类会用按钮的逻辑坐标绘制）
+    // 必须确保 render 传入的 xm/ym 也使用逻辑坐标
+    // 将物理鼠标坐标转换为逻辑坐标
+    int logicXM = xm / PIXEL_SCALE;
+    int logicYM = ym / PIXEL_SCALE;
+    Screen::render(logicXM, logicYM, a);
 }
 
 void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
-    int logicalX = (int)(x * Gui::InvGuiScale);
-    int logicalY = (int)(y * Gui::InvGuiScale);
-
-    DLOG_C("click raw(%d,%d) logical(%d,%d) InvScale=%.3f", x, y, logicalX, logicalY, Gui::InvGuiScale);
+    // 物理坐标转逻辑坐标（与 render 中的转换一致）
+    int logicalX = x / PIXEL_SCALE;
+    int logicalY = y / PIXEL_SCALE;
 
     for (auto* btn : buttons) {
         if (btn->active &&
@@ -168,28 +155,23 @@ void DebugScreen::mouseClicked(int x, int y, int buttonNum)
         {
             _pressedButton = btn;
             _pressedButton->setPressed();
-            DLOG_C("  Hit '%s' (%d,%d %dx%d)", btn->msg.c_str(), btn->x, btn->y, btn->width, btn->height);
             return;
         }
     }
-    DLOG_C("  No hit");
 }
 
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
-    int logicalX = (int)(x * Gui::InvGuiScale);
-    int logicalY = (int)(y * Gui::InvGuiScale);
+    int logicalX = x / PIXEL_SCALE;
+    int logicalY = y / PIXEL_SCALE;
 
     if (_pressedButton) {
-        bool inside = (_pressedButton->active &&
-                       logicalX >= _pressedButton->x && logicalX < _pressedButton->x + _pressedButton->width &&
-                       logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height);
-
-        DLOG_C("release logical(%d,%d) inside=%d", logicalX, logicalY, (int)inside);
-
-        if (inside) {
+        if (_pressedButton->active &&
+            logicalX >= _pressedButton->x && logicalX < _pressedButton->x + _pressedButton->width &&
+            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
+        {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
         }
@@ -200,42 +182,39 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 
 void DebugScreen::buttonClicked(Button* button)
 {
-    DLOG_C("buttonClicked id=%d '%s'", button->id, button->msg.c_str());
     if (button->id == 99) {
         mc->setScreen(NULL);
         return;
     }
     executeAction(button->id);
-    if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER) {
+    if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER)
         mc->setScreen(NULL);
-    }
 }
 
-// ... executeAction 实现同上，略 ...
 void DebugScreen::executeAction(int id)
 {
-    DLOG_C("executeAction id=%d", id);
+    
 
     switch (id)
     {
     case BTN_GODMODE:
-        DLOG_C("  GodMode");
+        
         mc->onGraphicsReset(); mc->player->heal(100); break;
     case BTN_GAMEMODE:
-        DLOG_C("  Toggle creative mode");
+        
         mc->setIsCreativeMode(!mc->isCreativeMode()); break;
     case BTN_TIME:
-        DLOG_C("  Time +1000");
+        
         if (mc->level) mc->level->setTime(mc->level->getTime() + 1000); break;
     case BTN_ARMOR:
-        DLOG_C("  Open ArmorScreen");
+        
         mc->setScreen(new ArmorScreen()); break;
     case BTN_HURT_RELOAD:
-        DLOG_C("  Hurt + Reload textures");
+        
         mc->textures->reloadAll(); mc->player->hurtTo(2); break;
     case BTN_SPAWNMOB:
     {
-        DLOG_C("  Spawn random mob");
+        
         Mob* mob = nullptr;
         int types[] = {MobTypes::Sheep, MobTypes::Pig, MobTypes::Chicken, MobTypes::Cow};
         int mobType = types[Mth::random(4)];
@@ -249,7 +228,7 @@ void DebugScreen::executeAction(int id)
     }
     case BTN_MASSACRE:
     {
-        DLOG_C("  Massacre all non-player entities");
+        
         const EntityList& entities = mc->level->getAllEntities();
         for (int i = entities.size() - 1; i >= 0; --i) {
             Entity* e = entities[i];
@@ -258,51 +237,51 @@ void DebugScreen::executeAction(int id)
         break;
     }
     case BTN_CLEARINV:
-        DLOG_C("  Clear inventory");
+        
         mc->player->inventory->clearInventoryWithDefault(); break;
     case BTN_PRERENDER:
-        DLOG_C("  Open PrerenderTilesScreen");
+        
         mc->setScreen(new PrerenderTilesScreen()); break;
     case BTN_DROPALL:
-        DLOG_C("  Drop all inventory items");
+        
         for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
             if (mc->player->inventory->getItem(i)) mc->player->inventory->dropSlot(i, false);
         break;
     case BTN_SPEEDUP:
-        DLOG_C("  Speed up 5 seconds");
+        
         for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i) mc->level->tick();
         break;
     case BTN_3RDPERSON:
-        DLOG_C("  Toggle 3rd person");
+        
         mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW); break;
 
     case BTN_NOPVP: {
-        DLOG_C("  Toggle noPvP");
+        
         auto& as = mc->level->adventureSettings; as.noPvP = !as.noPvP;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NOPVM: {
-        DLOG_C("  Toggle noPvM");
+        
         auto& as = mc->level->adventureSettings; as.noPvM = !as.noPvM;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NOMVP: {
-        DLOG_C("  Toggle noMvP");
+        
         auto& as = mc->level->adventureSettings; as.noMvP = !as.noMvP;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_IMMUTABLE: {
-        DLOG_C("  Toggle immutable world");
+        
         auto& as = mc->level->adventureSettings; as.immutableWorld = !as.immutableWorld;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NAMETAGS: {
-        DLOG_C("  Toggle showNameTags");
+        
         auto& as = mc->level->adventureSettings; as.showNameTags = !as.showNameTags;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_PARTICLES: {
-        DLOG_C("  Spawn test particles");
+
         Level* lvl = mc->level; if (!lvl) break;
         float px = mc->player->x, py = mc->player->y, pz = mc->player->z;
         for (int i = 0; i < 50; ++i) {
