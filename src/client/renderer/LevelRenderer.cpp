@@ -914,7 +914,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-    // 强制重置被破坏的 noEntityRenderFrames
     if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
         DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
         noEntityRenderFrames = 2;
@@ -926,14 +925,12 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-    // 玩家必须有效
-    Entity* player = mc->cameraTargetPlayer;
+    Mob* player = mc->cameraTargetPlayer;   // 这里改成 Mob*
     if (!player) {
         DLOG_C("renderEntities: cameraTargetPlayer is null!");
         return;
     }
 
-    // 防御：如果相机坐标非法 (NaN)，放弃本帧
     if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
         DLOG_C("renderEntities: camera pos is NaN, skipping frame");
         return;
@@ -949,7 +946,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
-    // 相机偏移：直接使用玩家世界坐标，不再叠加任何 worldOff
     if (useRepair) {
         double xOff = player->xOld + (player->x - player->xOld) * a;
         double yOff = player->yOld + (player->y - player->yOld) * a;
@@ -968,7 +964,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     TIMER_POP_PUSH("entities");
 
-    // ★ 关键：抛弃 getAllEntities()，改用基于区块的范围查询
     double range = 128.0;
     AABB queryBox(player->x - range, player->y - range, player->z - range,
                   player->x + range, player->y + range, player->z + range);
@@ -978,7 +973,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     DLOG_C("renderEntities: cam=(%.2f,%.2f,%.2f), queried=%d, ptr=%p",
            player->x, player->y, player->z, totalEntities, (void*)&entities);
 
-    // 数量异常，直接放弃
     if (totalEntities > 5000 || totalEntities < 0) {
         DLOG_C("renderEntities: suspicious entity count, aborting");
     } else if (totalEntities > 0) {
@@ -987,7 +981,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             Entity* entity = entities[i];
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
 
-            // 实体坐标不再叠加偏移
             double ex = entity->x;
             double ey = entity->y;
             double ez = entity->z;
