@@ -908,13 +908,13 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 }
 
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    // 防御：如果 level 为空，直接返回
+    // 防御性检查：level 必须有效
     if (!level) {
         DLOG_C("renderEntities: level is null!");
         return;
     }
 
-    // 强制重置 noEntityRenderFrames 为 2，防止内存破坏导致跳过过多帧
+    // 强制修正 noEntityRenderFrames，防止被内存破坏导致永久跳过
     if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
         DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
         noEntityRenderFrames = 2;
@@ -926,122 +926,41 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-    // 后面的代码保持不变...
-    TIMER_PUSH("prepare");
-    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, mc->cameraTargetPlayer, a);
-    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, mc->cameraTargetPlayer, &mc->options, a);
+    // 暂不信任 getAllEntities()，因为它返回了非法指针 0xa
+    // 直接针对玩家做一个硬核渲染测试
+    Entity* player = mc->cameraTargetPlayer;
+    if (!player) {
+        DLOG_C("renderEntities: cameraTargetPlayer is null!");
+        return;
+    }
 
+    // 准备渲染调度器
+    EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+    disp->prepare(level, mc->font, player, &mc->options, a);
+    disp->xOff = player->xOld + (player->x - player->xOld) * a;
+    disp->yOff = player->yOld + (player->y - player->yOld) * a;
+    disp->zOff = player->zOld + (player->z - player->zOld) * a;
+
+    DLOG_C("renderEntities: DIRECT RENDER TEST of player id=%d, pos=(%.2f, %.2f, %.2f)",
+           player->entityId, player->x, player->y, player->z);
+
+    // 强制渲染玩家一次，完全忽略所有过滤条件
+    disp->render(player, a);
+
+    // 也尝试渲染方块实体（箱子、告示牌等），先不碰实体列表
+    TileEntityRenderDispatcher* tileDisp = TileEntityRenderDispatcher::getInstance();
+    tileDisp->prepare(level, textures, mc->font, player, a);
+    tileDisp->xOff = disp->xOff;
+    tileDisp->yOff = disp->yOff;
+    tileDisp->zOff = disp->zOff;
+    for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
+        tileDisp->render(level->tileEntities[i], a);
+    }
+
+    // 正常统计清零（不依赖野指针）
     totalEntities = 0;
     renderedEntities = 0;
     culledEntities = 0;
-
-    Entity* player = mc->cameraTargetPlayer;
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-
-    // 相机位置：直接使用玩家世界坐标的插值，无需额外叠加世界偏移
-    double xOff = player->xOld + (player->x - player->xOld) * a;
-    double yOff = player->yOld + (player->y - player->yOld) * a;
-    double zOff = player->zOld + (player->z - player->zOld) * a;
-
-    if (useRepair) {
-        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
-        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
-        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
-    } else {
-        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = 0.0;
-        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = 0.0;
-        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = 0.0;
-    }
-
-    DLOG_C("renderEntities: cam=(%.2f, %.2f, %.2f), total=%d",
-           xOff, yOff, zOff, (int)level->getAllEntities().size());
-
-    glEnableClientState2(GL_VERTEX_ARRAY);
-    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
-
-    TIMER_POP_PUSH("entities");
-    const EntityList& entities = level->getAllEntities();
-totalEntities = entities.size();
-DLOG_C("renderEntities: cam=(%.2f, %.2f, %.2f), total=%d, ptr=%p",
-       xOff, yOff, zOff, totalEntities, (void*)&entities);
-
-// 防御：实体数量异常
-if (totalEntities > 5000 || totalEntities < 0) {
-    DLOG_C("renderEntities: suspicious totalEntities, aborting");
-    return;
-}
-
-if (totalEntities > 0) {
-    // 打印第一个实体的信息，方便确认
-    Entity* first = entities[0];
-    DLOG_C("  first entity id=%d, pos=(%.1f,%.1f,%.1f)",
-           first->entityId, first->x, first->y, first->z);
-    // ... 后续处理
-        Entity** toRender = new Entity*[totalEntities];
-        for (int i = 0; i < totalEntities; i++) {
-            Entity* entity = entities[i];
-            bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-
-            // 直接使用实体世界坐标（已包含世界偏移），不额外叠加
-            double ex = entity->x;
-            double ey = entity->y;
-            double ez = entity->z;
-
-            // 1. shouldRender 检查
-            // 为 shouldRender 创建左值
-Vec3 renderPos(ex, ey, ez);
-if (!entity->shouldRender(renderPos)) {
-    DLOG_C("  ent %d shouldRender fail (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
-    continue;
-}
-
-            // 2. 视锥体裁剪（使用未偏移的包围盒）
-            if (!culler->isVisible(entity->bb)) {
-                DLOG_C("  ent %d culler fail", entity->entityId);
-                continue;
-            }
-
-            // 3. 区块存在性检查
-            if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) {
-                DLOG_C("  ent %d no chunk (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
-                continue;
-            }
-
-            // 4. 跳过第一人称下的本地玩家
-            if (entity == mc->cameraTargetPlayer && !thirdPerson) {
-                DLOG_C("  skip self in 1st person");
-                continue;
-            }
-            if (entity == mc->cameraTargetPlayer && 
-                thirdPerson == 0 && 
-                mc->cameraTargetPlayer->isPlayer() &&
-                !((Player*)mc->cameraTargetPlayer)->isSleeping()) {
-                continue;
-            }
-
-            toRender[renderedEntities++] = entity;
-        }
-
-        DLOG_C("renderEntities: passed %d / %d", renderedEntities, totalEntities);
-
-        if (renderedEntities > 0) {
-            std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
-            for (int i = 0; i < renderedEntities; ++i) {
-                EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
-                disp->render(toRender[i], a);
-            }
-        }
-        delete[] toRender;
-    }
-
-    TIMER_POP_PUSH("tileentities");
-    for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
-        TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
-    }
-
-    glDisableClientState2(GL_VERTEX_ARRAY);
-    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
-    TIMER_POP();
 }
 
 std::string LevelRenderer::gatherStats1() {
