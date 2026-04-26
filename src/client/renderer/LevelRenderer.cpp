@@ -1239,8 +1239,10 @@ void LevelRenderer::onGraphicsReset()
 }
 
 void LevelRenderer::entityAdded(Entity* entity) {
-    mc->onEntityAdded(entity);   // 加入安全列表
-    // 移除原有的 onGraphicsReset 调用，避免进一步破坏
+    if (mc) {
+        mc->onEntityAdded(entity);
+    }
+    // 彻底注释掉原 hack，防止内存破坏
     // if (!entity->isPlayer()) return;
     // EntityRenderDispatcher::getInstance()->onGraphicsReset();
 }
