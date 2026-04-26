@@ -252,6 +252,20 @@ void Inventory::setupDefault() {
 #endif
 		addItem(new ItemInstance(Item::bow));
 		addItem(new ItemInstance(Item::sign));
+		// 补全所有尚未添加的方块（包括水、岩浆、火、隐形基岩等）
+for (int id = 1; id < 256; ++id) {
+    if (!Tile::tiles[id]) continue;
+    bool already = false;
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i] && items[i]->id == id) {
+            already = true;
+            break;
+        }
+    }
+    if (!already) {
+        addItem(new ItemInstance(id, 1, 0));
+    }
+}
 	} else {
 #if defined(WIN32)
 		// Survival
