@@ -907,54 +907,43 @@ void LevelRenderer::skyColorChanged()
 bool entityRenderPredicate(const Entity* a, const Entity* b) {
 	return a->entityRendererId < b->entityRendererId;
 }
-
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
+    // 只信任参数和已知强指针
     if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
     if (!player) return;
-
     if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
         DLOG_C("renderEntities: camera pos is NaN, skipping frame");
         return;
     }
 
-    // 准备调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
     TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
+    // 设置相机偏移（直接计算，不依赖任何成员）
+    double xOff, yOff, zOff;
     if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
-        disp->xOff = player->xOld + (player->x - player->xOld) * a;
-        disp->yOff = player->yOld + (player->y - player->yOld) * a;
-        disp->zOff = player->zOld + (player->z - player->zOld) * a;
+        xOff = player->xOld + (player->x - player->xOld) * a;
+        yOff = player->yOld + (player->y - player->yOld) * a;
+        zOff = player->zOld + (player->z - player->zOld) * a;
     } else {
-        disp->xOff = disp->yOff = disp->zOff = 0.0;
+        xOff = yOff = zOff = 0.0;
     }
+    disp->xOff = xOff;
+    disp->yOff = yOff;
+    disp->zOff = zOff;
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    int rendered = 0;
-    int total = mc->m_renderEntitiesCount;
+    DLOG_C("renderEntities: ONLY render player id=%d, pos=(%.2f,%.2f,%.2f)",
+           player->entityId, player->x, player->y, player->z);
 
-    for (int i = 0; i < total; ++i) {
-        Entity* entity = mc->m_renderEntitiesArray[i];
-        if (!entity || entity->removed) continue;
+    // 直接渲染玩家（无论第几人称，暂时不隐藏，仅为验证管线）
+    disp->render(player, a);
 
-        bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-        if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
-
-        Vec3 renderPos(entity->x, entity->y, entity->z);
-        if (!entity->shouldRender(renderPos)) continue;
-        if (!culler->isVisible(entity->bb)) continue;
-        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
-
-        disp->render(entity, a);
-        rendered++;
-    }
-
-    DLOG_C("renderEntities: raw array, rendered %d / %d", rendered, total);
-
+    // 方块实体（箱子等）照旧，它们目前还稳定
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
