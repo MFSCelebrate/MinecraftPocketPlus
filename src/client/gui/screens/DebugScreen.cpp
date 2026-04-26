@@ -3,7 +3,6 @@
 #include "../../Minecraft.h"
 #include "../../player/LocalPlayer.h"
 #include "../../../world/level/Level.h"
-#include "../../../world/item/ItemInstance.h"
 #include "../../../world/entity/MobFactory.h"
 #include "../../../world/level/MobSpawner.h"
 #include "../../../world/entity/player/Inventory.h"
@@ -18,8 +17,7 @@
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
-    : mc(mc), scrollY(0.0f), maxScroll(0.0f), lastTouchY(0.0f), dragging(false),
-      contentHeight(0), viewportHeight(0), _pressedButton(nullptr)
+    : mc(mc), _pressedButton(nullptr), columns(0), btnWidth(0), btnHeight(0)
 {
 }
 
@@ -28,11 +26,10 @@ DebugScreen::~DebugScreen()
     for (auto* b : debugButtons) delete b;
 }
 
-// ---------- 初始化 ----------
 void DebugScreen::init()
 {
-    // 12 原有按钮
-    addButton(BTN_GODMODE,      "God Mode");
+    // 原有 + 新增按钮（共 18 个功能按钮）
+    addButton(BTN_GODMODE,      "God");
     addButton(BTN_GAMEMODE,     "Gamemode");
     addButton(BTN_TIME,         "Time +");
     addButton(BTN_ARMOR,        "Armor");
@@ -44,14 +41,12 @@ void DebugScreen::init()
     addButton(BTN_DROPALL,      "Drop All");
     addButton(BTN_SPEEDUP,      "Speed Up");
     addButton(BTN_3RDPERSON,    "3rd Person");
-
-    // 6 新增按钮
-    addButton(BTN_NOPVP,        "NoPvP Toggle");
-    addButton(BTN_NOPVM,        "NoPvM Toggle");
-    addButton(BTN_NOMVP,        "NoMvP Toggle");
-    addButton(BTN_IMMUTABLE,    "Immutable Toggle");
-    addButton(BTN_NAMETAGS,     "NameTags Toggle");
-    addButton(BTN_PARTICLES,    "Test Particles");
+    addButton(BTN_NOPVP,        "NoPvP");
+    addButton(BTN_NOPVM,        "NoPvM");
+    addButton(BTN_NOMVP,        "NoMvP");
+    addButton(BTN_IMMUTABLE,    "Immutable");
+    addButton(BTN_NAMETAGS,     "NameTags");
+    addButton(BTN_PARTICLES,    "Particles");
 
     // 关闭按钮
     Button* closeBtn = new Button(99, "Close");
@@ -65,109 +60,101 @@ void DebugScreen::init()
 void DebugScreen::addButton(int id, const std::string& text)
 {
     Button* btn = new Button(id, text);
-    btn->width = 120;
-    btn->height = 30;
     buttons.push_back(btn);
     debugButtons.push_back(btn);
 }
 
-// ---------- 布局 ----------
 void DebugScreen::setupPositions()
 {
-    const int buttonPadding = 4;
-    const int btnH = 30;
-    int btnW = (int)(width * 0.7f);
-    if (btnW > 400) btnW = 400;
-    int startX = (width - btnW) / 2;
+    // 按钮网格动态计算
+    const int totalBtns = (int)debugButtons.size();  // 18
+    // 根据屏幕宽度和 GuiScale 智能分配列数
+    float screenWidthF = (float)width;   // 逻辑坐标宽度
+    // 目标：按钮宽度 100 逻辑像素，高度 24，间距 4
+    btnWidth = 100;
+    btnHeight = 24;
+    const int padding = 4;
 
-    for (size_t i = 0; i < buttons.size(); ++i)
-    {
-        buttons[i]->x = startX;
-        buttons[i]->y = 30 + (int)(i * (btnH + buttonPadding));
-        buttons[i]->width = btnW;
-        buttons[i]->height = btnH;
+    // 计算能容纳的最大列数
+    int maxColumns = (int)((screenWidthF - 20) / (btnWidth + padding)); // 左右留 10 边距
+    if (maxColumns < 1) maxColumns = 1;
+    // 根据按钮总数和列数计算最佳列数（尽量让每行按钮数均匀）
+    // 这里简单取最大列数，但为了美观，按钮总数较少时可以限制列数
+    if (totalBtns <= 6) {
+        columns = 3;
+    } else if (totalBtns <= 12) {
+        columns = 4;
+    } else {
+        columns = 5;
+    }
+    if (columns > maxColumns) columns = maxColumns;
+
+    // 计算起始 X 坐标，使整体居中
+    int gridWidth = columns * btnWidth + (columns - 1) * padding;
+    int startX = (width - gridWidth) / 2;
+    int startY = 35; // 标题下方
+
+    // 18 个功能按钮按行排列
+    for (size_t i = 0; i < debugButtons.size(); ++i) {
+        int row = (int)i / columns;
+        int col = (int)i % columns;
+        debugButtons[i]->x = startX + col * (btnWidth + padding);
+        debugButtons[i]->y = startY + row * (btnHeight + padding);
+        debugButtons[i]->width = btnWidth;
+        debugButtons[i]->height = btnHeight;
     }
 
-    contentHeight = (int)(buttons.size() * (btnH + buttonPadding) - buttonPadding);
-    viewportHeight = height - 50;       // 标题 30，下边距 20
-
-    // 强制从顶部开始
-    scrollY = 0.0f;
-    maxScroll = contentHeight - viewportHeight;
-    if (maxScroll < 0) maxScroll = 0;
-    if (scrollY > maxScroll) scrollY = maxScroll;
-    if (scrollY < 0) scrollY = 0;
+    // 关闭按钮居中放在最后一行下方
+    Button* closeBtn = nullptr;
+    for (auto* b : buttons) {
+        if (b->id == 99) { closeBtn = b; break; }
+    }
+    if (closeBtn) {
+        closeBtn->width = 120;
+        closeBtn->height = 30;
+        closeBtn->x = (width - closeBtn->width) / 2;
+        // 放在功能按钮下方 20 像素
+        int lastRow = ((int)debugButtons.size() - 1) / columns;
+        int lastY = startY + lastRow * (btnHeight + padding) + btnHeight;
+        closeBtn->y = lastY + 20;
+    }
 }
 
-void DebugScreen::updateScrollLimits()
+void DebugScreen::render(int xm, int ym, float a)
 {
-    maxScroll = contentHeight - viewportHeight;
-    if (maxScroll < 0) maxScroll = 0;
-    if (scrollY > maxScroll) scrollY = maxScroll;
-    if (scrollY < 0) scrollY = 0;
+    fill(0, 0, width, height, 0x80000000);
+    drawCenteredString(mc->font, "Debug Panel", width / 2, 8, 0xFFFFFFFF);
+
+    // 直接渲染按钮，无滚动，无裁剪
+    Screen::render(xm, ym, a);
 }
 
-// ---------- Tick：专用于拖拽滚动 ----------
-void DebugScreen::tick()
-{
-    if (!dragging) return;
-
-    int x = Mouse::getX();
-    int y = Mouse::getY();
-    toGUICoordinate(x, y);                       // 屏幕 → Gui 坐标
-
-    float currentLogicY = (float)y + scrollY;   // 当前触摸点在内容空间中的 Y
-    float delta = lastTouchY - currentLogicY;   // 手指上推 delta 为正
-    scrollY += delta;
-    lastTouchY = currentLogicY;
-
-    updateScrollLimits();
-}
-
-// ---------- 鼠标按下 ----------
 void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
+    toGUICoordinate(x, y);
 
-    toGUICoordinate(x, y);                       // 屏幕 → Gui 坐标
-    int logicalY = y + (int)scrollY;            // 转换为按钮列表中的逻辑 Y
-
-    for (auto* btn : buttons)
-    {
+    for (auto* btn : buttons) {
         if (btn->active &&
             x >= btn->x && x < btn->x + btn->width &&
-            logicalY >= btn->y && logicalY < btn->y + btn->height)
+            y >= btn->y && y < btn->y + btn->height)
         {
             _pressedButton = btn;
             _pressedButton->setPressed();
-            return;                              // 千万别漏掉，保证不启动拖拽
+            return;
         }
     }
-
-    // 没命中按钮 → 开始拖拽
-    dragging = true;
-    lastTouchY = (float)(y + scrollY);          // 记录内容坐标中的触摸起点
 }
 
-// ---------- 鼠标释放 ----------
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
-
     toGUICoordinate(x, y);
 
-    if (dragging)
-    {
-        dragging = false;
-        return;
-    }
-
-    if (_pressedButton)
-    {
-        int logicalY = y + (int)scrollY;
+    if (_pressedButton) {
         if (_pressedButton->active &&
             x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
-            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
+            y >= _pressedButton->y && y < _pressedButton->y + _pressedButton->height)
         {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
@@ -177,44 +164,18 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum)
     }
 }
 
-// ---------- 渲染 ----------
-void DebugScreen::render(int xm, int ym, float a)
-{
-    fill(0, 0, width, height, 0x80000000);
-    drawCenteredString(mc->font, "Debug Panel", width / 2, 10, 0xFFFFFFFF);
-
-    // 裁剪区域（上边距 30，左右各留 10，下边距 20）
-    glEnable2(GL_SCISSOR_TEST);
-    int clipX = 10;
-    int clipY = 30;
-    int clipW = width - 20;
-    int clipH = height - clipY - 20;
-    glScissor(
-        Gui::GuiScale * clipX,
-        mc->height - Gui::GuiScale * (clipY + clipH),
-        Gui::GuiScale * clipW,
-        Gui::GuiScale * clipH
-    );
-
-    // 平移内容
-    glPushMatrix();
-    glTranslatef(0, -scrollY, 0);
-    // 注意：传给基类的鼠标坐标不需要加上 scrollY，因为基类只是用来画按钮，不执行点击逻辑
-    Screen::render(xm, ym, a);
-    glPopMatrix();
-
-    glDisable2(GL_SCISSOR_TEST);
-}
-
 void DebugScreen::buttonClicked(Button* button)
 {
-    if (button->id == 99) { mc->setScreen(NULL); return; }
+    if (button->id == 99) {
+        mc->setScreen(NULL);
+        return;
+    }
     executeAction(button->id);
     if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER)
         mc->setScreen(NULL);
 }
 
-// ---------- 功能实现（含发包） ----------
+// ---------- 功能实现（无变化） ----------
 void DebugScreen::executeAction(int id)
 {
     switch (id)
@@ -237,8 +198,7 @@ void DebugScreen::executeAction(int id)
         mob = MobFactory::CreateMob(mobType, mc->level);
         float dx = 4 - 8 * Mth::random() + 4 * Mth::sin(Mth::DEGRAD * mc->player->yRot);
         float dz = 4 - 8 * Mth::random() + 4 * Mth::cos(Mth::DEGRAD * mc->player->yRot);
-        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz,
-                                       Mth::random() * 360, 0, true))
+        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz, Mth::random() * 360, 0, true))
             delete mob;
         break;
     }
@@ -290,11 +250,11 @@ void DebugScreen::executeAction(int id)
         float px = mc->player->x, py = mc->player->y, pz = mc->player->z;
         for (int i = 0; i < 50; ++i) {
             lvl->addParticle("explode", px, py + 1.0f, pz,
-                             0.02f * (rand() % 100 - 50), 0.02f * (rand() % 100),
-                             0.02f * (rand() % 100 - 50));
+                0.02f * (rand() % 100 - 50), 0.02f * (rand() % 100),
+                0.02f * (rand() % 100 - 50));
             lvl->addParticle("largesmoke", px, py + 1.0f, pz,
-                             0.04f * (rand() % 100 - 50), 0.04f * (rand() % 100),
-                             0.04f * (rand() % 100 - 50));
+                0.04f * (rand() % 100 - 50), 0.04f * (rand() % 100),
+                0.04f * (rand() % 100 - 50));
         }
         break;
     }
