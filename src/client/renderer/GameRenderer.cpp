@@ -293,6 +293,8 @@ double zOff = cameraEntity->zo + (cameraEntity->z - cameraEntity->zo) * a;
         AllowAllCuller allowAll;
 
 		TIMER_POP_PUSH("culling");
+		FrustumCuller frustum;
+        frustum.prepare(xOff, yOff, zOff);
         mc->levelRenderer->cull(&frustum, a);
         mc->levelRenderer->updateDirtyChunks(cameraEntity, false);
 
