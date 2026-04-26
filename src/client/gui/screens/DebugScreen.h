@@ -29,17 +29,12 @@ private:
     void addButton(int id, const std::string& text);
     void executeAction(int id);
 
-    virtual void mouseClicked(int x, int y, int buttonNum) override;
-    virtual void mouseReleased(int x, int y, int buttonNum) override;
-
+    // 完全抛弃自定义鼠标事件，使用基类的默认处理（避免任何坐标转换问题）
+    // 基类的 Screen::mouseClicked / mouseReleased 会直接使用按钮的逻辑坐标，
+    // 前提是按钮的 x, y, width, height 已经是正确的逻辑坐标。
+    
     Minecraft* mc;
     std::vector<Button*> debugButtons;
-    Button* _pressedButton;
-
-    // 按钮网格参数
-    int columns;
-    int btnWidth;
-    int btnHeight;
 
     static const int BTN_GODMODE      = 0;
     static const int BTN_GAMEMODE     = 1;
