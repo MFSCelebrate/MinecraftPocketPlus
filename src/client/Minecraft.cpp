@@ -90,6 +90,9 @@
 #include "../network/command/CommandServer.h"
 #include "gamemode/CreatorMode.h"
 
+#include <algorithm>
+//Exper
+
 Minecraft* Minecraft::instance = nullptr;
 
 static void checkGlError(const char* tag) {
@@ -1600,3 +1603,4 @@ void Minecraft::optionUpdated(OptionId option, int value ) {
         setSize(width, height);
     }
 }
+
