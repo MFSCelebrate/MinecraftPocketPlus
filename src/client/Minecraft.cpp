@@ -1418,6 +1418,9 @@ void Minecraft::_levelGenerated()
 	// Hack to (hopefully) get the players to show (note: in LevelListener
 	// instead, since adding yourself always generates a entityAdded)
 	//EntityRenderDispatcher::getInstance()->onGraphicsReset();
+	// 安全地刷新实体渲染器，确保模型加载
+EntityRenderDispatcher::getInstance()->onGraphicsReset();
+TileEntityRenderDispatcher::getInstance()->onGraphicsReset();
 	_hasSignaledGeneratingLevelFinished = true;
 }
 
