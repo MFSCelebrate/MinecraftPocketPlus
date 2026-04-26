@@ -235,6 +235,19 @@ Minecraft::~Minecraft()
 #endif
 }
 
+void Minecraft::onEntityAdded(Entity* e) {
+    if (e && !e->removed) {
+        m_renderEntities.push_back(e);
+    }
+}
+
+void Minecraft::onEntityRemoved(Entity* e) {
+    auto it = std::find(m_renderEntities.begin(), m_renderEntities.end(), e);
+    if (it != m_renderEntities.end()) {
+        m_renderEntities.erase(it);
+    }
+}
+
 // Only called by server
 void Minecraft::selectLevel( const std::string& levelId, const std::string& levelName, const LevelSettings& settings )
 {
@@ -1377,6 +1390,7 @@ void Minecraft::_levelGenerated()
 
 	level->validateSpawn();
 	level->loadPlayer(player, true);
+    onEntityAdded(player);  // 额外确保玩家在安全列表（因为 addEntity 会调用 entityAdded，但容器已损坏）
 	// if we are client side, we trust the server to have given us a correct position
 	if (player && !level->isClientSide) {
 		player->resetPos(false);
