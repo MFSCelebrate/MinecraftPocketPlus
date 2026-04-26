@@ -212,3 +212,108 @@ void DebugScreen::buttonClicked(Button* button)
 }
 
 // ... executeAction 实现同上，略 ...
+void DebugScreen::executeAction(int id)
+{
+    DLOG_C("executeAction id=%d", id);
+
+    switch (id)
+    {
+    case BTN_GODMODE:
+        DLOG_C("  GodMode");
+        mc->onGraphicsReset(); mc->player->heal(100); break;
+    case BTN_GAMEMODE:
+        DLOG_C("  Toggle creative mode");
+        mc->setIsCreativeMode(!mc->isCreativeMode()); break;
+    case BTN_TIME:
+        DLOG_C("  Time +1000");
+        if (mc->level) mc->level->setTime(mc->level->getTime() + 1000); break;
+    case BTN_ARMOR:
+        DLOG_C("  Open ArmorScreen");
+        mc->setScreen(new ArmorScreen()); break;
+    case BTN_HURT_RELOAD:
+        DLOG_C("  Hurt + Reload textures");
+        mc->textures->reloadAll(); mc->player->hurtTo(2); break;
+    case BTN_SPAWNMOB:
+    {
+        DLOG_C("  Spawn random mob");
+        Mob* mob = nullptr;
+        int types[] = {MobTypes::Sheep, MobTypes::Pig, MobTypes::Chicken, MobTypes::Cow};
+        int mobType = types[Mth::random(4)];
+        mob = MobFactory::CreateMob(mobType, mc->level);
+        float dx = 4 - 8 * Mth::random() + 4 * Mth::sin(Mth::DEGRAD * mc->player->yRot);
+        float dz = 4 - 8 * Mth::random() + 4 * Mth::cos(Mth::DEGRAD * mc->player->yRot);
+        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz,
+                                       Mth::random() * 360, 0, true))
+            delete mob;
+        break;
+    }
+    case BTN_MASSACRE:
+    {
+        DLOG_C("  Massacre all non-player entities");
+        const EntityList& entities = mc->level->getAllEntities();
+        for (int i = entities.size() - 1; i >= 0; --i) {
+            Entity* e = entities[i];
+            if (!e->isPlayer()) mc->level->removeEntity(e);
+        }
+        break;
+    }
+    case BTN_CLEARINV:
+        DLOG_C("  Clear inventory");
+        mc->player->inventory->clearInventoryWithDefault(); break;
+    case BTN_PRERENDER:
+        DLOG_C("  Open PrerenderTilesScreen");
+        mc->setScreen(new PrerenderTilesScreen()); break;
+    case BTN_DROPALL:
+        DLOG_C("  Drop all inventory items");
+        for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
+            if (mc->player->inventory->getItem(i)) mc->player->inventory->dropSlot(i, false);
+        break;
+    case BTN_SPEEDUP:
+        DLOG_C("  Speed up 5 seconds");
+        for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i) mc->level->tick();
+        break;
+    case BTN_3RDPERSON:
+        DLOG_C("  Toggle 3rd person");
+        mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW); break;
+
+    case BTN_NOPVP: {
+        DLOG_C("  Toggle noPvP");
+        auto& as = mc->level->adventureSettings; as.noPvP = !as.noPvP;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
+    }
+    case BTN_NOPVM: {
+        DLOG_C("  Toggle noPvM");
+        auto& as = mc->level->adventureSettings; as.noPvM = !as.noPvM;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
+    }
+    case BTN_NOMVP: {
+        DLOG_C("  Toggle noMvP");
+        auto& as = mc->level->adventureSettings; as.noMvP = !as.noMvP;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
+    }
+    case BTN_IMMUTABLE: {
+        DLOG_C("  Toggle immutable world");
+        auto& as = mc->level->adventureSettings; as.immutableWorld = !as.immutableWorld;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
+    }
+    case BTN_NAMETAGS: {
+        DLOG_C("  Toggle showNameTags");
+        auto& as = mc->level->adventureSettings; as.showNameTags = !as.showNameTags;
+        AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
+    }
+    case BTN_PARTICLES: {
+        DLOG_C("  Spawn test particles");
+        Level* lvl = mc->level; if (!lvl) break;
+        float px = mc->player->x, py = mc->player->y, pz = mc->player->z;
+        for (int i = 0; i < 50; ++i) {
+            lvl->addParticle("explode", px, py + 1.0f, pz,
+                0.02f * (rand() % 100 - 50), 0.02f * (rand() % 100),
+                0.02f * (rand() % 100 - 50));
+            lvl->addParticle("largesmoke", px, py + 1.0f, pz,
+                0.04f * (rand() % 100 - 50), 0.04f * (rand() % 100),
+                0.04f * (rand() % 100 - 50));
+        }
+        break;
+    }
+    }
+}
