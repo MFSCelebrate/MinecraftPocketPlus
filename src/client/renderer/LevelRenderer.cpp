@@ -909,101 +909,54 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 }
 
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    // 完全防御：不信任任何成员变量，直接干活
     if (!mc) return;
-    Level* level = this->level;   // 局部变量，避免 this 损坏
-    if (!level) {
-        DLOG_C("renderEntities: level is null!");
-        return;
-    }
-
     Mob* player = mc->cameraTargetPlayer;
     if (!player) {
         DLOG_C("renderEntities: cameraTargetPlayer is null!");
         return;
     }
-
-    // 强制每帧都尝试渲染（忽略 noEntityRenderFrames）
-    // 如果相机坐标非法，跳过
     if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
-        DLOG_C("renderEntities: camera pos is NaN, skipping frame");
+        DLOG_C("renderEntities: camera pos is NaN, skipping");
         return;
     }
 
-    // 准备调度器
-    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
-    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, player, &mc->options, a);
+    // 打印 level 对象的地址和内部关键成员偏移（仅用于诊断）
+    DLOG_C("renderEntities: level addr=%p, &entities=%p, &players=%p, &tileEntities=%p",
+           (void*)level, (void*)&level->entities, (void*)&level->players, (void*)&level->tileEntities);
 
-    double xOff, yOff, zOff;
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-    if (useRepair) {
-        xOff = player->xOld + (player->x - player->xOld) * a;
-        yOff = player->yOld + (player->y - player->yOld) * a;
-        zOff = player->zOld + (player->z - player->zOld) * a;
+    // 不信任任何容器，直接尝试获取另一位玩家
+    Player* otherPlayer = nullptr;
+    for (unsigned int i = 0; i < 10; ++i) {   // 最多尝试 10 次，防止无限循环
+        // 直接使用 mc->player 作为测试（因为它是安全的）
+        if (mc->player && mc->player != player && !mc->player->removed) {
+            otherPlayer = mc->player;
+            break;
+        }
+        break; // 单机下只有本地玩家
+    }
+
+    if (otherPlayer) {
+        DLOG_C("found other player id=%d, pos=(%.2f,%.2f,%.2f)",
+               otherPlayer->entityId, otherPlayer->x, otherPlayer->y, otherPlayer->z);
     } else {
-        xOff = yOff = zOff = 0.0;
-    }
-    EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
-    EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
-    EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
-
-    glEnableClientState2(GL_VERTEX_ARRAY);
-    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
-
-    // 统计用局部变量
-    int total = 0, rendered = 0;
-
-    // ★ 安全实体源：仅来自 players 列表（它是完好的）
-    const PlayerList& players = level->players;
-    total = (int)players.size();
-    DLOG_C("renderEntities: using players list, count=%d, camera=(%.2f,%.2f,%.2f)",
-           total, player->x, player->y, player->z);
-
-    // 因为我们只遍历玩家，且数量不会多，直接用简单循环
-    for (unsigned int i = 0; i < players.size(); ++i) {
-        Entity* entity = players[i];
-        if (!entity || entity->removed) continue;
-
-        bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-
-        // 跳过第一人称的自己
-        if (entity == mc->cameraTargetPlayer && !thirdPerson) {
-            DLOG_C("  skip self in 1st person");
-            continue;
-        }
-
-        // 基本可见性检查（距离）
-        Vec3 renderPos(entity->x, entity->y, entity->z);
-        if (!entity->shouldRender(renderPos)) {
-            DLOG_C("  player %d shouldRender fail", entity->entityId);
-            continue;
-        }
-
-        // 视锥体检查（使用现有 culler）
-        if (!culler->isVisible(entity->bb)) {
-            DLOG_C("  player %d culler fail", entity->entityId);
-            continue;
-        }
-
-        // 区块检查
-        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) {
-            DLOG_C("  player %d no chunk", entity->entityId);
-            continue;
-        }
-
-        EntityRenderDispatcher::getInstance()->render(entity, a);
-        rendered++;
+        DLOG_C("no other player found (only local)");
     }
 
-    DLOG_C("renderEntities: actually rendered %d / %d players", rendered, total);
+    // 准备渲染调度器
+    EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+    disp->prepare(level, mc->font, player, &mc->options, a);
+    if (otherPlayer) {
+        // 强制渲染另一位玩家一次，跳过所有检查
+        disp->render(otherPlayer, a);
+        DLOG_C("rendered other player directly");
+    }
 
-    // 方块实体（箱子等）照常
+    // 方块实体照常（如果 tileEntities 也坏了，这里可能崩溃，但可以注释掉）
+    /*
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
-
-    glDisableClientState2(GL_VERTEX_ARRAY);
-    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+    */
 }
 
 std::string LevelRenderer::gatherStats1() {
