@@ -252,22 +252,18 @@ void Inventory::setupDefault() {
 #endif
 		addItem(new ItemInstance(Item::bow));
 		addItem(new ItemInstance(Item::sign));
-		// 补全所有尚未添加的方块（包括水、岩浆、火、隐形基岩等）
-// 完全补全：每个方块 × 每种数据值（0~15）均作为单独物品加入
+		// 补全所有尚未添加的方块（包括水、岩浆、火、隐形基岩等“黑名单”方块）
 for (int id = 1; id < 256; ++id) {
-    if (!Tile::tiles[id]) continue;   // 跳过无效方块
-    for (int data = 0; data < 16; ++data) {
-        // 检查是否已经存在该 (id, data) 组合
-        bool already = false;
-        for (size_t i = 0; i < items.size(); ++i) {
-            if (items[i] && items[i]->id == id && items[i]->getAuxValue() == data) {
-                already = true;
-                break;
-            }
+    if (!Tile::tiles[id]) continue;          // 只处理有效方块
+    bool already = false;
+    for (size_t i = 0; i < items.size(); ++i) {
+        if (items[i] && items[i]->id == id) {
+            already = true;
+            break;
         }
-        if (!already) {
-            addItem(new ItemInstance(id, 1, data));
-        }
+    }
+    if (!already) {
+        addItem(new ItemInstance(id, 1, 0));
     }
 }
 	} else {
