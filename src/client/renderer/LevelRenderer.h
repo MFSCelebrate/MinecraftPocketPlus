@@ -25,6 +25,7 @@ public:
     static const int CHUNK_SIZE;
     static const int MAX_VISIBLE_REBUILDS_PER_FRAME = 3;
     static const int MAX_INVISIBLE_REBUILDS_PER_FRAME = 1;
+    virtual void entityRemoved(Entity* entity);
     
     // 改为 double 以支持远距离精度
     double xOld;
