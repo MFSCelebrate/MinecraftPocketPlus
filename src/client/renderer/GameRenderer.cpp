@@ -290,7 +290,7 @@ double zOff = cameraEntity->zo + (cameraEntity->z - cameraEntity->zo) * a;
         
 		TIMER_POP_PUSH("frustrum");
 		// 临时测试：用 AllowAllCuller 替换 FrustumCuller
-        AllowAllCuller allowAll;
+        //AllowAllCuller allowAll;
 
 		TIMER_POP_PUSH("culling");
 		FrustumCuller frustum;
@@ -318,7 +318,8 @@ double zOff = cameraEntity->zo + (cameraEntity->z - cameraEntity->zo) * a;
         
         glShadeModel2(GL_FLAT);
 		TIMER_POP_PUSH("entities");
-		mc->levelRenderer->renderEntities(cameraEntity->getPos(a), &allowAll, a);
+		//mc->levelRenderer->renderEntities(cameraEntity->getPos(a), &allowAll, a);
+		mc->levelRenderer->renderEntities(cameraEntity->getPos(a), &frustum, a);
 //        setupFog(0);
 		TIMER_POP_PUSH("particles");
         particleEngine->render(cameraEntity, a);
