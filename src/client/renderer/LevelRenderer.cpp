@@ -913,47 +913,111 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
+    // 防御：修正被破坏的 noEntityRenderFrames
     if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
         DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
         noEntityRenderFrames = 2;
     }
-
     if (noEntityRenderFrames > 0) {
         noEntityRenderFrames--;
         DLOG_C("renderEntities: skip, frames left: %d", noEntityRenderFrames);
         return;
     }
 
-    // 直接取 Mob*，因为 cameraTargetPlayer 就是 Mob*
-    Mob* player = mc->cameraTargetPlayer;
-    if (!player) {
-        DLOG_C("renderEntities: cameraTargetPlayer is null!");
-        return;
-    }
-
-    EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
-    disp->prepare(level, mc->font, player, &mc->options, a);
-    disp->xOff = player->xOld + (player->x - player->xOld) * a;
-    disp->yOff = player->yOld + (player->y - player->yOld) * a;
-    disp->zOff = player->zOld + (player->z - player->zOld) * a;
-
-    DLOG_C("renderEntities: DIRECT RENDER TEST of player id=%d, pos=(%.2f, %.2f, %.2f)",
-           player->entityId, player->x, player->y, player->z);
-
-    disp->render(player, a);
-
-    TileEntityRenderDispatcher* tileDisp = TileEntityRenderDispatcher::getInstance();
-    tileDisp->prepare(level, textures, mc->font, player, a);
-    tileDisp->xOff = disp->xOff;
-    tileDisp->yOff = disp->yOff;
-    tileDisp->zOff = disp->zOff;
-    for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
-        tileDisp->render(level->tileEntities[i], a);
-    }
+    // 准备渲染调度器
+    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, mc->cameraTargetPlayer, a);
+    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, mc->cameraTargetPlayer, &mc->options, a);
 
     totalEntities = 0;
     renderedEntities = 0;
     culledEntities = 0;
+
+    Entity* player = mc->cameraTargetPlayer;
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+
+    // 相机偏移（直接使用玩家世界坐标，不再叠加 worldOff）
+    if (useRepair) {
+        double xOff = player->xOld + (player->x - player->xOld) * a;
+        double yOff = player->yOld + (player->y - player->yOld) * a;
+        double zOff = player->zOld + (player->z - player->zOld) * a;
+        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
+        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
+        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
+    } else {
+        EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = 0.0;
+        EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = 0.0;
+        EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = 0.0;
+    }
+
+    glEnableClientState2(GL_VERTEX_ARRAY);
+    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
+
+    // ========== 关键修复：抛弃 getAllEntities()，改用区块范围查询 ==========
+    // 以玩家为中心，构建一个覆盖周围所有可能实体的 AABB (半径 128)
+    double range = 128.0;
+    AABB queryBox(player->x - range, player->y - range, player->z - range,
+                  player->x + range, player->y + range, player->z + range);
+    EntityList entities = level->getEntities(NULL, queryBox);   // 从区块中收集实体
+
+    totalEntities = entities.size();
+    DLOG_C("renderEntities: cam=(%.2f,%.2f,%.2f), queried=%d, ptr=%p",
+           player->x, player->y, player->z, totalEntities, (void*)&entities);
+
+    // 如果返回的列表大小依然荒谬（例如大于 5000），可能 level 本身已损坏，放弃渲染
+    if (totalEntities > 5000 || totalEntities < 0) {
+        DLOG_C("renderEntities: suspicious entity count, aborting");
+    } else if (totalEntities > 0) {
+        Entity** toRender = new Entity*[totalEntities];
+        for (int i = 0; i < totalEntities; i++) {
+            Entity* entity = entities[i];
+            bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
+
+            // 直接使用实体世界坐标（不再叠加 worldOff）
+            double ex = entity->x;
+            double ey = entity->y;
+            double ez = entity->z;
+
+            Vec3 renderPos(ex, ey, ez);
+            if (!entity->shouldRender(renderPos)) {
+                DLOG_C("  ent %d shouldRender fail (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
+                continue;
+            }
+            if (!culler->isVisible(entity->bb)) {
+                DLOG_C("  ent %d culler fail", entity->entityId);
+                continue;
+            }
+            if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) {
+                DLOG_C("  ent %d no chunk (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
+                continue;
+            }
+            if (entity == mc->cameraTargetPlayer && !thirdPerson) {
+                DLOG_C("  skip self in 1st person");
+                continue;
+            }
+            if (entity == mc->cameraTargetPlayer && thirdPerson == 0 &&
+                mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) {
+                continue;
+            }
+
+            toRender[renderedEntities++] = entity;
+        }
+        DLOG_C("renderEntities: passed %d / %d", renderedEntities, totalEntities);
+        if (renderedEntities > 0) {
+            std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
+            for (int i = 0; i < renderedEntities; ++i) {
+                EntityRenderDispatcher::getInstance()->render(toRender[i], a);
+            }
+        }
+        delete[] toRender;
+    }
+
+    // 渲染方块实体（箱子、告示牌等）
+    for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
+        TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
+    }
+
+    glDisableClientState2(GL_VERTEX_ARRAY);
+    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
 
 std::string LevelRenderer::gatherStats1() {
