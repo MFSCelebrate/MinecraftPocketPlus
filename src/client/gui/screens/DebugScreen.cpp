@@ -132,12 +132,15 @@ void DebugScreen::render(int xm, int ym, float a)
 void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
-    toGUICoordinate(x, y);
+
+    // 正确的逻辑坐标转换：物理像素 * InvGuiScale
+    int logicalX = (int)(x * Gui::InvGuiScale);
+    int logicalY = (int)(y * Gui::InvGuiScale);
 
     for (auto* btn : buttons) {
         if (btn->active &&
-            x >= btn->x && x < btn->x + btn->width &&
-            y >= btn->y && y < btn->y + btn->height)
+            logicalX >= btn->x && logicalX < btn->x + btn->width &&
+            logicalY >= btn->y && logicalY < btn->y + btn->height)
         {
             _pressedButton = btn;
             _pressedButton->setPressed();
@@ -149,17 +152,19 @@ void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
-    toGUICoordinate(x, y);
+
+    int logicalX = (int)(x * Gui::InvGuiScale);
+    int logicalY = (int)(y * Gui::InvGuiScale);
 
     if (_pressedButton) {
         if (_pressedButton->active &&
-            x >= _pressedButton->x && x < _pressedButton->x + _pressedButton->width &&
-            y >= _pressedButton->y && y < _pressedButton->y + _pressedButton->height)
+            logicalX >= _pressedButton->x && logicalX < _pressedButton->x + _pressedButton->width &&
+            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
         {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
         }
-        _pressedButton->released(x, y);
+        _pressedButton->released(logicalX, logicalY);
         _pressedButton = nullptr;
     }
 }
