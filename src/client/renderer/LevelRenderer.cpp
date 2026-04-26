@@ -38,6 +38,10 @@
 /* static */ const int LevelRenderer::CHUNK_SIZE = 16;
 #endif
 
+// 静态实体数组（不依赖任何对象成员，存放于 .data 段）
+static Entity* s_safeEntities[8192];
+static int s_safeEntityCount = 0;
+
 LevelRenderer::LevelRenderer( Minecraft* mc)
 :	mc(mc),
 	textures(mc->textures),
@@ -912,25 +916,44 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     Mob* player = mc->cameraTargetPlayer;
     if (!player) return;
 
-    // 简单准备（暂时不用 Off 和 Prepare 的复杂逻辑，直接给坐标）
+    // 准备调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
+    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
-    // 直接用玩家位置计算相对偏移
-    double xOff = player->xOld + (player->x - player->xOld) * a;
-    double yOff = player->yOld + (player->y - player->yOld) * a;
-    double zOff = player->zOld + (player->z - player->zOld) * a;
-    disp->xOff = xOff;
-    disp->yOff = yOff;
-    disp->zOff = zOff;
+    double xOff, yOff, zOff;
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+    if (useRepair) {
+        xOff = player->xOld + (player->x - player->xOld) * a;
+        yOff = player->yOld + (player->y - player->yOld) * a;
+        zOff = player->zOld + (player->z - player->zOld) * a;
+    } else {
+        xOff = yOff = zOff = 0.0;
+    }
+    disp->xOff = TileEntityRenderDispatcher::instance->xOff = xOff;
+    disp->yOff = TileEntityRenderDispatcher::instance->yOff = yOff;
+    disp->zOff = TileEntityRenderDispatcher::instance->zOff = zOff;
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    // 直接画
-    disp->render(player, a);
+    int rendered = 0;
+    for (int i = 0; i < s_safeEntityCount; ++i) {
+        Entity* entity = s_safeEntities[i];
+        if (!entity || entity->removed) continue;
 
-    // 画方块实体
+        bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
+        if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+
+        if (!entity->shouldRender(Vec3(entity->x, entity->y, entity->z))) continue;
+        if (!culler->isVisible(entity->bb)) continue;
+        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
+
+        disp->render(entity, a);
+        rendered++;
+    }
+
+    // 方块实体（箱子、告示牌）
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
@@ -938,6 +961,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glDisableClientState2(GL_VERTEX_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
+
 std::string LevelRenderer::gatherStats1() {
 	std::stringstream ss;
 	ss << "C: " << renderedChunks << "/" << totalChunks << ". F: " << offscreenChunks << ", O: " << occludedChunks << ", E: " << emptyChunks << "\n";
@@ -1209,11 +1233,23 @@ void LevelRenderer::onGraphicsReset()
 }
 
 void LevelRenderer::entityAdded(Entity* entity) {
+    if (!entity || entity->removed) return;
+    // 防止重复添加（简单去重）
+    for (int i = 0; i < s_safeEntityCount; ++i)
+        if (s_safeEntities[i] == entity)
+            return;
+    if (s_safeEntityCount < 8192)
+        s_safeEntities[s_safeEntityCount++] = entity;
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
+    for (int i = 0; i < s_safeEntityCount; ++i) {
+        if (s_safeEntities[i] == entity) {
+            s_safeEntities[i] = s_safeEntities[--s_safeEntityCount];
+            return;
+        }
+    }
 }
-
 int _t_keepPic = -1;
 
 void LevelRenderer::takePicture( TripodCamera* cam, Entity* entity )
