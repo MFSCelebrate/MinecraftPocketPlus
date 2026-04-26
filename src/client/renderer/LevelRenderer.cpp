@@ -908,13 +908,11 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 }
 
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    // 防御性检查：level 必须有效
     if (!level) {
         DLOG_C("renderEntities: level is null!");
         return;
     }
 
-    // 强制修正 noEntityRenderFrames，防止被内存破坏导致永久跳过
     if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
         DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
         noEntityRenderFrames = 2;
@@ -926,15 +924,13 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-    // 暂不信任 getAllEntities()，因为它返回了非法指针 0xa
-    // 直接针对玩家做一个硬核渲染测试
-    Entity* player = mc->cameraTargetPlayer;
+    // 直接取 Mob*，因为 cameraTargetPlayer 就是 Mob*
+    Mob* player = mc->cameraTargetPlayer;
     if (!player) {
         DLOG_C("renderEntities: cameraTargetPlayer is null!");
         return;
     }
 
-    // 准备渲染调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
     disp->xOff = player->xOld + (player->x - player->xOld) * a;
@@ -944,10 +940,8 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     DLOG_C("renderEntities: DIRECT RENDER TEST of player id=%d, pos=(%.2f, %.2f, %.2f)",
            player->entityId, player->x, player->y, player->z);
 
-    // 强制渲染玩家一次，完全忽略所有过滤条件
     disp->render(player, a);
 
-    // 也尝试渲染方块实体（箱子、告示牌等），先不碰实体列表
     TileEntityRenderDispatcher* tileDisp = TileEntityRenderDispatcher::getInstance();
     tileDisp->prepare(level, textures, mc->font, player, a);
     tileDisp->xOff = disp->xOff;
@@ -957,7 +951,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         tileDisp->render(level->tileEntities[i], a);
     }
 
-    // 正常统计清零（不依赖野指针）
     totalEntities = 0;
     renderedEntities = 0;
     culledEntities = 0;
