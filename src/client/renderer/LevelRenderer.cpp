@@ -30,6 +30,7 @@
 #include "../../world/level/levelgen/RandomLevelSource.h"
 // ----------------------------------------------------
 #include "../../util/DebugLog.h"  // 确保在文件顶部包含，如果还没有的话
+#include <cmath>
 
 #ifdef GFX_SMALLER_CHUNKS
 /* static */ const int LevelRenderer::CHUNK_SIZE = 8;
@@ -913,29 +914,42 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         return;
     }
 
-    // 防御：修正被破坏的 noEntityRenderFrames
+    // 强制重置被破坏的 noEntityRenderFrames
     if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
         DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
         noEntityRenderFrames = 2;
     }
+
     if (noEntityRenderFrames > 0) {
         noEntityRenderFrames--;
         DLOG_C("renderEntities: skip, frames left: %d", noEntityRenderFrames);
         return;
     }
 
-    // 准备渲染调度器
-    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, mc->cameraTargetPlayer, a);
-    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, mc->cameraTargetPlayer, &mc->options, a);
+    // 玩家必须有效
+    Entity* player = mc->cameraTargetPlayer;
+    if (!player) {
+        DLOG_C("renderEntities: cameraTargetPlayer is null!");
+        return;
+    }
+
+    // 防御：如果相机坐标非法 (NaN)，放弃本帧
+    if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
+        DLOG_C("renderEntities: camera pos is NaN, skipping frame");
+        return;
+    }
+
+    TIMER_PUSH("prepare");
+    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
+    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, player, &mc->options, a);
 
     totalEntities = 0;
     renderedEntities = 0;
     culledEntities = 0;
 
-    Entity* player = mc->cameraTargetPlayer;
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
-    // 相机偏移（直接使用玩家世界坐标，不再叠加 worldOff）
+    // 相机偏移：直接使用玩家世界坐标，不再叠加任何 worldOff
     if (useRepair) {
         double xOff = player->xOld + (player->x - player->xOld) * a;
         double yOff = player->yOld + (player->y - player->yOld) * a;
@@ -952,18 +966,19 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    // ========== 关键修复：抛弃 getAllEntities()，改用区块范围查询 ==========
-    // 以玩家为中心，构建一个覆盖周围所有可能实体的 AABB (半径 128)
+    TIMER_POP_PUSH("entities");
+
+    // ★ 关键：抛弃 getAllEntities()，改用基于区块的范围查询
     double range = 128.0;
     AABB queryBox(player->x - range, player->y - range, player->z - range,
                   player->x + range, player->y + range, player->z + range);
-    EntityList entities = level->getEntities(NULL, queryBox);   // 从区块中收集实体
-
+    EntityList entities = level->getEntities(NULL, queryBox);
     totalEntities = entities.size();
+
     DLOG_C("renderEntities: cam=(%.2f,%.2f,%.2f), queried=%d, ptr=%p",
            player->x, player->y, player->z, totalEntities, (void*)&entities);
 
-    // 如果返回的列表大小依然荒谬（例如大于 5000），可能 level 本身已损坏，放弃渲染
+    // 数量异常，直接放弃
     if (totalEntities > 5000 || totalEntities < 0) {
         DLOG_C("renderEntities: suspicious entity count, aborting");
     } else if (totalEntities > 0) {
@@ -972,7 +987,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             Entity* entity = entities[i];
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
 
-            // 直接使用实体世界坐标（不再叠加 worldOff）
+            // 实体坐标不再叠加偏移
             double ex = entity->x;
             double ey = entity->y;
             double ez = entity->z;
@@ -1011,13 +1026,14 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         delete[] toRender;
     }
 
-    // 渲染方块实体（箱子、告示牌等）
+    TIMER_POP_PUSH("tileentities");
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
 
     glDisableClientState2(GL_VERTEX_ARRAY);
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
+    TIMER_POP();
 }
 
 std::string LevelRenderer::gatherStats1() {
