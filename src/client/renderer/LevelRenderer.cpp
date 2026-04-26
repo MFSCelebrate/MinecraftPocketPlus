@@ -912,6 +912,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
     if (!player) return;
+
     if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
         DLOG_C("renderEntities: camera pos is NaN, skipping frame");
         return;
@@ -922,29 +923,38 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     disp->prepare(level, mc->font, player, &mc->options, a);
     TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
-    double xOff, yOff, zOff;
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-    if (useRepair) {
-        xOff = player->xOld + (player->x - player->xOld) * a;
-        yOff = player->yOld + (player->y - player->yOld) * a;
-        zOff = player->zOld + (player->z - player->zOld) * a;
+    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
+        disp->xOff = player->xOld + (player->x - player->xOld) * a;
+        disp->yOff = player->yOld + (player->y - player->yOld) * a;
+        disp->zOff = player->zOld + (player->z - player->zOld) * a;
     } else {
-        xOff = yOff = zOff = 0.0;
+        disp->xOff = disp->yOff = disp->zOff = 0.0;
     }
-    disp->xOff = xOff;
-    disp->yOff = yOff;
-    disp->zOff = zOff;
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    DLOG_C("renderEntities: FORCE RENDER PLAYER id=%d, pos=(%.2f,%.2f,%.2f)",
-           player->entityId, player->x, player->y, player->z);
+    int rendered = 0;
+    int total = mc->m_renderEntitiesCount;
 
-    // 直接强制渲染玩家，完全无视任何过滤条件、安全列表
-    disp->render(player, a);
+    for (int i = 0; i < total; ++i) {
+        Entity* entity = mc->m_renderEntitiesArray[i];
+        if (!entity || entity->removed) continue;
 
-    // 方块实体（箱子等）照常
+        bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
+        if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+
+        Vec3 renderPos(entity->x, entity->y, entity->z);
+        if (!entity->shouldRender(renderPos)) continue;
+        if (!culler->isVisible(entity->bb)) continue;
+        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
+
+        disp->render(entity, a);
+        rendered++;
+    }
+
+    DLOG_C("renderEntities: raw array, rendered %d / %d", rendered, total);
+
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
@@ -1224,18 +1234,11 @@ void LevelRenderer::onGraphicsReset()
 }
 
 void LevelRenderer::entityAdded(Entity* entity) {
-    if (mc) {
-        mc->onEntityAdded(entity);
-    }
-    // 彻底注释掉原 hack，防止内存破坏
-    // if (!entity->isPlayer()) return;
-    // EntityRenderDispatcher::getInstance()->onGraphicsReset();
+    if (mc) mc->onEntityAdded(entity);
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
-    if (mc) {
-        mc->onEntityRemoved(entity);
-    }
+    if (mc) mc->onEntityRemoved(entity);
 }
 
 int _t_keepPic = -1;
