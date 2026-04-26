@@ -29,6 +29,7 @@
 #include "../../world/level/chunk/ChunkCache.h"
 #include "../../world/level/levelgen/RandomLevelSource.h"
 // ----------------------------------------------------
+#include "../../util/DebugLog.h"  // 确保在文件顶部包含，如果还没有的话
 
 #ifdef GFX_SMALLER_CHUNKS
 /* static */ const int LevelRenderer::CHUNK_SIZE = 8;
@@ -909,6 +910,7 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     if (noEntityRenderFrames > 0) {
         noEntityRenderFrames--;
+        DLOG_C("renderEntities: skip, frames left: %d", noEntityRenderFrames);
         return;
     }
 
@@ -923,26 +925,12 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     Entity* player = mc->cameraTargetPlayer;
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
-    // ========== 获取世界偏移 ==========
-    double worldOffX = 0.0, worldOffY = 0.0, worldOffZ = 0.0;
-    RandomLevelSource* rls = nullptr;
-    if (level && level->getChunkSource()) {
-        ChunkCache* cache = dynamic_cast<ChunkCache*>(level->getChunkSource());
-        if (cache) {
-            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-            if (rls) {
-                worldOffX = rls->getWorldOffsetX();
-                worldOffY = rls->getWorldOffsetY();
-                worldOffZ = rls->getWorldOffsetZ();
-            }
-        }
-    }
+    // 相机位置：直接使用玩家世界坐标的插值，无需额外叠加世界偏移
+    double xOff = player->xOld + (player->x - player->xOld) * a;
+    double yOff = player->yOld + (player->y - player->yOld) * a;
+    double zOff = player->zOld + (player->z - player->zOld) * a;
 
-    // 相机偏移
     if (useRepair) {
-        double xOff = player->xOld + (player->x - player->xOld) * a;
-        double yOff = player->yOld + (player->y - player->yOld) * a;
-        double zOff = player->zOld + (player->z - player->zOld) * a;
         EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
         EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
         EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
@@ -951,6 +939,9 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = 0.0;
         EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = 0.0;
     }
+
+    DLOG_C("renderEntities: cam=(%.2f, %.2f, %.2f), total=%d",
+           xOff, yOff, zOff, (int)level->getAllEntities().size());
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
@@ -964,29 +955,46 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             Entity* entity = entities[i];
             bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
 
-            // ========== 为实体计算世界坐标（本地坐标 + 偏移） ==========
-            double ex = entity->x + worldOffX;
-            double ey = entity->y + worldOffY;
-            double ez = entity->z + worldOffZ;
+            // 直接使用实体世界坐标（已包含世界偏移），不额外叠加
+            double ex = entity->x;
+            double ey = entity->y;
+            double ez = entity->z;
 
-            // 构造左值 Vec3 以供 shouldRender
-            Vec3 entityWorldPos((float)ex, (float)ey, (float)ez);
-            if (!entity->shouldRender(entityWorldPos)) continue;
+            // 1. shouldRender 检查
+            if (!entity->shouldRender(Vec3(ex, ey, ez))) {
+                DLOG_C("  ent %d shouldRender fail (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
+                continue;
+            }
 
-            // 拷贝并移动 AABB，用于 culler 检查
-            AABB movedBB = entity->bb;
-            movedBB.move((float)worldOffX, (float)worldOffY, (float)worldOffZ);
-            if (!culler->isVisible(movedBB)) continue;
+            // 2. 视锥体裁剪（使用未偏移的包围盒）
+            if (!culler->isVisible(entity->bb)) {
+                DLOG_C("  ent %d culler fail", entity->entityId);
+                continue;
+            }
 
-            // 检查偏移后的区块是否存在（使用 double 坐标，保证精度）
-            if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) continue;
+            // 3. 区块存在性检查
+            if (!level->hasChunkAt(Mth::floor(ex), Mth::floor(ey), Mth::floor(ez))) {
+                DLOG_C("  ent %d no chunk (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
+                continue;
+            }
 
-            // 跳过第一人称下的本地玩家
-            if (entity == mc->cameraTargetPlayer && thirdPerson == 0 && mc->cameraTargetPlayer->isPlayer() && !((Player*)mc->cameraTargetPlayer)->isSleeping()) continue;
-            if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+            // 4. 跳过第一人称下的本地玩家
+            if (entity == mc->cameraTargetPlayer && !thirdPerson) {
+                DLOG_C("  skip self in 1st person");
+                continue;
+            }
+            if (entity == mc->cameraTargetPlayer && 
+                thirdPerson == 0 && 
+                mc->cameraTargetPlayer->isPlayer() &&
+                !((Player*)mc->cameraTargetPlayer)->isSleeping()) {
+                continue;
+            }
 
             toRender[renderedEntities++] = entity;
         }
+
+        DLOG_C("renderEntities: passed %d / %d", renderedEntities, totalEntities);
+
         if (renderedEntities > 0) {
             std::sort(&toRender[0], &toRender[renderedEntities], entityRenderPredicate);
             for (int i = 0; i < renderedEntities; ++i) {
@@ -1006,6 +1014,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
     TIMER_POP();
 }
+
 std::string LevelRenderer::gatherStats1() {
 	std::stringstream ss;
 	ss << "C: " << renderedChunks << "/" << totalChunks << ". F: " << offscreenChunks << ", O: " << occludedChunks << ", E: " << emptyChunks << "\n";
