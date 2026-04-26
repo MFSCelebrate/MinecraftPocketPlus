@@ -23,6 +23,7 @@ public:
     TileItem(int id_)
 	:	super(id_)
 	{
+		setStackedByData(true);
         this->tileId = id_ + 256;
         this->setIcon(Tile::tiles[id_ + 256]->getTexture(2));
     }
