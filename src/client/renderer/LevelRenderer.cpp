@@ -911,52 +911,61 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
-    if (!player) {
-        DLOG_C("renderEntities: cameraTargetPlayer is null!");
-        return;
-    }
-    if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
-        DLOG_C("renderEntities: camera pos is NaN, skipping");
-        return;
-    }
+    if (!player) return;
 
-    // 打印 level 对象的地址和内部关键成员偏移（仅用于诊断）
-    DLOG_C("renderEntities: level addr=%p, &entities=%p, &players=%p, &tileEntities=%p",
-           (void*)level, (void*)&level->entities, (void*)&level->players, (void*)&level->tileEntities);
+    // 准备调度器
+    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, player, &mc->options, a);
+    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
-    // 不信任任何容器，直接尝试获取另一位玩家
-    Player* otherPlayer = nullptr;
-    for (unsigned int i = 0; i < 10; ++i) {   // 最多尝试 10 次，防止无限循环
-        // 直接使用 mc->player 作为测试（因为它是安全的）
-        if (mc->player && mc->player != player && !mc->player->removed) {
-            otherPlayer = mc->player;
-            break;
-        }
-        break; // 单机下只有本地玩家
-    }
-
-    if (otherPlayer) {
-        DLOG_C("found other player id=%d, pos=(%.2f,%.2f,%.2f)",
-               otherPlayer->entityId, otherPlayer->x, otherPlayer->y, otherPlayer->z);
+    double xOff, yOff, zOff;
+    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+    if (useRepair) {
+        xOff = player->xOld + (player->x - player->xOld) * a;
+        yOff = player->yOld + (player->y - player->yOld) * a;
+        zOff = player->zOld + (player->z - player->zOld) * a;
     } else {
-        DLOG_C("no other player found (only local)");
+        xOff = yOff = zOff = 0.0;
+    }
+    EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
+    EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
+    EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
+
+    glEnableClientState2(GL_VERTEX_ARRAY);
+    glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
+
+    // ★ 使用安全列表
+    const std::vector<Entity*>& entities = mc->m_renderEntities;
+    int total = (int)entities.size();
+    int rendered = 0;
+
+    DLOG_C("Using safe list, count=%d, camera=(%.2f,%.2f,%.2f)", total, player->x, player->y, player->z);
+
+    if (total > 0 && total < 1000) {
+        for (int i = 0; i < total; ++i) {
+            Entity* entity = entities[i];
+            if (!entity || entity->removed) continue;
+
+            bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
+            if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+
+            Vec3 renderPos(entity->x, entity->y, entity->z);
+            if (!entity->shouldRender(renderPos)) continue;
+            if (!culler->isVisible(entity->bb)) continue;
+            if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
+
+            EntityRenderDispatcher::getInstance()->render(entity, a);
+            rendered++;
+        }
     }
 
-    // 准备渲染调度器
-    EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
-    disp->prepare(level, mc->font, player, &mc->options, a);
-    if (otherPlayer) {
-        // 强制渲染另一位玩家一次，跳过所有检查
-        disp->render(otherPlayer, a);
-        DLOG_C("rendered other player directly");
-    }
+    DLOG_C("Actually rendered %d / %d", rendered, total);
 
-    // 方块实体照常（如果 tileEntities 也坏了，这里可能崩溃，但可以注释掉）
-    /*
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
-    */
+
+    glDisableClientState2(GL_VERTEX_ARRAY);
+    glDisableClientState2(GL_TEXTURE_COORD_ARRAY);
 }
 
 std::string LevelRenderer::gatherStats1() {
@@ -1229,13 +1238,15 @@ void LevelRenderer::onGraphicsReset()
 	allChanged();
 }
 
-void LevelRenderer::entityAdded( Entity* entity )
-{
-	if (!entity->isPlayer())
-		return;
+void LevelRenderer::entityAdded(Entity* entity) {
+    mc->onEntityAdded(entity);   // 加入安全列表
+    // 移除原有的 onGraphicsReset 调用，避免进一步破坏
+    // if (!entity->isPlayer()) return;
+    // EntityRenderDispatcher::getInstance()->onGraphicsReset();
+}
 
-	// Hack to (hopefully) get the players to show
-	EntityRenderDispatcher::getInstance()->onGraphicsReset();
+void LevelRenderer::entityRemoved(Entity* entity) {
+    mc->onEntityRemoved(entity); // 从安全列表移除
 }
 
 int _t_keepPic = -1;
