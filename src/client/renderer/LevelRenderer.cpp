@@ -912,9 +912,14 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
     if (!player) return;
+    if (std::isnan(player->x) || std::isnan(player->y) || std::isnan(player->z)) {
+        DLOG_C("renderEntities: camera pos is NaN, skipping frame");
+        return;
+    }
 
     // 准备调度器
-    EntityRenderDispatcher::getInstance()->prepare(level, mc->font, player, &mc->options, a);
+    EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+    disp->prepare(level, mc->font, player, &mc->options, a);
     TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
 
     double xOff, yOff, zOff;
@@ -926,40 +931,20 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     } else {
         xOff = yOff = zOff = 0.0;
     }
-    EntityRenderDispatcher::xOff = TileEntityRenderDispatcher::xOff = xOff;
-    EntityRenderDispatcher::yOff = TileEntityRenderDispatcher::yOff = yOff;
-    EntityRenderDispatcher::zOff = TileEntityRenderDispatcher::zOff = zOff;
+    disp->xOff = xOff;
+    disp->yOff = yOff;
+    disp->zOff = zOff;
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    // ★ 使用安全列表
-    const std::vector<Entity*>& entities = mc->m_renderEntities;
-    int total = (int)entities.size();
-    int rendered = 0;
+    DLOG_C("renderEntities: FORCE RENDER PLAYER id=%d, pos=(%.2f,%.2f,%.2f)",
+           player->entityId, player->x, player->y, player->z);
 
-    DLOG_C("Using safe list, count=%d, camera=(%.2f,%.2f,%.2f)", total, player->x, player->y, player->z);
+    // 直接强制渲染玩家，完全无视任何过滤条件、安全列表
+    disp->render(player, a);
 
-    if (total > 0 && total < 1000) {
-        for (int i = 0; i < total; ++i) {
-            Entity* entity = entities[i];
-            if (!entity || entity->removed) continue;
-
-            bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-            if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
-
-            Vec3 renderPos(entity->x, entity->y, entity->z);
-            if (!entity->shouldRender(renderPos)) continue;
-            if (!culler->isVisible(entity->bb)) continue;
-            if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
-
-            EntityRenderDispatcher::getInstance()->render(entity, a);
-            rendered++;
-        }
-    }
-
-    DLOG_C("Actually rendered %d / %d", rendered, total);
-
+    // 方块实体（箱子等）照常
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
     }
