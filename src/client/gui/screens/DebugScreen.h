@@ -20,7 +20,7 @@ public:
     virtual bool isInGameScreen() override { return false; }
     virtual bool isPauseScreen() override { return false; }
 
-    virtual void tick() override;
+    virtual void tick() override {}
 
 protected:
     virtual void buttonClicked(Button* button) override;
@@ -28,22 +28,18 @@ protected:
 private:
     void addButton(int id, const std::string& text);
     void executeAction(int id);
-    void updateScrollLimits();
 
     virtual void mouseClicked(int x, int y, int buttonNum) override;
     virtual void mouseReleased(int x, int y, int buttonNum) override;
-    
+
     Minecraft* mc;
     std::vector<Button*> debugButtons;
-
-    float scrollY;
-    float maxScroll;
-    float lastTouchY;
-    bool dragging;
-    int contentHeight;
-    int viewportHeight;
-
     Button* _pressedButton;
+
+    // 按钮网格参数
+    int columns;
+    int btnWidth;
+    int btnHeight;
 
     static const int BTN_GODMODE      = 0;
     static const int BTN_GAMEMODE     = 1;
@@ -57,7 +53,6 @@ private:
     static const int BTN_DROPALL      = 9;
     static const int BTN_SPEEDUP      = 10;
     static const int BTN_3RDPERSON    = 11;
-
     static const int BTN_NOPVP        = 12;
     static const int BTN_NOPVM        = 13;
     static const int BTN_NOMVP        = 14;
