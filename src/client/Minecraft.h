@@ -52,6 +52,10 @@ protected:
 public:
     static Minecraft* instance;
 	virtual ~Minecraft();
+
+std::vector<Entity*> m_renderEntities;
+void onEntityAdded(Entity* e);
+void onEntityRemoved(Entity* e);
     
 	void init();
 	void setSize(int width, int height);
