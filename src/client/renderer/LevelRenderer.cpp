@@ -908,12 +908,25 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 }
 
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
+    // 防御：如果 level 为空，直接返回
+    if (!level) {
+        DLOG_C("renderEntities: level is null!");
+        return;
+    }
+
+    // 强制重置 noEntityRenderFrames 为 2，防止内存破坏导致跳过过多帧
+    if (noEntityRenderFrames > 10 || noEntityRenderFrames < 0) {
+        DLOG_C("renderEntities: noEntityRenderFrames corrupted (%d), resetting to 2", noEntityRenderFrames);
+        noEntityRenderFrames = 2;
+    }
+
     if (noEntityRenderFrames > 0) {
         noEntityRenderFrames--;
         DLOG_C("renderEntities: skip, frames left: %d", noEntityRenderFrames);
         return;
     }
 
+    // 后面的代码保持不变...
     TIMER_PUSH("prepare");
     TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, mc->cameraTargetPlayer, a);
     EntityRenderDispatcher::getInstance()->prepare(level, mc->font, mc->cameraTargetPlayer, &mc->options, a);
@@ -948,8 +961,22 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     TIMER_POP_PUSH("entities");
     const EntityList& entities = level->getAllEntities();
-    totalEntities = entities.size();
-    if (totalEntities > 0) {
+totalEntities = entities.size();
+DLOG_C("renderEntities: cam=(%.2f, %.2f, %.2f), total=%d, ptr=%p",
+       xOff, yOff, zOff, totalEntities, (void*)&entities);
+
+// 防御：实体数量异常
+if (totalEntities > 5000 || totalEntities < 0) {
+    DLOG_C("renderEntities: suspicious totalEntities, aborting");
+    return;
+}
+
+if (totalEntities > 0) {
+    // 打印第一个实体的信息，方便确认
+    Entity* first = entities[0];
+    DLOG_C("  first entity id=%d, pos=(%.1f,%.1f,%.1f)",
+           first->entityId, first->x, first->y, first->z);
+    // ... 后续处理
         Entity** toRender = new Entity*[totalEntities];
         for (int i = 0; i < totalEntities; i++) {
             Entity* entity = entities[i];
