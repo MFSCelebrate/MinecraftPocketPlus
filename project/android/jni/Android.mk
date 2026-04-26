@@ -18,8 +18,6 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/NinecraftApp.cpp \
 ../../../src/Performance.cpp \
 ../../../src/SharedConstants.cpp \
-../../../src/util/DebugLog.cpp \
-../../../src/client/gui/screens/DebugScreen.cpp \
 ../../../src/client/IConfigListener.cpp \
 ../../../src/client/Minecraft.cpp \
 ../../../src/client/MouseHandler.cpp \
@@ -85,6 +83,7 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/client/gui/screens/crafting/StonecutterScreen.cpp \
 ../../../src/client/gui/screens/crafting/WorkbenchScreen.cpp \
 ../../../src/client/gui/screens/TeleportScreen.cpp \
+../../../src/client/gui/screens/DebugScreen.cpp \
 ../../../src/client/gui/components/TeleportButton.cpp \
 ../../../src/client/model/ChickenModel.cpp \
 ../../../src/client/model/CowModel.cpp \
@@ -150,6 +149,7 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/util/StringUtils.cpp \
 ../../../src/util/PerfTimer.cpp \
 ../../../src/util/PerfRenderer.cpp \
+../../../src/util/DebugLog.cpp \
 ../../../src/world/Direction.cpp \
 ../../../src/world/entity/AgableMob.cpp \
 ../../../src/world/entity/Entity.cpp \
