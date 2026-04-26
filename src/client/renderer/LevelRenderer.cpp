@@ -961,10 +961,12 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
             double ez = entity->z;
 
             // 1. shouldRender 检查
-            if (!entity->shouldRender(Vec3(ex, ey, ez))) {
-                DLOG_C("  ent %d shouldRender fail (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
-                continue;
-            }
+            // 为 shouldRender 创建左值
+Vec3 renderPos(ex, ey, ez);
+if (!entity->shouldRender(renderPos)) {
+    DLOG_C("  ent %d shouldRender fail (%.1f,%.1f,%.1f)", entity->entityId, ex, ey, ez);
+    continue;
+}
 
             // 2. 视锥体裁剪（使用未偏移的包围盒）
             if (!culler->isVisible(entity->bb)) {
