@@ -14,6 +14,7 @@
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
 #include "../../sound/SoundEngine.h"
+#include "../../../util/DebugLog.h"   // 注意：根据项目实际路径调整
 #include <cmath>
 
 DebugScreen::DebugScreen(Minecraft* mc)
@@ -28,7 +29,8 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
-    // 原有 + 新增按钮（共 18 个功能按钮）
+    DLOG_C("DebugScreen::init(): creating buttons...");
+
     addButton(BTN_GODMODE,      "God");
     addButton(BTN_GAMEMODE,     "Gamemode");
     addButton(BTN_TIME,         "Time +");
@@ -48,13 +50,14 @@ void DebugScreen::init()
     addButton(BTN_NAMETAGS,     "NameTags");
     addButton(BTN_PARTICLES,    "Particles");
 
-    // 关闭按钮
     Button* closeBtn = new Button(99, "Close");
     closeBtn->width = 120;
     closeBtn->height = 30;
     buttons.push_back(closeBtn);
 
     passEvents = false;
+
+    DLOG_C("DebugScreen::init(): %d function buttons + 1 close button", (int)debugButtons.size());
 }
 
 void DebugScreen::addButton(int id, const std::string& text)
@@ -66,20 +69,15 @@ void DebugScreen::addButton(int id, const std::string& text)
 
 void DebugScreen::setupPositions()
 {
-    // 按钮网格动态计算
-    const int totalBtns = (int)debugButtons.size();  // 18
-    // 根据屏幕宽度和 GuiScale 智能分配列数
-    float screenWidthF = (float)width;   // 逻辑坐标宽度
-    // 目标：按钮宽度 100 逻辑像素，高度 24，间距 4
+    const int totalBtns = (int)debugButtons.size();
     btnWidth = 100;
     btnHeight = 24;
     const int padding = 4;
 
-    // 计算能容纳的最大列数
-    int maxColumns = (int)((screenWidthF - 20) / (btnWidth + padding)); // 左右留 10 边距
+    float screenWidthF = (float)width;
+    int maxColumns = (int)((screenWidthF - 20) / (btnWidth + padding));
     if (maxColumns < 1) maxColumns = 1;
-    // 根据按钮总数和列数计算最佳列数（尽量让每行按钮数均匀）
-    // 这里简单取最大列数，但为了美观，按钮总数较少时可以限制列数
+
     if (totalBtns <= 6) {
         columns = 3;
     } else if (totalBtns <= 12) {
@@ -89,12 +87,13 @@ void DebugScreen::setupPositions()
     }
     if (columns > maxColumns) columns = maxColumns;
 
-    // 计算起始 X 坐标，使整体居中
     int gridWidth = columns * btnWidth + (columns - 1) * padding;
     int startX = (width - gridWidth) / 2;
-    int startY = 35; // 标题下方
+    int startY = 35;
 
-    // 18 个功能按钮按行排列
+    DLOG_C("setupPositions: width=%d, height=%d, scale=%.2f, columns=%d, btnW=%d, btnH=%d, startX=%d, startY=%d",
+           width, height, Gui::GuiScale, columns, btnWidth, btnHeight, startX, startY);
+
     for (size_t i = 0; i < debugButtons.size(); ++i) {
         int row = (int)i / columns;
         int col = (int)i % columns;
@@ -102,21 +101,21 @@ void DebugScreen::setupPositions()
         debugButtons[i]->y = startY + row * (btnHeight + padding);
         debugButtons[i]->width = btnWidth;
         debugButtons[i]->height = btnHeight;
+
+        DLOG_C("  Btn[%d] '%s' => (%d,%d) %dx%d", (int)i, debugButtons[i]->msg.c_str(),
+               debugButtons[i]->x, debugButtons[i]->y, debugButtons[i]->width, debugButtons[i]->height);
     }
 
-    // 关闭按钮居中放在最后一行下方
     Button* closeBtn = nullptr;
     for (auto* b : buttons) {
         if (b->id == 99) { closeBtn = b; break; }
     }
     if (closeBtn) {
-        closeBtn->width = 120;
-        closeBtn->height = 30;
         closeBtn->x = (width - closeBtn->width) / 2;
-        // 放在功能按钮下方 20 像素
-        int lastRow = ((int)debugButtons.size() - 1) / columns;
+        int lastRow = (totalBtns - 1) / columns;
         int lastY = startY + lastRow * (btnHeight + padding) + btnHeight;
         closeBtn->y = lastY + 20;
+        DLOG_C("  CloseBtn => (%d,%d) %dx%d", closeBtn->x, closeBtn->y, closeBtn->width, closeBtn->height);
     }
 }
 
@@ -124,8 +123,6 @@ void DebugScreen::render(int xm, int ym, float a)
 {
     fill(0, 0, width, height, 0x80000000);
     drawCenteredString(mc->font, "Debug Panel", width / 2, 8, 0xFFFFFFFF);
-
-    // 直接渲染按钮，无滚动，无裁剪
     Screen::render(xm, ym, a);
 }
 
@@ -133,9 +130,10 @@ void DebugScreen::mouseClicked(int x, int y, int buttonNum)
 {
     if (buttonNum != MouseAction::ACTION_LEFT) return;
 
-    // 正确的逻辑坐标转换：物理像素 * InvGuiScale
     int logicalX = (int)(x * Gui::InvGuiScale);
     int logicalY = (int)(y * Gui::InvGuiScale);
+
+    DLOG_C("mouseClicked: raw(%d,%d) -> logical(%d,%d), scale=%f", x, y, logicalX, logicalY, Gui::InvGuiScale);
 
     for (auto* btn : buttons) {
         if (btn->active &&
@@ -144,9 +142,11 @@ void DebugScreen::mouseClicked(int x, int y, int buttonNum)
         {
             _pressedButton = btn;
             _pressedButton->setPressed();
+            DLOG_C("  Hit button '%s' (id=%d)", btn->msg.c_str(), btn->id);
             return;
         }
     }
+    DLOG_C("  No button hit");
 }
 
 void DebugScreen::mouseReleased(int x, int y, int buttonNum)
@@ -156,13 +156,18 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum)
     int logicalX = (int)(x * Gui::InvGuiScale);
     int logicalY = (int)(y * Gui::InvGuiScale);
 
+    DLOG_C("mouseReleased: raw(%d,%d) -> logical(%d,%d)", x, y, logicalX, logicalY);
+
     if (_pressedButton) {
-        if (_pressedButton->active &&
-            logicalX >= _pressedButton->x && logicalX < _pressedButton->x + _pressedButton->width &&
-            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height)
-        {
+        bool stillInside = (_pressedButton->active &&
+                            logicalX >= _pressedButton->x && logicalX < _pressedButton->x + _pressedButton->width &&
+                            logicalY >= _pressedButton->y && logicalY < _pressedButton->y + _pressedButton->height);
+        DLOG_C("  Stored button '%s' (id=%d), stillInside=%d", _pressedButton->msg.c_str(), _pressedButton->id, (int)stillInside);
+
+        if (stillInside) {
             buttonClicked(_pressedButton);
             mc->soundEngine->playUI("random.click", 1, 1);
+            DLOG_C("  Button activated: '%s'", _pressedButton->msg.c_str());
         }
         _pressedButton->released(logicalX, logicalY);
         _pressedButton = nullptr;
@@ -171,44 +176,59 @@ void DebugScreen::mouseReleased(int x, int y, int buttonNum)
 
 void DebugScreen::buttonClicked(Button* button)
 {
+    DLOG_C("buttonClicked: id=%d, msg='%s'", button->id, button->msg.c_str());
+
     if (button->id == 99) {
+        DLOG_C("  Close button -> exit DebugScreen");
         mc->setScreen(NULL);
         return;
     }
     executeAction(button->id);
-    if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER)
+    if (button->id != BTN_ARMOR && button->id != BTN_PRERENDER) {
+        DLOG_C("  Auto-closing DebugScreen");
         mc->setScreen(NULL);
+    }
 }
 
-// ---------- 功能实现（无变化） ----------
+// ---------- 功能实现（加入少量日志） ----------
 void DebugScreen::executeAction(int id)
 {
+    DLOG_C("executeAction: id=%d", id);
+
     switch (id)
     {
     case BTN_GODMODE:
+        DLOG_C("  GodMode");
         mc->onGraphicsReset(); mc->player->heal(100); break;
     case BTN_GAMEMODE:
+        DLOG_C("  Toggle creative mode");
         mc->setIsCreativeMode(!mc->isCreativeMode()); break;
     case BTN_TIME:
+        DLOG_C("  Time +1000");
         if (mc->level) mc->level->setTime(mc->level->getTime() + 1000); break;
     case BTN_ARMOR:
+        DLOG_C("  Open ArmorScreen");
         mc->setScreen(new ArmorScreen()); break;
     case BTN_HURT_RELOAD:
+        DLOG_C("  Hurt + Reload textures");
         mc->textures->reloadAll(); mc->player->hurtTo(2); break;
     case BTN_SPAWNMOB:
     {
+        DLOG_C("  Spawn random mob");
         Mob* mob = nullptr;
         int types[] = {MobTypes::Sheep, MobTypes::Pig, MobTypes::Chicken, MobTypes::Cow};
         int mobType = types[Mth::random(4)];
         mob = MobFactory::CreateMob(mobType, mc->level);
         float dx = 4 - 8 * Mth::random() + 4 * Mth::sin(Mth::DEGRAD * mc->player->yRot);
         float dz = 4 - 8 * Mth::random() + 4 * Mth::cos(Mth::DEGRAD * mc->player->yRot);
-        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz, Mth::random() * 360, 0, true))
+        if (mob && !MobSpawner::addMob(mc->level, mob, mc->player->x + dx, mc->player->y, mc->player->z + dz,
+                                       Mth::random() * 360, 0, true))
             delete mob;
         break;
     }
     case BTN_MASSACRE:
     {
+        DLOG_C("  Massacre all non-player entities");
         const EntityList& entities = mc->level->getAllEntities();
         for (int i = entities.size() - 1; i >= 0; --i) {
             Entity* e = entities[i];
@@ -217,40 +237,51 @@ void DebugScreen::executeAction(int id)
         break;
     }
     case BTN_CLEARINV:
+        DLOG_C("  Clear inventory");
         mc->player->inventory->clearInventoryWithDefault(); break;
     case BTN_PRERENDER:
+        DLOG_C("  Open PrerenderTilesScreen");
         mc->setScreen(new PrerenderTilesScreen()); break;
     case BTN_DROPALL:
+        DLOG_C("  Drop all inventory items");
         for (int i = Inventory::MAX_SELECTION_SIZE; i < mc->player->inventory->getContainerSize(); ++i)
             if (mc->player->inventory->getItem(i)) mc->player->inventory->dropSlot(i, false);
         break;
     case BTN_SPEEDUP:
+        DLOG_C("  Speed up 5 seconds");
         for (int i = 0; i < 5 * SharedConstants::TicksPerSecond; ++i) mc->level->tick();
         break;
     case BTN_3RDPERSON:
+        DLOG_C("  Toggle 3rd person");
         mc->options.toggle(OPTIONS_THIRD_PERSON_VIEW); break;
 
     case BTN_NOPVP: {
+        DLOG_C("  Toggle noPvP");
         auto& as = mc->level->adventureSettings; as.noPvP = !as.noPvP;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NOPVM: {
+        DLOG_C("  Toggle noPvM");
         auto& as = mc->level->adventureSettings; as.noPvM = !as.noPvM;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NOMVP: {
+        DLOG_C("  Toggle noMvP");
         auto& as = mc->level->adventureSettings; as.noMvP = !as.noMvP;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_IMMUTABLE: {
+        DLOG_C("  Toggle immutable world");
         auto& as = mc->level->adventureSettings; as.immutableWorld = !as.immutableWorld;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_NAMETAGS: {
+        DLOG_C("  Toggle showNameTags");
         auto& as = mc->level->adventureSettings; as.showNameTags = !as.showNameTags;
         AdventureSettingsPacket p(as); mc->raknetInstance->send(p); break;
     }
     case BTN_PARTICLES: {
+        DLOG_C("  Spawn test particles");
         Level* lvl = mc->level; if (!lvl) break;
         float px = mc->player->x, py = mc->player->y, pz = mc->player->z;
         for (int i = 0; i < 50; ++i) {
