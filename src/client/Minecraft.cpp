@@ -182,6 +182,7 @@ Minecraft::Minecraft() :
 	reserved_f1(0),reserved_f2(0), options(this)
 {
     instance = this;   // <-- 添加这一行
+	m_renderEntitiesCount = 0;
 //#ifdef ANDROID
     #if defined(NO_NETWORK)
     raknetInstance = new IRakNetInstance();
@@ -239,15 +240,18 @@ Minecraft::~Minecraft()
 }
 
 void Minecraft::onEntityAdded(Entity* e) {
-    if (e && !e->removed) {
-        m_renderEntities.push_back(e);
-    }
+    if (!e || e->removed) return;
+    if (m_renderEntitiesCount >= MAX_RENDER_ENTITIES) return;
+    m_renderEntitiesArray[m_renderEntitiesCount++] = e;
 }
 
 void Minecraft::onEntityRemoved(Entity* e) {
-    auto it = std::find(m_renderEntities.begin(), m_renderEntities.end(), e);
-    if (it != m_renderEntities.end()) {
-        m_renderEntities.erase(it);
+    for (int i = 0; i < m_renderEntitiesCount; ++i) {
+        if (m_renderEntitiesArray[i] == e) {
+            // 将最后一个元素移到当前位置，并减少计数
+            m_renderEntitiesArray[i] = m_renderEntitiesArray[--m_renderEntitiesCount];
+            return;
+        }
     }
 }
 
@@ -1393,7 +1397,8 @@ void Minecraft::_levelGenerated()
 
 	level->validateSpawn();
 	level->loadPlayer(player, true);
-    onEntityAdded(player);  // 额外确保玩家在安全列表（因为 addEntity 会调用 entityAdded，但容器已损坏）
+	onEntityAdded(player);  // 确保玩家在列表中
+    //确保玩家在安全列表（因为 addEntity 会调用 entityAdded，但容器已损坏）
 	// if we are client side, we trust the server to have given us a correct position
 	if (player && !level->isClientSide) {
 		player->resetPos(false);
