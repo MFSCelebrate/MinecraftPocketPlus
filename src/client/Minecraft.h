@@ -38,7 +38,7 @@ class NetEventCallback;
 class CommandServer;
 struct PingedCompatibleServer;
 //class ExternalFileLevelStorageSource;
-
+#include <vector>
 
 #include "../App.h"
 #include "PixelCalc.h"
@@ -171,6 +171,9 @@ public:
 	int lastTickTime;
 	float ticksSinceLastUpdate;
 
+std::vector<Entity*> m_renderEntities;
+void onEntityAdded(Entity* e);
+void onEntityRemoved(Entity* e);
 	Level* level;
 
 	LocalPlayer*	player;
