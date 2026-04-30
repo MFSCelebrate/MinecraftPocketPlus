@@ -33,11 +33,11 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
-    // 数字按钮 0-9
+    // 添加数字按钮 0-9
     for (int i = 0; i < 10; ++i)
         addDigitButton(i);
 
-    // 额外功能按钮（顺序保持）
+    // 添加额外功能按钮（顺序保持）
     Button* b;
 
     b = new Button(ACT_HEAL_RESET, "Heal");
@@ -114,89 +114,72 @@ void DebugScreen::addDigitButton(int digit)
 
 void DebugScreen::setupPositions()
 {
-    // 确保宽高有效
     if (width <= 0 && mc && mc->width > 0 && Gui::InvGuiScale > 0)
         width = (int)(mc->width * Gui::InvGuiScale);
     if (height <= 0 && mc && mc->height > 0 && Gui::InvGuiScale > 0)
         height = (int)(mc->height * Gui::InvGuiScale);
 
-    // ---------- 数字按钮网格 ----------
-    const int digitCols = 5;          // 固定每行5个
-    int digitW = 42;                  // 稍小
-    int digitH = 36;
-    int digitPadX = 4;
-    int digitPadY = 4;
-    int digitStartY = 70;
+    // 动态列数（屏幕越宽列越多）
+    int cols = 5;
+    if (width < 450) cols = 4;
+    if (width < 360) cols = 3;
 
-    // 根据屏幕宽度微调数字按钮尺寸
-    if (width < 360) {
-        digitW = 36;
-        digitH = 30;
-    }
+    // 按钮尺寸 (按屏幕宽度自适应)
+    int btnWidth  = (width - 10) / cols - 4; // 留出边距和间距
+    int btnHeight = 28;
+    int padX = 4;
+    int padY = 4;
+    int startY = 70;                        // 标题下方开始
 
-    for (int i = 0; i < 10; ++i) {
-        int row = i / digitCols;
-        int col = i % digitCols;
-        digitButtons[i]->width  = digitW;
-        digitButtons[i]->height = digitH;
-        digitButtons[i]->x = (width - (digitW * digitCols + digitPadX * (digitCols-1))) / 2 + col * (digitW + digitPadX);
-        digitButtons[i]->y = digitStartY + row * (digitH + digitPadY);
-    }
+    // 所有按钮总列表 (10个数字 + extraButtons + 1个Close)
+    std::vector<Button*> allBtns;
+    for (int i = 0; i < 10; ++i) allBtns.push_back(digitButtons[i]);
+    for (auto* b : extraButtons) allBtns.push_back(b);
 
-    // ---------- 额外按钮网格 ----------
-    int extraCols = 4;
-    if (width < 600) extraCols = 3;
-    if (width < 400) extraCols = 2;
-
-    int extraW = 100;                 // 足够显示文字
-    int extraH = 26;
-    int extraPadX = 4;
-    int extraPadY = 4;
-    int extraStartY = digitStartY + 2 * (digitH + digitPadY) + 16;
-
-    int totalExtras = (int)extraButtons.size();
-    int gridW = extraW * extraCols + extraPadX * (extraCols - 1);
-    int startX = (width - gridW) / 2;
-
-    for (int i = 0; i < totalExtras; ++i) {
-        int row = i / extraCols;
-        int col = i % extraCols;
-        extraButtons[i]->width  = extraW;
-        extraButtons[i]->height = extraH;
-        extraButtons[i]->x = startX + col * (extraW + extraPadX);
-        extraButtons[i]->y = extraStartY + row * (extraH + extraPadY);
-    }
-
-    // ---------- 关闭按钮 ----------
+    // 找到关闭按钮（单独处理）
     Button* closeBtn = nullptr;
     for (auto* b : buttons) {
         if (b->id == 99) { closeBtn = b; break; }
     }
+
+    int total = (int)allBtns.size();
+    int rows = (total + cols - 1) / cols;
+    int gridWidth = btnWidth * cols + padX * (cols - 1);
+    int startX = (width - gridWidth) / 2;
+
+    // 排列所有普通按钮
+    for (int i = 0; i < total; ++i) {
+        int row = i / cols;
+        int col = i % cols;
+        allBtns[i]->width  = btnWidth;
+        allBtns[i]->height = btnHeight;
+        allBtns[i]->x = startX + col * (btnWidth + padX);
+        allBtns[i]->y = startY + row * (btnHeight + padY);
+    }
+
+    // 关闭按钮放在末尾下方居中
     if (closeBtn) {
         closeBtn->width  = 120;
         closeBtn->height = 30;
-        int lastRow = (totalExtras > 0) ? (totalExtras - 1) / extraCols : 0;
-        int lastY = extraStartY + lastRow * (extraH + extraPadY) + extraH;
+        int lastY = startY + rows * (btnHeight + padY);
         closeBtn->x = (width - closeBtn->width) / 2;
-        closeBtn->y = lastY + 12;
+        closeBtn->y = lastY + 10;
     }
 
-    // ---------- 高度溢出检查，整体缩放 ----------
+    // 总高度检查，超过屏幕则缩放垂直方向
     int totalHeight = closeBtn ? (closeBtn->y + closeBtn->height + 10) : 0;
     if (totalHeight > height) {
-        float scale = (float)(height - 30) / totalHeight;  // 留出顶部标题空间
+        float scale = (float)(height - 30) / totalHeight;  // 顶端保留30像素给标题
         if (scale < 1.0f) {
-            // 粗暴但有效：将所有按钮的 y 坐标和高度按比例缩放
-            for (int i = 0; i < 10; ++i) {
-                digitButtons[i]->y = (int)(digitStartY + (digitButtons[i]->y - digitStartY) * scale);
-                digitButtons[i]->height = (int)(digitButtons[i]->height * scale);
-            }
-            for (size_t i = 0; i < extraButtons.size(); ++i) {
-                extraButtons[i]->y = (int)(extraStartY + (extraButtons[i]->y - extraStartY) * scale);
-                extraButtons[i]->height = (int)(extraButtons[i]->height * scale);
+            // 缩放所有按钮的垂直位置和高度
+            for (int i = 0; i < total; ++i) {
+                int oldY = allBtns[i]->y;
+                allBtns[i]->y = (int)(startY + (oldY - startY) * scale);
+                allBtns[i]->height = (int)(allBtns[i]->height * scale);
             }
             if (closeBtn) {
-                closeBtn->y = (int)(extraStartY + (closeBtn->y - extraStartY) * scale);
+                int oldY = closeBtn->y;
+                closeBtn->y = (int)(startY + (oldY - startY) * scale);
                 closeBtn->height = (int)(closeBtn->height * scale);
             }
         }
@@ -216,7 +199,7 @@ void DebugScreen::keyPressed(int key)
     if (key == 27) {   // Escape
         mc->setScreen(NULL);
     }
-    // 数字键仍由 Minecraft::tickInput 处理（切换调试页），面板不再拦截
+    // 数字键仍由 Minecraft::tickInput 处理
 }
 
 void DebugScreen::buttonClicked(Button* button)
@@ -227,7 +210,7 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
 
-    // 数字按钮 0~9：调用 PerfRenderer 切换调试页
+    // 数字按钮切换调试页
     if (id >= 0 && id <= 9) {
         if (mc->getPerfRenderer())
             mc->getPerfRenderer()->debugFpsMeterKeyPress(id);
