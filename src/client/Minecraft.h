@@ -149,6 +149,7 @@ public:
 
 	volatile bool pause;
 
+    PerfRenderer* getPerfRenderer() const { return _perfRenderer; }
 	LevelRenderer*  levelRenderer;
 	GameRenderer*   gameRenderer;
 	ParticleEngine* particleEngine;
