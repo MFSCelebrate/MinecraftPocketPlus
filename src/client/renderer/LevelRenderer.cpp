@@ -937,22 +937,19 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 	return a->entityRendererId < b->entityRendererId;
 }
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    if (!mc) { DLOG_C("renderEntities: mc is null"); return; }
+    if (!mc) return;
     Mob* player = mc->cameraTargetPlayer;
-    if (!player) { DLOG_C("renderEntities: cameraTargetPlayer is null"); return; }
+    if (!player) return;
 
-    DLOG_C("renderEntities: player id=%d, pos=(%.2f,%.2f,%.2f)", player->entityId, player->x, player->y, player->z);
-    DLOG_C("   safe list count = %d", s_safeEntityCount);
-
-    // 准备调度器
+    // 准备渲染调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
     TileEntityRenderDispatcher* tileDisp = TileEntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
     tileDisp->prepare(level, textures, mc->font, player, a);
 
+    // 设置相机偏移（不再叠加 worldOff，实体坐标已是世界坐标）
     double xOff, yOff, zOff;
-    bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-    if (useRepair) {
+    if (mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR)) {
         xOff = player->xOld + (player->x - player->xOld) * a;
         yOff = player->yOld + (player->y - player->yOld) * a;
         zOff = player->zOld + (player->z - player->zOld) * a;
@@ -965,40 +962,26 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
 
-    int rendered = 0;
-    for (int i = 0; i < s_safeEntityCount; ++i) {
-        Entity* entity = s_safeEntities[i];
-        if (!entity) { DLOG_C("   entity %d is null", i); continue; }
-        if (entity->removed) { DLOG_C("   entity %d (id=%d) removed", i, entity->entityId); continue; }
+    // ★ 核心：从区块动态查找实体（完全不依赖被破坏的全局列表）
+    AABB queryBox(player->x - 64, player->y - 64, player->z - 64,
+                  player->x + 64, player->y + 64, player->z + 64);
+    EntityList& nearby = level->getEntities(NULL, queryBox);
+
+    for (size_t i = 0; i < nearby.size(); ++i) {
+        Entity* entity = nearby[i];
+        if (!entity || entity->removed) continue;
 
         bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-        if (entity == player && !thirdPerson) {
-            DLOG_C("   skip self in first person");
-            continue;
-        }
+        if (entity == player && !thirdPerson) continue;   // 第一人称下隐藏自己
 
         Vec3 renderPos(entity->x, entity->y, entity->z);
-        if (!entity->shouldRender(renderPos)) {
-            DLOG_C("   entity %d (id=%d) shouldRender failed", i, entity->entityId);
-            continue;
-        }
-        if (!culler->isVisible(entity->bb)) {
-            DLOG_C("   entity %d (id=%d) culler failed, bb: %s", i, entity->entityId, entity->bb.toString().c_str());
-            continue;
-        }
-        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) {
-            DLOG_C("   entity %d (id=%d) no chunk at (%.2f,%.2f,%.2f)", i, entity->entityId, entity->x, entity->y, entity->z);
-            continue;
-        }
+        if (!entity->shouldRender(renderPos)) continue;
+        if (!culler->isVisible(entity->bb)) continue;
 
         disp->render(entity, a);
-        rendered++;
-        DLOG_C("   rendered entity %d (id=%d)", i, entity->entityId);
     }
 
-    DLOG_C("renderEntities: total rendered = %d", rendered);
-
-    // 方块实体
+    // 方块实体（箱子、告示牌）照常
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         tileDisp->render(level->tileEntities[i], a);
     }
@@ -1278,24 +1261,11 @@ void LevelRenderer::onGraphicsReset()
 }
 
 void LevelRenderer::entityAdded(Entity* entity) {
-    if (!entity || entity->removed) return;
-    for (int i = 0; i < s_safeEntityCount; ++i)
-        if (s_safeEntities[i] == entity) return;
-    if (s_safeEntityCount < 8192) {
-        s_safeEntities[s_safeEntityCount++] = entity;
-        DLOG_C("entityAdded: id=%d, type=%d, count now %d", 
-               entity->entityId, entity->getEntityTypeId(), s_safeEntityCount);
-    }
+    // 安全起见，暂时清空，避免任何可能的副作用
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
-    for (int i = 0; i < s_safeEntityCount; ++i) {
-        if (s_safeEntities[i] == entity) {
-            s_safeEntities[i] = s_safeEntities[--s_safeEntityCount];
-            DLOG_C("entityRemoved: id=%d, count now %d", entity->entityId, s_safeEntityCount);
-            return;
-        }
-    }
+    // 同上
 }
 
 int _t_keepPic = -1;
