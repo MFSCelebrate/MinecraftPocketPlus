@@ -14,7 +14,7 @@
 #include "../../../network/packet/AdventureSettingsPacket.h"
 #include "../../../network/RakNetInstance.h"
 #include "../../sound/SoundEngine.h"
-#include "../../../Difficulty.h"
+#include "../../../world/Difficulty.h"
 #include "../../util/PerfRenderer.h"
 #include "../gui/Gui.h"
 
