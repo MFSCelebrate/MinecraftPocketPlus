@@ -153,25 +153,31 @@ void LevelRenderer::setLevel( Level* level )
 	if (level != NULL) {
 		level->addListener(this);
 		allChanged();
-		// 在 setLevel 中，当关卡被设置时，立刻用所有现有实体填充安全数组。
+// 填充安全数组并打印日志
 s_safeEntityCount = 0;
 const EntityList& allEntities = level->getAllEntities();
-int maxCount = (int)allEntities.size();
+int totalCount = (int)allEntities.size();
+DLOG_C("setLevel: getAllEntities returned %d entities", totalCount);
+int maxCount = totalCount;
 if (maxCount > 8192) maxCount = 8192;
 for (int i = 0; i < maxCount; ++i) {
     if (allEntities[i] && !allEntities[i]->removed) {
         s_safeEntities[s_safeEntityCount++] = allEntities[i];
+        DLOG_C("   add to safe list: id=%d, pos=(%.2f,%.2f,%.2f)", 
+               allEntities[i]->entityId, allEntities[i]->x, allEntities[i]->y, allEntities[i]->z);
     }
 }
-// 确保玩家本人也在列表中
+// 确保 cameraTargetPlayer 在列表中
 if (mc->cameraTargetPlayer) {
     bool found = false;
-    for (int i = 0; i < s_safeEntityCount; ++i) {
+    for (int i = 0; i < s_safeEntityCount; ++i)
         if (s_safeEntities[i] == mc->cameraTargetPlayer) { found = true; break; }
-    }
-    if (!found && s_safeEntityCount < 8192)
+    if (!found && s_safeEntityCount < 8192) {
         s_safeEntities[s_safeEntityCount++] = mc->cameraTargetPlayer;
+        DLOG_C("   manually add cameraTarget: id=%d", mc->cameraTargetPlayer->entityId);
+    }
 }
+DLOG_C("setLevel: safe list count = %d", s_safeEntityCount);
 	}
 }
 
@@ -931,9 +937,12 @@ bool entityRenderPredicate(const Entity* a, const Entity* b) {
 	return a->entityRendererId < b->entityRendererId;
 }
 void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
-    if (!mc) return;
+    if (!mc) { DLOG_C("renderEntities: mc is null"); return; }
     Mob* player = mc->cameraTargetPlayer;
-    if (!player) return;
+    if (!player) { DLOG_C("renderEntities: cameraTargetPlayer is null"); return; }
+
+    DLOG_C("renderEntities: player id=%d, pos=(%.2f,%.2f,%.2f)", player->entityId, player->x, player->y, player->z);
+    DLOG_C("   safe list count = %d", s_safeEntityCount);
 
     // 准备调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
@@ -950,7 +959,6 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     } else {
         xOff = yOff = zOff = 0.0;
     }
-    // 正确设置偏移量（通过 getInstance 访问静态成员）
     disp->xOff = xOff;    disp->yOff = yOff;    disp->zOff = zOff;
     tileDisp->xOff = xOff; tileDisp->yOff = yOff; tileDisp->zOff = zOff;
 
@@ -960,22 +968,37 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     int rendered = 0;
     for (int i = 0; i < s_safeEntityCount; ++i) {
         Entity* entity = s_safeEntities[i];
-        if (!entity || entity->removed) continue;
+        if (!entity) { DLOG_C("   entity %d is null", i); continue; }
+        if (entity->removed) { DLOG_C("   entity %d (id=%d) removed", i, entity->entityId); continue; }
 
         bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
-        if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
+        if (entity == player && !thirdPerson) {
+            DLOG_C("   skip self in first person");
+            continue;
+        }
 
-        // 使用局部变量作为左值
         Vec3 renderPos(entity->x, entity->y, entity->z);
-        if (!entity->shouldRender(renderPos)) continue;
-        if (!culler->isVisible(entity->bb)) continue;
-        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
+        if (!entity->shouldRender(renderPos)) {
+            DLOG_C("   entity %d (id=%d) shouldRender failed", i, entity->entityId);
+            continue;
+        }
+        if (!culler->isVisible(entity->bb)) {
+            DLOG_C("   entity %d (id=%d) culler failed, bb: %s", i, entity->entityId, entity->bb.toString().c_str());
+            continue;
+        }
+        if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) {
+            DLOG_C("   entity %d (id=%d) no chunk at (%.2f,%.2f,%.2f)", i, entity->entityId, entity->x, entity->y, entity->z);
+            continue;
+        }
 
         disp->render(entity, a);
         rendered++;
+        DLOG_C("   rendered entity %d (id=%d)", i, entity->entityId);
     }
 
-    // 方块实体（箱子、告示牌）
+    DLOG_C("renderEntities: total rendered = %d", rendered);
+
+    // 方块实体
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
         tileDisp->render(level->tileEntities[i], a);
     }
@@ -1256,22 +1279,25 @@ void LevelRenderer::onGraphicsReset()
 
 void LevelRenderer::entityAdded(Entity* entity) {
     if (!entity || entity->removed) return;
-    // 防止重复添加（简单去重）
     for (int i = 0; i < s_safeEntityCount; ++i)
-        if (s_safeEntities[i] == entity)
-            return;
-    if (s_safeEntityCount < 8192)
+        if (s_safeEntities[i] == entity) return;
+    if (s_safeEntityCount < 8192) {
         s_safeEntities[s_safeEntityCount++] = entity;
+        DLOG_C("entityAdded: id=%d, type=%d, count now %d", 
+               entity->entityId, entity->getEntityTypeId(), s_safeEntityCount);
+    }
 }
 
 void LevelRenderer::entityRemoved(Entity* entity) {
     for (int i = 0; i < s_safeEntityCount; ++i) {
         if (s_safeEntities[i] == entity) {
             s_safeEntities[i] = s_safeEntities[--s_safeEntityCount];
+            DLOG_C("entityRemoved: id=%d, count now %d", entity->entityId, s_safeEntityCount);
             return;
         }
     }
 }
+
 int _t_keepPic = -1;
 
 void LevelRenderer::takePicture( TripodCamera* cam, Entity* entity )
