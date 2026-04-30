@@ -260,9 +260,9 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/world/level/tile/entity/FurnaceTileEntity.cpp \
 ../../../src/world/phys/HitResult.cpp
 
-LOCAL_CFLAGS := -DPLATFORM_ANDROID -DPRE_ANDROID23 -Wno-narrowing $(LOCAL_CFLAGS)
-LOCAL_CPPFLAGS := -std=c++14 -frtti
-LOCAL_CPPFLAGS += -frtti
+LOCAL_CFLAGS := -DPLATFORM_ANDROID -DPRE_ANDROID23 -Wno-narrowing $(LOCAL_CFLAGS) -DPROFILER
+LOCAL_CPPFLAGS := -std=c++14 -frtti -DPROFILER
+LOCAL_CPPFLAGS += -frtti -DPROFILER
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../../../src
 
 #LOCAL_CFLAGS := -DANDROID_PUBLISH -DDEMO_MODE $(LOCAL_CFLAGS)
