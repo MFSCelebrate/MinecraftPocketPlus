@@ -33,11 +33,11 @@ DebugScreen::~DebugScreen()
 
 void DebugScreen::init()
 {
-    // ========== 数字按钮 0-9 ==========
+    // 数字按钮 0-9
     for (int i = 0; i < 10; ++i)
         addDigitButton(i);
 
-    // ========== 额外调试功能按钮 ==========
+    // 额外功能按钮（顺序保持）
     Button* b;
 
     b = new Button(ACT_HEAL_RESET, "Heal");
@@ -114,46 +114,60 @@ void DebugScreen::addDigitButton(int digit)
 
 void DebugScreen::setupPositions()
 {
+    // 确保宽高有效
     if (width <= 0 && mc && mc->width > 0 && Gui::InvGuiScale > 0)
         width = (int)(mc->width * Gui::InvGuiScale);
     if (height <= 0 && mc && mc->height > 0 && Gui::InvGuiScale > 0)
         height = (int)(mc->height * Gui::InvGuiScale);
 
-    const int btnW = 50;
-    const int btnH = 50;
-    const int pad = 6;
-    const int startY = 80;
+    // ---------- 数字按钮网格 ----------
+    const int digitCols = 5;          // 固定每行5个
+    int digitW = 42;                  // 稍小
+    int digitH = 36;
+    int digitPadX = 4;
+    int digitPadY = 4;
+    int digitStartY = 70;
 
-    // 数字按钮：两排 5个
-    for (int i = 0; i < 10; ++i) {
-        int row = i / 5;
-        int col = i % 5;
-        digitButtons[i]->width  = btnW;
-        digitButtons[i]->height = btnH;
-        digitButtons[i]->x = (width - (btnW * 5 + pad * 4)) / 2 + col * (btnW + pad);
-        digitButtons[i]->y = startY + row * (btnH + pad);
+    // 根据屏幕宽度微调数字按钮尺寸
+    if (width < 360) {
+        digitW = 36;
+        digitH = 30;
     }
 
-    // 额外按钮：自适应网格
-    int extraStartY = startY + 2 * (btnH + pad) + 20;
-    int cols = 4;
-    if (width < 650) cols = 3;
-    if (width < 450) cols = 2;
-    int extraW = 110;
-    int extraH = 28;
-    int gridW = extraW * cols + pad * (cols - 1);
+    for (int i = 0; i < 10; ++i) {
+        int row = i / digitCols;
+        int col = i % digitCols;
+        digitButtons[i]->width  = digitW;
+        digitButtons[i]->height = digitH;
+        digitButtons[i]->x = (width - (digitW * digitCols + digitPadX * (digitCols-1))) / 2 + col * (digitW + digitPadX);
+        digitButtons[i]->y = digitStartY + row * (digitH + digitPadY);
+    }
+
+    // ---------- 额外按钮网格 ----------
+    int extraCols = 4;
+    if (width < 600) extraCols = 3;
+    if (width < 400) extraCols = 2;
+
+    int extraW = 100;                 // 足够显示文字
+    int extraH = 26;
+    int extraPadX = 4;
+    int extraPadY = 4;
+    int extraStartY = digitStartY + 2 * (digitH + digitPadY) + 16;
+
+    int totalExtras = (int)extraButtons.size();
+    int gridW = extraW * extraCols + extraPadX * (extraCols - 1);
     int startX = (width - gridW) / 2;
 
-    for (size_t i = 0; i < extraButtons.size(); ++i) {
-        int row = (int)i / cols;
-        int col = (int)i % cols;
+    for (int i = 0; i < totalExtras; ++i) {
+        int row = i / extraCols;
+        int col = i % extraCols;
         extraButtons[i]->width  = extraW;
         extraButtons[i]->height = extraH;
-        extraButtons[i]->x = startX + col * (extraW + pad);
-        extraButtons[i]->y = extraStartY + row * (extraH + pad);
+        extraButtons[i]->x = startX + col * (extraW + extraPadX);
+        extraButtons[i]->y = extraStartY + row * (extraH + extraPadY);
     }
 
-    // 关闭按钮
+    // ---------- 关闭按钮 ----------
     Button* closeBtn = nullptr;
     for (auto* b : buttons) {
         if (b->id == 99) { closeBtn = b; break; }
@@ -161,16 +175,38 @@ void DebugScreen::setupPositions()
     if (closeBtn) {
         closeBtn->width  = 120;
         closeBtn->height = 30;
-        int lastRow = (extraButtons.size() > 0) ? (int)(extraButtons.size() - 1) / cols : 0;
-        int lastY = extraStartY + lastRow * (extraH + pad) + extraH;
+        int lastRow = (totalExtras > 0) ? (totalExtras - 1) / extraCols : 0;
+        int lastY = extraStartY + lastRow * (extraH + extraPadY) + extraH;
         closeBtn->x = (width - closeBtn->width) / 2;
-        closeBtn->y = lastY + 16;
+        closeBtn->y = lastY + 12;
+    }
+
+    // ---------- 高度溢出检查，整体缩放 ----------
+    int totalHeight = closeBtn ? (closeBtn->y + closeBtn->height + 10) : 0;
+    if (totalHeight > height) {
+        float scale = (float)(height - 30) / totalHeight;  // 留出顶部标题空间
+        if (scale < 1.0f) {
+            // 粗暴但有效：将所有按钮的 y 坐标和高度按比例缩放
+            for (int i = 0; i < 10; ++i) {
+                digitButtons[i]->y = (int)(digitStartY + (digitButtons[i]->y - digitStartY) * scale);
+                digitButtons[i]->height = (int)(digitButtons[i]->height * scale);
+            }
+            for (size_t i = 0; i < extraButtons.size(); ++i) {
+                extraButtons[i]->y = (int)(extraStartY + (extraButtons[i]->y - extraStartY) * scale);
+                extraButtons[i]->height = (int)(extraButtons[i]->height * scale);
+            }
+            if (closeBtn) {
+                closeBtn->y = (int)(extraStartY + (closeBtn->y - extraStartY) * scale);
+                closeBtn->height = (int)(closeBtn->height * scale);
+            }
+        }
     }
 }
 
 void DebugScreen::render(int xm, int ym, float a)
 {
-    fill(0, 0, width, height, 0x30000000); // 半透明背景，底层UI可见
+    // 半透明背景，底层 UI 可见
+    fill(0, 0, width, height, 0x30000000);
     drawCenteredString(mc->font, "Debug Panel", width / 2, 20, 0xFFFFFFFF);
     Screen::render(xm, ym, a);
 }
@@ -180,7 +216,7 @@ void DebugScreen::keyPressed(int key)
     if (key == 27) {   // Escape
         mc->setScreen(NULL);
     }
-    // 数字键不处理，留给 Minecraft::tickInput 切换调试页
+    // 数字键仍由 Minecraft::tickInput 处理（切换调试页），面板不再拦截
 }
 
 void DebugScreen::buttonClicked(Button* button)
@@ -191,21 +227,18 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
 
-    // 数字按钮：切换 PerfRenderer 调试页
+    // 数字按钮 0~9：调用 PerfRenderer 切换调试页
     if (id >= 0 && id <= 9) {
         if (mc->getPerfRenderer())
             mc->getPerfRenderer()->debugFpsMeterKeyPress(id);
         return;
     }
 
-    // 其他额外功能按钮
     executeExtraAction(id);
-    // 除了打开子界面的按钮，其余关闭面板
     if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER)
         mc->setScreen(NULL);
 }
 
-// ---------- 额外功能实现 ----------
 void DebugScreen::executeExtraAction(int id) {
     switch (id) {
         case ACT_HEAL_RESET:
