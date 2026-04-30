@@ -32,7 +32,7 @@ NoiseFarlands Reference 的目标是：**打破 0.6.1 的有限世界枷锁，�
   视锥体裁剪、相机参数、RenderList 等均已改用 `double`，仅在 `glTranslatef` 等 GL 调用处转为 `float`。
 
 - **🌄 地形噪声系统全面升级**  
-  噪声生成器已按 Wiki 对齐重命名为 Low、High、Selector、Sand、Gravel、Scale、Depth、Forest 等，并通过 `PerlinNoise` / `ImprovedNoise` 实现 double 精度 3D 采样，支持 64-bit Farlands 选项。
+  噪声生成器已按 Wiki 对齐重命名为 Low、High、Selector、Sand、Gravel、Scale、Depth、Forest 等，并通过 `PerlinNoise` / `ImprovedNoise` 实现 double 精度 3D 噪声采样，支持64位边境之地。
 
 - **🔩 创造模式全方块注册**  
   `Inventory::setupDefault()` 中遍历 id 1~255 补全所有方块，且 `TileItem` 已启用 `setStackedByData(true)`，确保不同数据值方块独立堆叠。
@@ -45,7 +45,7 @@ NoiseFarlands Reference 的目标是：**打破 0.6.1 的有限世界枷锁，�
 
 - **✅ 各种修复及可开关内容**  
   带 * 的为可开关内容。  
-  GUI 输入框字符重复/删除、天空网格*、世界偏移双重叠加*、调试屏幕噪声显示异常、时间不流动（下界反应堆残留永夜模式）等问题均已被解决。
+  GUI 输入框字符重复/删除、天空网格*、世界偏移双重叠加、调试屏幕噪声显示异常、时间不流动（下界反应堆残留永夜模式）等问题均已被解决。
 
 ## 🚀 快速开始
 
