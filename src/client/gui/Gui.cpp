@@ -754,8 +754,7 @@ void Gui::onLevelGenerated() {
     }
 }
 
-    
-void Gui::renderDebugInfo() {
+    void Gui::renderDebugInfo() {
     // FPS counter (updates once per second)
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
@@ -859,7 +858,6 @@ void Gui::renderDebugInfo() {
         double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
         double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
 
-        // ---- 基本地形噪声 (3D) ----
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
         const double scale_large_Y  = s / 160.0;
@@ -868,36 +866,21 @@ void Gui::renderDebugInfo() {
         ny_large = sampleWorldY * scale_large_Y;
         nz_large = sampleWorldZ * scale_large_XZ;
 
-        noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large); // 低噪声 (3D)
-noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)ny_large, (float)nz_large); // 高噪声 (3D)
-noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large); // 选择器噪声 (3D)
-		
-        // ---- 地表材质噪声 (2D) ----
+        noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large);
+        noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)ny_large, (float)nz_large);
+        noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large);
+
         const double scale_sand       = 1.0 / 32.0;
         const double scale_depth      = 1.0 / 64.0;
         const double scale_scale      = 1.0 / 80.0;
         const double scale_depth_noise= 1.0 / 200.0;
         const double scale_forest     = 0.5;
 
-        double nx_sand = sampleWorldX * scale_sand;
-        double nz_sand = sampleWorldZ * scale_sand;
-        noiseVals[3] = rls->getPerlinNoise2((float)nx_sand, (float)nz_sand);    // 沙子噪声
-
-        double nx_depth = sampleWorldX * scale_depth;
-        double nz_depth = sampleWorldZ * scale_depth;
-        noiseVals[4] = rls->getPerlinNoise3((float)nx_depth, (float)nz_depth);   // 沙砾噪声
-
-        double nx_scale = sampleWorldX * scale_scale;
-        double nz_scale = sampleWorldZ * scale_scale;
-        noiseVals[5] = rls->getScaleNoise((float)nx_scale, (float)nz_scale);     // 比例噪声
-
-        double nx_depnoise = sampleWorldX * scale_depth_noise;
-        double nz_depnoise = sampleWorldZ * scale_depth_noise;
-        noiseVals[6] = rls->getDepthNoise((float)nx_depnoise, (float)nz_depnoise); // 深度噪声
-
-        double nx_forest = sampleWorldX * scale_forest;
-        double nz_forest = sampleWorldZ * scale_forest;
-        noiseVals[7] = rls->getForestNoise((float)nx_forest, (float)nz_forest);  // 树密度噪声
+        noiseVals[3] = rls->getPerlinNoise2((float)(sampleWorldX * scale_sand), (float)(sampleWorldZ * scale_sand));
+        noiseVals[4] = rls->getPerlinNoise3((float)(sampleWorldX * scale_depth), (float)(sampleWorldZ * scale_depth));
+        noiseVals[5] = rls->getScaleNoise((float)(sampleWorldX * scale_scale), (float)(sampleWorldZ * scale_scale));
+        noiseVals[6] = rls->getDepthNoise((float)(sampleWorldX * scale_depth_noise), (float)(sampleWorldZ * scale_depth_noise));
+        noiseVals[7] = rls->getForestNoise((float)(sampleWorldX * scale_forest), (float)(sampleWorldZ * scale_forest));
     }
 
     // ===================== 噪声计算（Float 精度） =====================
@@ -916,38 +899,24 @@ noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_
         float fz_large = (float)(sampleWorldZ * scale_large_XZ);
 
         noiseValsF[0] = rls->getLPerlinNoise1(fx_large, fy_large, fz_large);
-noiseValsF[1] = rls->getLPerlinNoise2(fx_large, fy_large, fz_large);
-noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
-		
+        noiseValsF[1] = rls->getLPerlinNoise2(fx_large, fy_large, fz_large);
+        noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
+
         const double scale_sand       = 1.0 / 32.0;
         const double scale_depth      = 1.0 / 64.0;
         const double scale_scale      = 1.0 / 80.0;
         const double scale_depth_noise= 1.0 / 200.0;
         const double scale_forest     = 0.5;
 
-        float fx_sand = (float)(sampleWorldX * scale_sand);
-        float fz_sand = (float)(sampleWorldZ * scale_sand);
-        noiseValsF[3] = rls->getPerlinNoise2(fx_sand, fz_sand);
-
-        float fx_depth = (float)(sampleWorldX * scale_depth);
-        float fz_depth = (float)(sampleWorldZ * scale_depth);
-        noiseValsF[4] = rls->getPerlinNoise3(fx_depth, fz_depth);
-
-        float fx_scale = (float)(sampleWorldX * scale_scale);
-        float fz_scale = (float)(sampleWorldZ * scale_scale);
-        noiseValsF[5] = rls->getScaleNoise(fx_scale, fz_scale);
-
-        float fx_depnoise = (float)(sampleWorldX * scale_depth_noise);
-        float fz_depnoise = (float)(sampleWorldZ * scale_depth_noise);
-        noiseValsF[6] = rls->getDepthNoise(fx_depnoise, fz_depnoise);
-
-        float fx_forest = (float)(sampleWorldX * scale_forest);
-        float fz_forest = (float)(sampleWorldZ * scale_forest);
-        noiseValsF[7] = rls->getForestNoise(fx_forest, fz_forest);
+        noiseValsF[3] = rls->getPerlinNoise2((float)(sampleWorldX * scale_sand), (float)(sampleWorldZ * scale_sand));
+        noiseValsF[4] = rls->getPerlinNoise3((float)(sampleWorldX * scale_depth), (float)(sampleWorldZ * scale_depth));
+        noiseValsF[5] = rls->getScaleNoise((float)(sampleWorldX * scale_scale), (float)(sampleWorldZ * scale_scale));
+        noiseValsF[6] = rls->getDepthNoise((float)(sampleWorldX * scale_depth_noise), (float)(sampleWorldZ * scale_depth_noise));
+        noiseValsF[7] = rls->getForestNoise((float)(sampleWorldX * scale_forest), (float)(sampleWorldZ * scale_forest));
     }
 
-    // ===================== 构建显示行 (24 行) =====================
-    static char ln[25][1024];
+    // ===================== 构建显示行 (扩展为 27 行) =====================
+    static char ln[27][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -966,15 +935,9 @@ noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
 
     // 噪声标签 (Wiki 对齐)
     const char* labels[8] = {
-    "Low-Noise",      // 低噪声    (Low Noise)
-    "High-Noise",     // 高噪声    (High Noise)
-    "Selector-Noise",   // 选择器噪声 (Selector Noise)
-    "Sand-Noise",     // 沙子噪声  (Sand Noise)
-    "Gravel-Noise",   // 沙砾噪声  (Gravel Noise)
-    "Scale-Noise",    // 比例噪声  (Scale Noise)
-    "Depth-Noise",    // 深度噪声  (Depth Noise)
-    "Tree-Density-Noise"    // 树密度噪声 (Tree Density Noise)
-};
+        "Low-Noise", "High-Noise", "Selector-Noise", "Sand-Noise",
+        "Gravel-Noise", "Scale-Noise", "Depth-Noise", "Tree-Density-Noise"
+    };
     // Double 噪声行
     char firstPartD[1024] = "";
     char secondPartD[1024] = "";
@@ -1008,9 +971,9 @@ noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
         snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
         strcat(secondPartF, tmp);
     }
-	ln[15][0] = '\0';
-    snprintf(ln[16], sizeof(ln[15]), "Terrain Noise(Float): %s", firstPartF);
-    snprintf(ln[17], sizeof(ln[16]), "Surface Noise(Float): %s", secondPartF);
+    ln[15][0] = '\0';
+    snprintf(ln[16], sizeof(ln[16]), "Terrain Noise(Float): %s", firstPartF);
+    snprintf(ln[17], sizeof(ln[17]), "Surface Noise(Float): %s", secondPartF);
 
     // 噪声输入坐标
     if (rls) {
@@ -1027,8 +990,18 @@ noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
     sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
     ln[24][0] = '\0';
 
+    // ========== 新增：条纹修复关闭时的警告行 ==========
+    bool stripeRepairOn = minecraft->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+    if (!stripeRepairOn) {
+        ln[25][0] = '\0';   // 空行分隔
+        snprintf(ln[26], sizeof(ln[26]), "Warning: Entity Rendering Has Become Invalid!!! (Enable Stripe Repair)");
+    } else {
+        ln[25][0] = '\0';
+        ln[26][0] = '\0';
+    }
+
     // ===================== 渲染 =====================
-    const int N = 25;
+    const int N = 27;                     // 总共 27 行（索引 0 ~ 26）
     const float LH  = (float)Font::DefaultLineHeight;
     const float MGN = 2.0f;
     const float PAD = 2.0f;
@@ -1054,14 +1027,16 @@ noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
-        int col = 0xffffffff;                       // 默认白色
+        int col = 0xffffffff;               // 默认白色
 
         if (i == 0)
-            col = 0xffFFFF55;                       // 标题黄色
+            col = 0xffFFFF55;               // 标题黄色
         else if (i == 11)
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000; // 64Bit 绿色/红色
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;   // 64Bit 绿/红
         else if (i == 16 || i == 17)
-            col = 0xFFFF8080;                       // Float 噪声行 浅红色
+            col = 0xFFFF8080;               // Float 噪声行浅红
+        else if (i == 26)                   // 新增警告行强制红色
+            col = 0xffff0000;
 
         font->draw(ln[i], MGN, y, col);
     }
