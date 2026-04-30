@@ -15,7 +15,7 @@
 #include "../../../network/RakNetInstance.h"
 #include "../../sound/SoundEngine.h"
 #include "../../../world/Difficulty.h"
-#include "../../util/PerfRenderer.h"
+#include "../../../util/PerfRenderer.h"
 #include "../gui/Gui.h"
 
 DebugScreen::DebugScreen(Minecraft* mc)
