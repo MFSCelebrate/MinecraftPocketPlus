@@ -153,6 +153,25 @@ void LevelRenderer::setLevel( Level* level )
 	if (level != NULL) {
 		level->addListener(this);
 		allChanged();
+		// 在 setLevel 中，当关卡被设置时，立刻用所有现有实体填充安全数组。
+s_safeEntityCount = 0;
+const EntityList& allEntities = level->getAllEntities();
+int maxCount = (int)allEntities.size();
+if (maxCount > 8192) maxCount = 8192;
+for (int i = 0; i < maxCount; ++i) {
+    if (allEntities[i] && !allEntities[i]->removed) {
+        s_safeEntities[s_safeEntityCount++] = allEntities[i];
+    }
+}
+// 确保玩家本人也在列表中
+if (mc->cameraTargetPlayer) {
+    bool found = false;
+    for (int i = 0; i < s_safeEntityCount; ++i) {
+        if (s_safeEntities[i] == mc->cameraTargetPlayer) { found = true; break; }
+    }
+    if (!found && s_safeEntityCount < 8192)
+        s_safeEntities[s_safeEntityCount++] = mc->cameraTargetPlayer;
+}
 	}
 }
 
