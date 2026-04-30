@@ -918,8 +918,9 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     // 准备调度器
     EntityRenderDispatcher* disp = EntityRenderDispatcher::getInstance();
+    TileEntityRenderDispatcher* tileDisp = TileEntityRenderDispatcher::getInstance();
     disp->prepare(level, mc->font, player, &mc->options, a);
-    TileEntityRenderDispatcher::getInstance()->prepare(level, textures, mc->font, player, a);
+    tileDisp->prepare(level, textures, mc->font, player, a);
 
     double xOff, yOff, zOff;
     bool useRepair = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
@@ -930,9 +931,9 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
     } else {
         xOff = yOff = zOff = 0.0;
     }
-    disp->xOff = TileEntityRenderDispatcher::instance->xOff = xOff;
-    disp->yOff = TileEntityRenderDispatcher::instance->yOff = yOff;
-    disp->zOff = TileEntityRenderDispatcher::instance->zOff = zOff;
+    // 正确设置偏移量（通过 getInstance 访问静态成员）
+    disp->xOff = xOff;    disp->yOff = yOff;    disp->zOff = zOff;
+    tileDisp->xOff = xOff; tileDisp->yOff = yOff; tileDisp->zOff = zOff;
 
     glEnableClientState2(GL_VERTEX_ARRAY);
     glEnableClientState2(GL_TEXTURE_COORD_ARRAY);
@@ -945,7 +946,9 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
         bool thirdPerson = mc->options.getBooleanValue(OPTIONS_THIRD_PERSON_VIEW);
         if (entity == mc->cameraTargetPlayer && !thirdPerson) continue;
 
-        if (!entity->shouldRender(Vec3(entity->x, entity->y, entity->z))) continue;
+        // 使用局部变量作为左值
+        Vec3 renderPos(entity->x, entity->y, entity->z);
+        if (!entity->shouldRender(renderPos)) continue;
         if (!culler->isVisible(entity->bb)) continue;
         if (!level->hasChunkAt(Mth::floor(entity->x), Mth::floor(entity->y), Mth::floor(entity->z))) continue;
 
@@ -955,7 +958,7 @@ void LevelRenderer::renderEntities(Vec3 cam, Culler* culler, float a) {
 
     // 方块实体（箱子、告示牌）
     for (unsigned int i = 0; i < level->tileEntities.size(); i++) {
-        TileEntityRenderDispatcher::getInstance()->render(level->tileEntities[i], a);
+        tileDisp->render(level->tileEntities[i], a);
     }
 
     glDisableClientState2(GL_VERTEX_ARRAY);
