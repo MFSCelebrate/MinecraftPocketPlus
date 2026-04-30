@@ -182,7 +182,6 @@ Minecraft::Minecraft() :
 	reserved_f1(0),reserved_f2(0), options(this)
 {
     instance = this;   // <-- 添加这一行
-	m_renderEntitiesCount = 0;
 //#ifdef ANDROID
     #if defined(NO_NETWORK)
     raknetInstance = new IRakNetInstance();
@@ -237,22 +236,6 @@ Minecraft::~Minecraft()
 #ifndef STANDALONE_SERVER
 	EntityRenderDispatcher::destroy();
 #endif
-}
-
-void Minecraft::onEntityAdded(Entity* e) {
-    if (!e || e->removed) return;
-    if (m_renderEntitiesCount >= MAX_RENDER_ENTITIES) return;
-    m_renderEntitiesArray[m_renderEntitiesCount++] = e;
-}
-
-void Minecraft::onEntityRemoved(Entity* e) {
-    for (int i = 0; i < m_renderEntitiesCount; ++i) {
-        if (m_renderEntitiesArray[i] == e) {
-            // 将最后一个元素移到当前位置，并减少计数
-            m_renderEntitiesArray[i] = m_renderEntitiesArray[--m_renderEntitiesCount];
-            return;
-        }
-    }
 }
 
 // Only called by server
@@ -1425,10 +1408,7 @@ void Minecraft::_levelGenerated()
 
 	// Hack to (hopefully) get the players to show (note: in LevelListener
 	// instead, since adding yourself always generates a entityAdded)
-	//EntityRenderDispatcher::getInstance()->onGraphicsReset();
-	// 安全地刷新实体渲染器，确保模型加载
-EntityRenderDispatcher::getInstance()->onGraphicsReset();
-TileEntityRenderDispatcher::getInstance()->onGraphicsReset();
+	EntityRenderDispatcher::getInstance()->onGraphicsReset();
 	_hasSignaledGeneratingLevelFinished = true;
 }
 
