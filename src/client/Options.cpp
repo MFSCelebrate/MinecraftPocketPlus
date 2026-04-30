@@ -33,7 +33,7 @@ OptionFloat cameraSpeed("cameraSpeed", 1.f);
 OptionInt guiScale("guiScale", 0, 0, 5);
 
 OptionString skin("skin", "Default");
-OptionString debugScreenSize("debug_screen_size", "0.5");
+OptionString debugScreenSize("debug_screen_size", "0.46");
 OptionString seaLevel("sea_level", "63");
 OptionString worldScaleX("world_scale_x", "1.0");
 OptionString worldScaleZ("world_scale_z", "1.0");
