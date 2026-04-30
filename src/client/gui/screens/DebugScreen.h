@@ -21,39 +21,43 @@ public:
     virtual bool isPauseScreen() override { return false; }
 
     virtual void tick() override {}
+    virtual void keyPressed(int key) override;
 
 protected:
     virtual void buttonClicked(Button* button) override;
 
 private:
-    void addButton(int id, const std::string& text);
-    void executeAction(int id);
+    void addDigitButton(int digit);
+    void executeExtraAction(int id);
 
-    // 完全抛弃自定义鼠标事件，使用基类的默认处理（避免任何坐标转换问题）
-    // 基类的 Screen::mouseClicked / mouseReleased 会直接使用按钮的逻辑坐标，
-    // 前提是按钮的 x, y, width, height 已经是正确的逻辑坐标。
-    
     Minecraft* mc;
-    std::vector<Button*> debugButtons;
 
-    static const int BTN_GODMODE      = 0;
-    static const int BTN_GAMEMODE     = 1;
-    static const int BTN_TIME         = 2;
-    static const int BTN_ARMOR        = 3;
-    static const int BTN_HURT_RELOAD  = 4;
-    static const int BTN_SPAWNMOB     = 5;
-    static const int BTN_MASSACRE     = 6;
-    static const int BTN_CLEARINV     = 7;
-    static const int BTN_PRERENDER    = 8;
-    static const int BTN_DROPALL      = 9;
-    static const int BTN_SPEEDUP      = 10;
-    static const int BTN_3RDPERSON    = 11;
-    static const int BTN_NOPVP        = 12;
-    static const int BTN_NOPVM        = 13;
-    static const int BTN_NOMVP        = 14;
-    static const int BTN_IMMUTABLE    = 15;
-    static const int BTN_NAMETAGS     = 16;
-    static const int BTN_PARTICLES    = 17;
+    // 0-9 数字按钮（切换调试页）
+    Button* digitButtons[10];
+
+    // 额外调试功能按钮
+    std::vector<Button*> extraButtons;
+
+    // 额外功能 ID
+    static const int ACT_HEAL_RESET       = 100;
+    static const int ACT_TOGGLE_GAMEMODE  = 101;
+    static const int ACT_ADVANCE_TIME     = 102;
+    static const int ACT_OPEN_ARMOR       = 103;
+    static const int ACT_HURT_RELOAD      = 104;
+    static const int ACT_SPAWN_MOB        = 105;
+    static const int ACT_MASSACRE         = 106;
+    static const int ACT_REFILL_INV       = 107;
+    static const int ACT_PRERENDER        = 108;
+    static const int ACT_DROP_INV         = 109;
+    static const int ACT_TOGGLE_DIFFICULTY= 110;
+    static const int ACT_TOGGLE_3RDPERSON = 111;
+    static const int ACT_SPEEDUP          = 112;
+    static const int ACT_NOPVP            = 113;
+    static const int ACT_NOPVM            = 114;
+    static const int ACT_NOMVP            = 115;
+    static const int ACT_IMMUTABLE        = 116;
+    static const int ACT_NAMETAGS         = 117;
+    static const int ACT_PARTICLES        = 118;
 };
 
-#endif
+#endif // DEBUGSCREEN_H
