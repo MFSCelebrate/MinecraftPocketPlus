@@ -846,43 +846,42 @@ void Gui::onLevelGenerated() {
     std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
     if (!scaleStr.empty()) {
         debugScale = (float)atof(scaleStr.c_str());
-        if (debugScale < 0.5f) debugScale = 0.5f;
-        if (debugScale > 3.0f) debugScale = 3.0f;
     }
 
     // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
-    double noiseVals[8] = {0.0};
-    double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
-    if (rls) {
-        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
-        double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
-        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+    // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
+double noiseVals[8] = {0.0};
+double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
+if (rls) {
+    double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
+    double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
+    double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
 
-        const double s = 684.412;
-        const double scale_large_XZ = s / 80.0;
-        const double scale_large_Y  = s / 160.0;
+    const double s = 684.412;
+    const double scale_large_XZ = s / 80.0;
+    const double scale_large_Y  = s / 160.0;
 
-        nx_large = sampleWorldX * scale_large_XZ;
-        ny_large = sampleWorldY * scale_large_Y;
-        nz_large = sampleWorldZ * scale_large_XZ;
+    nx_large = sampleWorldX * scale_large_XZ;
+    ny_large = sampleWorldY * scale_large_Y;
+    nz_large = sampleWorldZ * scale_large_XZ;
 
-        noiseVals[0] = rls->getLPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large);
-        noiseVals[1] = rls->getLPerlinNoise2((float)nx_large, (float)ny_large, (float)nz_large);
-        noiseVals[2] = rls->getPerlinNoise1((float)nx_large, (float)ny_large, (float)nz_large);
+    // 直接使用 double 参数，不再强制转换为 float
+    noiseVals[0] = rls->getLPerlinNoise1(nx_large, ny_large, nz_large);
+    noiseVals[1] = rls->getLPerlinNoise2(nx_large, ny_large, nz_large);
+    noiseVals[2] = rls->getPerlinNoise1(nx_large, ny_large, nz_large);
 
-        const double scale_sand       = 1.0 / 32.0;
-        const double scale_depth      = 1.0 / 64.0;
-        const double scale_scale      = 1.0 / 80.0;
-        const double scale_depth_noise= 1.0 / 200.0;
-        const double scale_forest     = 0.5;
+    const double scale_sand       = 1.0 / 32.0;
+    const double scale_depth      = 1.0 / 64.0;
+    const double scale_scale      = 1.0 / 80.0;
+    const double scale_depth_noise= 1.0 / 200.0;
+    const double scale_forest     = 0.5;
 
-        noiseVals[3] = rls->getPerlinNoise2((float)(sampleWorldX * scale_sand), (float)(sampleWorldZ * scale_sand));
-        noiseVals[4] = rls->getPerlinNoise3((float)(sampleWorldX * scale_depth), (float)(sampleWorldZ * scale_depth));
-        noiseVals[5] = rls->getScaleNoise((float)(sampleWorldX * scale_scale), (float)(sampleWorldZ * scale_scale));
-        noiseVals[6] = rls->getDepthNoise((float)(sampleWorldX * scale_depth_noise), (float)(sampleWorldZ * scale_depth_noise));
-        noiseVals[7] = rls->getForestNoise((float)(sampleWorldX * scale_forest), (float)(sampleWorldZ * scale_forest));
-    }
-
+    noiseVals[3] = rls->getPerlinNoise2(sampleWorldX * scale_sand, sampleWorldZ * scale_sand);
+    noiseVals[4] = rls->getPerlinNoise3(sampleWorldX * scale_depth, sampleWorldZ * scale_depth);
+    noiseVals[5] = rls->getScaleNoise(sampleWorldX * scale_scale, sampleWorldZ * scale_scale);
+    noiseVals[6] = rls->getDepthNoise(sampleWorldX * scale_depth_noise, sampleWorldZ * scale_depth_noise);
+    noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
+}
     // ===================== 噪声计算（Float 精度） =====================
     float noiseValsF[8] = {0.0f};
     if (rls) {
@@ -993,11 +992,9 @@ void Gui::onLevelGenerated() {
     // ========== 新增：条纹修复关闭时的警告行 ==========
     bool stripeRepairOn = minecraft->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     if (!stripeRepairOn) {
-        ln[25][0] = '\0';   // 空行分隔
-        snprintf(ln[26], sizeof(ln[26]), "Warning: Entity Rendering Has Become Invalid!!! (Enable Stripe Repair)");
+        snprintf(ln[25], sizeof(ln[26]), "Warning: Entity Rendering Has Become Invalid!!! (Enable Stripe Repair)");
     } else {
         ln[25][0] = '\0';
-        ln[26][0] = '\0';
     }
 
     // ===================== 渲染 =====================
@@ -1035,7 +1032,7 @@ void Gui::onLevelGenerated() {
             col = fringeEnabled ? 0xff00ff00 : 0xffff0000;   // 64Bit 绿/红
         else if (i == 16 || i == 17)
             col = 0xFFFF8080;               // Float 噪声行浅红
-        else if (i == 26)                   // 新增警告行强制红色
+        else if (i == 25)                   // 新增警告行强制红色
             col = 0xffff0000;
 
         font->draw(ln[i], MGN, y, col);
