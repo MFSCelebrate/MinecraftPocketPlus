@@ -167,11 +167,6 @@ public:
 	int lastTickTime;
 	float ticksSinceLastUpdate;
 
-static const int MAX_RENDER_ENTITIES = 4096;
-Entity* m_renderEntitiesArray[MAX_RENDER_ENTITIES];
-int m_renderEntitiesCount;
-void onEntityAdded(Entity* e);
-void onEntityRemoved(Entity* e);
 	Level* level;
 
 	LocalPlayer*	player;
