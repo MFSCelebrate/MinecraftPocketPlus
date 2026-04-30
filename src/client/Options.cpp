@@ -55,7 +55,7 @@ OptionFloat soundVolume("sound", 1.f, SOUND_MIN_VALUE, SOUND_MAX_VALUE);
 OptionFloat sensitivityOpt("sensitivity", 0.5f, SENSITIVITY_MIN_VALUE, SENSITIVITY_MAX_VALUE);
 
 OptionBool invertYMouse("invertMouse", false);
-OptionInt viewDistance("renderDistance", 2, 0, 4);
+OptionInt viewDistance("renderDistance", 0, 0, 4);
 
 OptionBool anaglyph3d("anaglyph3d", false);
 OptionBool limitFramerate("limitFramerate", false);
@@ -68,7 +68,7 @@ OptionBool useTouchscreen("useTouchscreen", true);
 
 OptionBool serverVisible("servervisible", true);
 
-OptionBool stripeRepair("stripe_repair", false);
+OptionBool stripeRepair("stripe_repair", true);
 
 OptionInt keyForward("key.forward", Keyboard::KEY_W);
 OptionInt keyLeft("key.left", Keyboard::KEY_A);
