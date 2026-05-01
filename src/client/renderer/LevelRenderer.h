@@ -77,7 +77,11 @@ private:
     }
     int noEntityRenderFrames;
     int totalEntities;
-int cullSkipTimer = 0;   // 跳帧计数器
+// 视锥体剔除缓存
+double lastCullCamX, lastCullCamY, lastCullCamZ;
+float lastCullYRot, lastCullXRot;
+bool cullCacheValid;
+int cullSkipTimer;
     int renderedEntities;
     int culledEntities;
 
