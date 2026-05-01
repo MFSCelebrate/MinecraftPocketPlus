@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
-// 在 Mth.h 中添加
 
 namespace Mth {
     constexpr float PI = 3.1415926535897932384626433832795028841971f;
@@ -17,7 +16,7 @@ namespace Mth {
     // ========== double 版本（返回 int64_t）==========
     inline double sqrt(double x) { return std::sqrt(x); }
     inline int floor(double x) { return (int)std::floor(x); }
-    inline int64_t floor64(double x) { return (int64_t)std::floor(x); }   // 用于世界坐标转区块索引
+    inline int64_t floor64(double x) { return (int64_t)std::floor(x); }
     inline double sin(double x) { return std::sin(x); }
     inline double cos(double x) { return std::cos(x); }
     inline double atan(double x) { return std::atan(x); }
@@ -30,7 +29,6 @@ namespace Mth {
         if (v > high) return high;
         return v;
     }
-
     inline double lerp(double src, double dst, double alpha) {
         return src + (dst - src) * alpha;
     }
@@ -49,6 +47,24 @@ namespace Mth {
         return (abs(a) > abs(b)) ? a : b;
     }
 
+    // ========== 精度丢失检测（新增） ==========
+    inline void computePrecisionLoss(double maxCoord, double& doublePrecision, float& floatPrecision) {
+        int exp;
+        std::frexp(maxCoord, &exp);
+        doublePrecision = std::ldexp(1.0, exp - 53);
+        floatPrecision  = (float)std::ldexp(1.0, exp - 24);
+    }
+
+    inline int getPrecisionColor(double precision) {
+        if (precision < 0.03125)
+            return 0xFF88FF88;   // 浅绿色
+        else if (precision < 2.0)
+            return 0xFFFFFF55;   // 浅黄色
+        else
+            return 0xFFFF5555;   // 浅红色
+    }
+
+    // 原有非内联函数的声明
     void initMth();
     float invSqrt(float x);
     float random();
