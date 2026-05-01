@@ -6,6 +6,7 @@
 #include "EmptyLevelChunk.h"
 #include "../Level.h"
 #include "../LevelConstants.h"
+#include "AsyncChunkGenerator.h"   // ★ 新增
 #include <unordered_map>
 
 struct pair_hash {
@@ -18,17 +19,28 @@ class ChunkCache: public ChunkSource {
     static const int MAX_SAVES = 2;
 public:
     ChunkSource* getSource() const { return source; }
+
     ChunkCache(Level* level_, ChunkStorage* storage_, ChunkSource* source_)
     :   xLast(-999999999), zLast(-999999999), last(NULL),
         level(level_), storage(storage_), source(source_)
     {
         isChunkCache = true;
         emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
+
+        // ★ 如果底层源是随机地形生成器，则启动异步生成
+        RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(source);
+        if (rls) {
+            asyncGen = new AsyncChunkGenerator(rls, this, level);
+            asyncGen->start();
+        } else {
+            asyncGen = nullptr;
+        }
     }
 
     ~ChunkCache() {
         delete source;
         delete emptyChunk;
+        if (asyncGen) delete asyncGen;   // ★ 停止线程
         for (auto& pair : chunks) {
             if (pair.second) {
                 pair.second->deleteBlockData();
@@ -48,6 +60,7 @@ public:
         return getChunk(x, z);
     }
 
+    // ★ 核心改动：异步获取区块
     LevelChunk* getChunk(int64_t x, int64_t z) {
         if (x == xLast && z == zLast && last != NULL) {
             return last;
@@ -61,29 +74,20 @@ public:
             return last;
         }
 
+        // 尝试从磁盘加载
         LevelChunk* newChunk = load(x, z);
-        bool updateLights = false;
         if (newChunk == NULL) {
             if (source == NULL) {
                 newChunk = emptyChunk;
             } else {
-                newChunk = source->getChunk(x, z);
-            }
-        } else {
-            updateLights = true;
-        }
-        chunks[key] = newChunk;
-        newChunk->lightLava();
-
-        if (updateLights) {
-            for (int cx = 0; cx < 16; cx++) {
-                for (int cz = 0; cz < 16; cz++) {
-                    int height = level->getHeightmap((int)(cx + x * 16), (int)(cz + z * 16));
-                    for (int cy = height; cy >= 0; cy--) {
-                        level->updateLight(LightLayer::Sky, (int)(cx + x * 16), cy, (int)(cz + z * 16), (int)(cx + x * 16), cy, (int)(cz + z * 16));
-                        level->updateLight(LightLayer::Block, (int)(cx + x * 16 - 1), cy, (int)(cz + z * 16 - 1), (int)(cx + x * 16 + 1), cy, (int)(cz + z * 16 + 1));
-                    }
+                // ★ 异步请求生成，主线程立即获得占位区块
+                if (asyncGen) {
+                    asyncGen->requestChunk(x, z);
+                } else {
+                    // 无异步生成器时回退到同步生成
+                    newChunk = source->getChunk(x, z);
                 }
+                newChunk = emptyChunk;
             }
         }
 
@@ -91,19 +95,69 @@ public:
             newChunk->load();
         }
 
-        if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
-            postProcess(this, x, z);
-        if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
-            postProcess(this, x - 1, z);
-        if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
-            postProcess(this, x, z - 1);
-        if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
-            postProcess(this, x - 1, z - 1);
-
         xLast = x;
         zLast = z;
         last = newChunk;
         return newChunk;
+    }
+
+    // ★ 新增：异步生成器将生成的区块交还给缓存
+    void putChunk(int64_t x, int64_t z, LevelChunk* chunk) {
+        auto key = std::make_pair(x, z);
+        if (chunks.find(key) == chunks.end()) {
+            chunks[key] = chunk;
+            chunk->lightLava();
+            pendingInstall.push_back({x, z});
+        } else {
+            chunk->deleteBlockData();
+            delete chunk;
+        }
+    }
+
+    // ★ 新增：每帧调用，安装已完成的区块
+    void processAsyncChunks() {
+        if (!asyncGen) return;
+        
+        // 接收后台线程完成的区块
+        asyncGen->processCompletedChunks();
+
+        // 对刚刚安装的区块执行需要主线程完成的后续处理
+        for (auto& pos : pendingInstall) {
+            LevelChunk* chunk = nullptr;
+            auto key = std::make_pair(pos.first, pos.second);
+            auto it = chunks.find(key);
+            if (it != chunks.end()) chunk = it->second;
+            if (!chunk) continue;
+
+            int64_t blockX = pos.first * 16;
+            int64_t blockZ = pos.second * 16;
+            for (int cx = 0; cx < 16; cx++) {
+                for (int cz = 0; cz < 16; cz++) {
+                    int height = level->getHeightmap(blockX + cx, blockZ + cz);
+                    for (int cy = height; cy >= 0; cy--) {
+                        level->updateLight(LightLayer::Sky, blockX + cx, cy, blockZ + cz,
+                                           blockX + cx, cy, blockZ + cz);
+                        level->updateLight(LightLayer::Block, blockX + cx - 1, cy, blockZ + cz - 1,
+                                           blockX + cx + 1, cy, blockZ + cz + 1);
+                    }
+                }
+            }
+
+            int64_t x = pos.first, z = pos.second;
+            if (!chunk->terrainPopulated &&
+                hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
+                postProcess(this, x, z);
+            if (hasChunk(x-1, z) && !getChunk(x-1, z)->terrainPopulated &&
+                hasChunk(x-1, z+1) && hasChunk(x, z+1) && hasChunk(x-1, z))
+                postProcess(this, x-1, z);
+            if (hasChunk(x, z-1) && !getChunk(x, z-1)->terrainPopulated &&
+                hasChunk(x+1, z-1) && hasChunk(x, z-1) && hasChunk(x+1, z))
+                postProcess(this, x, z-1);
+            if (hasChunk(x-1, z-1) && !getChunk(x-1, z-1)->terrainPopulated &&
+                hasChunk(x-1, z-1) && hasChunk(x, z-1) && hasChunk(x-1, z))
+                postProcess(this, x-1, z-1);
+        }
+        pendingInstall.clear();
     }
 
     Biome::MobList getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
@@ -114,10 +168,7 @@ public:
         static int depth = 0;
         if (depth > 20) return;
         depth++;
-        if (!fits(x, z)) {
-            depth--;
-            return;
-        }
+        if (!fits(x, z)) { depth--; return; }
         LevelChunk* chunk = getChunk(x, z);
         if (!chunk->terrainPopulated) {
             chunk->terrainPopulated = true;
@@ -130,21 +181,22 @@ public:
     }
 
     bool tick() {
+        if (asyncGen) processAsyncChunks();
         if (storage != NULL) storage->tick();
         return source->tick();
     }
 
     void getLoadedChunks(std::vector<LevelChunk*>& out) const {
-    out.clear();
-    for (const auto& pair : chunks) {
-        if (pair.second && pair.second != emptyChunk) {
-            out.push_back(pair.second);
+        out.clear();
+        for (const auto& pair : chunks) {
+            if (pair.second && pair.second != emptyChunk) {
+                out.push_back(pair.second);
+            }
         }
     }
-}
 
     bool shouldSave() { return true; }
-    std::string gatherStats() { return "ChunkCache: dynamic"; }
+    std::string gatherStats() { return "ChunkCache: async dynamic"; }
 
     void saveAll(bool onlyUnsaved) {
         if (storage != NULL) {
@@ -159,25 +211,13 @@ public:
     }
 
 private:
-    // 在 ChunkCache 类中修改 load 函数
-LevelChunk* load(int64_t x, int64_t z) {
-    if (storage == NULL) return emptyChunk;
-    LevelChunk* levelChunk = storage->load(level, x, z);   // 直接传递 int64_t
-    if (levelChunk != NULL) {
-        levelChunk->lastSaveTime = level->getTime();
-    }
-    return levelChunk;
-}
-
-    void saveEntities(LevelChunk* levelChunk) {
-        if (storage == NULL) return;
-        storage->saveEntities(level, levelChunk);
-    }
-
-    void save(LevelChunk* levelChunk) {
-        if (storage == NULL) return;
-        levelChunk->lastSaveTime = level->getTime();
-        storage->save(level, levelChunk);
+    LevelChunk* load(int64_t x, int64_t z) {
+        if (storage == NULL) return emptyChunk;
+        LevelChunk* levelChunk = storage->load(level, x, z);
+        if (levelChunk != NULL) {
+            levelChunk->lastSaveTime = level->getTime();
+        }
+        return levelChunk;
     }
 
 public:
@@ -190,6 +230,10 @@ private:
     std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, pair_hash> chunks;
     Level* level;
     LevelChunk* last;
+
+    // ★ 异步生成相关
+    AsyncChunkGenerator* asyncGen = nullptr;
+    std::vector<std::pair<int64_t, int64_t>> pendingInstall;
 };
 
 #endif
