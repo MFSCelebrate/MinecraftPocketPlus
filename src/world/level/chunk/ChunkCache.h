@@ -190,6 +190,21 @@ public:
         return source->getMobsAt(mobCategory, x, y, z);
     }
 
+void postProcess(ChunkSource* parent, int64_t x, int64_t z) override {
+        if (!fits(x, z)) return;
+        LevelChunk* chunk = getChunk(x, z);
+        if (!chunk->terrainPopulated) {
+            chunk->terrainPopulated = true;
+            if (source != NULL) {
+                if (hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
+                    source->postProcess(parent, x, z);
+                else
+                    chunk->terrainPopulated = false;
+            }
+            chunk->clearUpdateMap();
+        }
+}
+
 private:
     void doFullLighting(LevelChunk* chunk, int64_t x, int64_t z) {
         for (int cx = 0; cx < 16; cx++) {
@@ -202,21 +217,6 @@ private:
                                        (int)(cx + x * 16 + 1), cy, (int)(cz + z * 16 + 1));
                 }
             }
-        }
-    }
-
-    void doPostProcess(int64_t x, int64_t z) {
-        if (!fits(x, z)) return;
-        LevelChunk* chunk = getChunk(x, z);
-        if (!chunk->terrainPopulated) {
-            chunk->terrainPopulated = true;
-            if (source != NULL) {
-                if (hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
-                    source->postProcess(this, x, z);
-                else
-                    chunk->terrainPopulated = false;
-            }
-            chunk->clearUpdateMap();
         }
     }
 
