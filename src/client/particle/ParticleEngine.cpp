@@ -17,8 +17,11 @@ ParticleEngine::~ParticleEngine() {
 }
 
 void ParticleEngine::add(Particle* p) {
-    int t = p->getParticleTexture();
-    particles[t].push_back(p);
+    if (particles.size() >= 200) {
+        delete p;   // 直接丢
+        return;
+    }
+    particles.push_back(p);
 }
 
 void ParticleEngine::tick() {
