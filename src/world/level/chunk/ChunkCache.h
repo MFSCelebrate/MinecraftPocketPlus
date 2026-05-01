@@ -26,7 +26,6 @@ public:
     {
         isChunkCache = true;
         emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
-        // 预分配生成缓冲区 (避免每次 getChunk 时动态分配)
         genBlocks = new unsigned char[LevelChunk::ChunkBlockCount];
         memset(genBlocks, 0, LevelChunk::ChunkBlockCount);
     }
@@ -53,7 +52,6 @@ public:
         return getChunk(x, z);
     }
 
-    // ★ 主入口：获取区块并保证光照完成
     LevelChunk* getChunk(int64_t x, int64_t z) {
         if (x == xLast && z == zLast && last != NULL)
             return last;
@@ -61,12 +59,10 @@ public:
         auto key = std::make_pair(x, z);
         auto it = chunks.find(key);
         if (it != chunks.end()) {
-            // 如果需要光照（之前为预生成块），现在立即执行
             if (deferredLighting.find(key) != deferredLighting.end()) {
                 doFullLighting(it->second, x, z);
                 deferredLighting.erase(key);
             }
-            // 如果需要后处理（树、矿等）
             if (deferredPostProcess.find(key) != deferredPostProcess.end()) {
                 doPostProcess(x, z);
                 deferredPostProcess.erase(key);
@@ -80,16 +76,7 @@ public:
             if (source == NULL) {
                 newChunk = emptyChunk;
             } else {
-                // 同步生成，但使用复用的 genBlocks 减少内存分配
-                RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(source);
-                if (rls) {
-                    // 注意：RandomLevelSource::getChunk 内部会 new blocks，
-                    // 我们无法直接使用预分配内存，除非修改其实现。
-                    // 这里保持原样，但后续可进一步改造。
-                    newChunk = source->getChunk(x, z);
-                } else {
-                    newChunk = source->getChunk(x, z);
-                }
+                newChunk = source->getChunk(x, z);
             }
         }
 
@@ -97,7 +84,6 @@ public:
             newChunk = emptyChunk;
         } else {
             chunks[key] = newChunk;
-            // 立即执行光照 (因为此区块被直接访问)
             newChunk->lightLava();
             doFullLighting(newChunk, x, z);
             doPostProcess(x, z);
@@ -108,19 +94,16 @@ public:
         return newChunk;
     }
 
-    // ★ 轻量级预生成：只生成裸区块，不加光照和后处理
     void preloadChunk(int64_t x, int64_t z) {
         auto key = std::make_pair(x, z);
-        if (chunks.find(key) != chunks.end())
-            return; // 已存在
+        if (chunks.find(key) != chunks.end()) return;
 
         LevelChunk* newChunk = load(x, z);
         if (newChunk == NULL && source != NULL) {
             newChunk = source->getChunk(x, z);
             if (newChunk) {
                 chunks[key] = newChunk;
-                newChunk->lightLava(); // 基础亮度矫正
-                // 不做光照更新，标记为延迟处理
+                newChunk->lightLava();
                 deferredLighting.insert(key);
                 deferredPostProcess.insert(key);
                 newChunk->load();
@@ -131,11 +114,10 @@ public:
     }
 
     bool tick() {
-        // 1. 批量处理延迟光照（每帧最多处理 2 个，分摊负载）
+        // 1. 延迟光照：每帧最多 2 个
         int lightCount = 0;
-        const int maxLightPerFrame = 2;
         auto lit = deferredLighting.begin();
-        while (lit != deferredLighting.end() && lightCount < maxLightPerFrame) {
+        while (lit != deferredLighting.end() && lightCount < 2) {
             auto key = *lit;
             auto it = chunks.find(key);
             if (it != chunks.end() && it->second != emptyChunk) {
@@ -147,39 +129,33 @@ public:
             }
         }
 
-        // 2. 延迟后处理（每帧最多 1 个，更耗时）
-        int ppCount = 0;
-        const int maxPPPerFrame = 1;
+        // 2. 延迟后处理：每帧最多 1 个
         auto ppit = deferredPostProcess.begin();
-        while (ppit != deferredPostProcess.end() && ppCount < maxPPPerFrame) {
+        while (ppit != deferredPostProcess.end()) {
             auto key = *ppit;
             doPostProcess(key.first, key.second);
             ppit = deferredPostProcess.erase(ppit);
-            ppCount++;
+            break; // 每帧只做 1 个
         }
 
-        // 3. 主动预生成玩家周围未加载区块（每帧最多 2 个）
-        const int maxPregen = 2;
+        // 3. 预生成玩家周围未加载区块（每帧最多 2 个）
         int pregen = 0;
-        for (size_t pi = 0; pi < level->players.size() && pregen < maxPregen; ++pi) {
+        for (size_t pi = 0; pi < level->players.size() && pregen < 2; ++pi) {
             Player* player = level->players[pi];
             int cx = Mth::floor(player->x / 16.0);
             int cz = Mth::floor(player->z / 16.0);
-            // 螺旋扩展半径
-            for (int r = 1; r <= 4 && pregen < maxPregen; ++r) {
+            for (int r = 1; r <= 4 && pregen < 2; ++r) {
                 for (int dx = -r; dx <= r; ++dx) {
-                    int nx = cx + dx;
-                    int nz = cz + r;
-                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= maxPregen) break; }
+                    int nx = cx + dx, nz = cz + r;
+                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= 2) break; }
                     nz = cz - r;
-                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= maxPregen) break; }
+                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= 2) break; }
                 }
                 for (int dz = -r+1; dz <= r-1; ++dz) {
-                    int nx = cx + r;
-                    int nz = cz + dz;
-                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= maxPregen) break; }
+                    int nx = cx + r, nz = cz + dz;
+                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= 2) break; }
                     nx = cx - r;
-                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= maxPregen) break; }
+                    if (!hasChunk(nx, nz)) { preloadChunk(nx, nz); if (++pregen >= 2) break; }
                 }
             }
         }
@@ -215,7 +191,6 @@ public:
     }
 
 private:
-    // 完整光照更新
     void doFullLighting(LevelChunk* chunk, int64_t x, int64_t z) {
         for (int cx = 0; cx < 16; cx++) {
             for (int cz = 0; cz < 16; cz++) {
@@ -230,18 +205,16 @@ private:
         }
     }
 
-    // 后处理（树木、矿石等）
     void doPostProcess(int64_t x, int64_t z) {
         if (!fits(x, z)) return;
         LevelChunk* chunk = getChunk(x, z);
         if (!chunk->terrainPopulated) {
             chunk->terrainPopulated = true;
             if (source != NULL) {
-                // 检查周围区块存在性
                 if (hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
                     source->postProcess(this, x, z);
                 else
-                    chunk->terrainPopulated = false; // 等待邻居
+                    chunk->terrainPopulated = false;
             }
             chunk->clearUpdateMap();
         }
@@ -254,7 +227,6 @@ private:
         return levelChunk;
     }
 
-    // 成员变量
     int64_t xLast, zLast;
     LevelChunk* emptyChunk;
     ChunkSource* source;
@@ -263,10 +235,7 @@ private:
     Level* level;
     LevelChunk* last;
 
-    // 预分配生成缓冲区（备用，尚未完全利用）
     unsigned char* genBlocks;
-
-    // 延迟处理队列
     std::set<std::pair<int64_t, int64_t>> deferredLighting;
     std::set<std::pair<int64_t, int64_t>> deferredPostProcess;
 };
