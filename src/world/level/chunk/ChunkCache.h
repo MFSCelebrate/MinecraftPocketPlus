@@ -30,12 +30,12 @@ public:
 
         // ★ 如果底层源是随机地形生成器，则启动异步生成
         RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(source);
-        if (rls) {
-            asyncGen = new AsyncChunkGenerator(rls, this, level);
-            asyncGen->start();
-        } else {
-            asyncGen = nullptr;
-        }
+if (rls) {
+    asyncGen = new AsyncChunkGenerator(rls, this, level);
+    // 不在此处启动，等首次 tick 再启动
+} else {
+    asyncGen = nullptr;
+}
     }
 
     ~ChunkCache() {
@@ -182,9 +182,13 @@ public:
     }
 
     bool tick() {
-        if (asyncGen) processAsyncChunks();
-        if (storage != NULL) storage->tick();
-        return source->tick();
+    if (asyncGen && !asyncGenStarted) {
+        asyncGen->start();
+        asyncGenStarted = true;
+    }
+    if (asyncGen) processAsyncChunks();
+    if (storage != NULL) storage->tick();
+    return source->tick();
     }
 
     void getLoadedChunks(std::vector<LevelChunk*>& out) const {
@@ -234,6 +238,8 @@ private:
 
     // ★ 异步生成相关
     AsyncChunkGenerator* asyncGen = nullptr;
+
+    bool asyncGenStarted = false;
     std::vector<std::pair<int64_t, int64_t>> pendingInstall;
 };
 
