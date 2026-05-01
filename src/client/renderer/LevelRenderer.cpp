@@ -73,6 +73,9 @@ LevelRenderer::LevelRenderer( Minecraft* mc)
 	ticks(0),
 	skyList(0), starList(0), darkList(0),
 	tileRenderer(NULL),
+lastCullCamX(-9999), lastCullCamY(-9999), lastCullCamZ(-9999),
+lastCullYRot(-9999), lastCullXRot(-9999),
+cullCacheValid(false), cullSkipTimer(0),
 	destroyProgress(0)
 {
 #ifdef OPENGL_ES
