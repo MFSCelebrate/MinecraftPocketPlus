@@ -1036,38 +1036,39 @@ void Gui::onLevelGenerated() {
     t.endOverrideAndDraw();
 
     // ========== 精度丢失显示（替换原 ln[18] 噪声输入行） ==========
-    {
-        double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
-        double doubleStep, floatStep;
-        Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
+{
+    double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
+    double doubleStep;
+    float floatStep;
+    Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
 
-        float yPos = MGN + 18 * LH;   // 对应原 ln[18] 的位置
+    float yPos = MGN + 18 * LH;   // 对应原 ln[18] 的位置
 
-        // 绘制 "Current Precision: "
-        font->draw("Current Precision: ", MGN, yPos, 0xFFFFFFFF);
-        float xCursor = MGN + font->width("Current Precision: ");
+    // 绘制 "Current Precision: "
+    font->draw("Current Precision: ", MGN, yPos, 0xFFFFFFFF);
+    float xCursor = MGN + font->width("Current Precision: ");
 
-        // 绘制 double 步长（带颜色）
-        char buf[64];
-        snprintf(buf, sizeof(buf), "%.8f", doubleStep);
-        int colD = getPrecisionColor(doubleStep);
-        font->draw(buf, xCursor, yPos, colD);
-        xCursor += font->width(buf);
+    // 绘制 double 步长（带颜色）
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.8f", doubleStep);
+    int colD = Mth::getPrecisionColor(doubleStep);
+    font->draw(buf, xCursor, yPos, colD);
+    xCursor += font->width(buf);
 
-        // 绘制 " (Float: "
-        font->draw(" (Float: ", xCursor, yPos, 0xFFFFFFFF);
-        xCursor += font->width(" (Float: ");
+    // 绘制 " (Float: "
+    font->draw(" (Float: ", xCursor, yPos, 0xFFFFFFFF);
+    xCursor += font->width(" (Float: ");
 
-        // 绘制 float 步长（带颜色）
-        snprintf(buf, sizeof(buf), "%.8f", floatStep);
-        int colF = getPrecisionColor(floatStep);
-        font->draw(buf, xCursor, yPos, colF);
-        xCursor += font->width(buf);
+    // 绘制 float 步长（带颜色）
+    snprintf(buf, sizeof(buf), "%.8f", floatStep);
+    int colF = Mth::getPrecisionColor(floatStep);
+    font->draw(buf, xCursor, yPos, colF);
+    xCursor += font->width(buf);
 
-        // 结尾括号
-        font->draw(")", xCursor, yPos, 0xFFFFFFFF);
-    }
-
+    // 结尾括号
+    font->draw(")", xCursor, yPos, 0xFFFFFFFF);
+}
+		
     glPopMatrix();
 }
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
