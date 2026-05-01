@@ -1,8 +1,7 @@
-// AsyncChunkGenerator.cpp
 #include "AsyncChunkGenerator.h"
-#include "../../world/level/chunk/LevelChunk.h"
-#include "../../world/level/chunk/ChunkCache.h"
-#include "../../world/level/levelgen/RandomLevelSource.h"
+#include "LevelChunk.h"                     // 同一目录下
+#include "ChunkCache.h"                     // 同一目录下
+#include "../levelgen/RandomLevelSource.h"  // 往上一级到 levelgen
 
 AsyncChunkGenerator::AsyncChunkGenerator(RandomLevelSource* source, ChunkCache* cache, Level* level)
     : source(source), cache(cache), level(level), running(false) {}
@@ -37,11 +36,8 @@ void AsyncChunkGenerator::processCompletedChunks() {
         std::lock_guard<std::mutex> lock(mutex);
         completed.swap(resultMap);
     }
-
     for (auto& [pos, chunk] : completed) {
         if (chunk) {
-            // 将生成的区块安装到 ChunkCache 中
-            // 需要 ChunkCache 提供 putChunk 方法（见下文）
             cache->putChunk(pos.first, pos.second, chunk);
         }
     }
@@ -57,10 +53,7 @@ void AsyncChunkGenerator::workerLoop() {
             task = taskQueue.front();
             taskQueue.pop();
         }
-
-        // 同步调用 RandomLevelSource::getChunk（可能耗时）
         LevelChunk* chunk = source->getChunk(task.first, task.second);
-
         {
             std::lock_guard<std::mutex> lock(mutex);
             resultMap[task] = chunk;
