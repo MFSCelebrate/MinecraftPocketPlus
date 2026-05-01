@@ -19,6 +19,8 @@ public:
     void renderFpsMeter(float tickTime);
     void setPieVisible(bool vis) { m_pieVisible = vis; }
     bool isPieVisible() const { return m_pieVisible; }
+    void drawTextLegend(const PerfTimer::ResultField& node,
+                    const std::vector<PerfTimer::ResultField>& list);
 
 private:
     std::string toPercentString(float percentage);
