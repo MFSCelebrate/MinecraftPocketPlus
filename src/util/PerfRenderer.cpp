@@ -126,10 +126,9 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
         t.draw();
     }
 
-    // ---------- 饼图与文字区域（由 m_pieVisible 控制） ----------
+    // ---------- 饼图与文字：由开关控制 ----------
     if (!m_pieVisible) {
-        // 只显示当前节点标题（保留简洁的性能信息）
-        drawTextLegend(node, list);
+        // 关闭时彻底隐藏，不绘制任何文字和几何体
         return;
     }
 
@@ -154,36 +153,53 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     frameSkip++;
     std::vector<float> currentPcts;
     for (auto& f : list) currentPcts.push_back(f.percentage);
-    if (m_pieVbo == 0 || (frameSkip % 4 == 0) || currentPcts != m_cachedPercentages) {
+
+    // 更精确的缓存比较：容忍0.01%的变化
+    bool pctsChanged = false;
+    if (currentPcts.size() == m_cachedPercentages.size()) {
+        for (size_t i = 0; i < currentPcts.size(); ++i) {
+            if (fabsf(currentPcts[i] - m_cachedPercentages[i]) > 0.01f) {
+                pctsChanged = true;
+                break;
+            }
+        }
+    } else {
+        pctsChanged = true;
+    }
+
+    if (m_pieVbo == 0 || (frameSkip % 4 == 0) || pctsChanged) {
         if (m_pieVbo != 0) glDeleteBuffers(1, &m_pieVbo);
         glGenBuffers(1, &m_pieVbo);
         m_cachedPercentages = currentPcts;
 
         t.begin();
         float totalPercentage = 0;
-        const int pieSteps = 8;          // 固定分段数，三角形数量适中
+        const float radConv = Mth::PI * 2.0f / 100.0f;
+        const int pieSteps = 8;          // 扇形分段数
         for (size_t i = 0; i < list.size(); i++) {
             PerfTimer::ResultField& result = list[i];
-            float segmentAngle = result.percentage * (Mth::PI * 2.0f / 100.0f);
+            if (result.percentage <= 0.0f) continue; // 跳过空扇形
+
+            float segAngle = result.percentage * radConv;
+            t.color(result.getColor());
 
             // 扇形主体
-            t.color(result.getColor());
             for (int j = 0; j < pieSteps; ++j) {
-                float a1 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * (j / (float)pieSteps);
-                float a2 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * ((j+1) / (float)pieSteps);
+                float a1 = totalPercentage * radConv + segAngle * (j / (float)pieSteps);
+                float a2 = totalPercentage * radConv + segAngle * ((j+1) / (float)pieSteps);
                 t.vertex((float)x, (float)y, 0);
-                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f, 0);
-                t.vertex(x + sin(a2) * r, y - cos(a2) * r * 0.5f, 0);
+                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f, 0);
+                t.vertex(x + sinf(a2) * r, y - cosf(a2) * r * 0.5f, 0);
             }
 
-            // 颜色条带（可选，保留原版立体感）
+            // 颜色条带（立体效果）
             t.color((result.getColor() & 0xfefefe) >> 1);
             for (int j = 0; j < pieSteps; ++j) {
-                float a1 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * (j / (float)pieSteps);
-                float a2 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * ((j+1) / (float)pieSteps);
-                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f, 0);
-                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f + 10, 0);
-                t.vertex(x + sin(a2) * r, y - cos(a2) * r * 0.5f, 0);
+                float a1 = totalPercentage * radConv + segAngle * (j / (float)pieSteps);
+                float a2 = totalPercentage * radConv + segAngle * ((j+1) / (float)pieSteps);
+                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f, 0);
+                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f + 10, 0);
+                t.vertex(x + sinf(a2) * r, y - cosf(a2) * r * 0.5f, 0);
             }
 
             totalPercentage += result.percentage;
@@ -192,7 +208,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
         m_pieVertexCount = rc.vertexCount;
     }
 
-    // 绘制饼图VBO
+    // 绘制VBO
     if (m_pieVbo != 0 && m_pieVertexCount > 0) {
         glEnableClientState2(GL_VERTEX_ARRAY);
         glEnableClientState2(GL_COLOR_ARRAY);
@@ -205,7 +221,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     }
 
     glEnable(GL_TEXTURE_2D);
-    // 文字始终显示（会被 pieVisible 控制，所以只有开启时才会调用）
+    // 仅当饼图开启时显示文字
     drawTextLegend(node, list);
 }
 void PerfRenderer::drawTextLegend(const PerfTimer::ResultField& node,
