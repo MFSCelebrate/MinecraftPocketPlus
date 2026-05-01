@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include "PerfTimer.h"
 
 class Minecraft;
 class Font;
