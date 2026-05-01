@@ -28,7 +28,7 @@ public:
         isChunkCache = true;
         emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
 
-        // 若底层源是随机地形生成器，则创建异步生成器，但先不启动
+        // 若底层源是随机地形生成器，则创建异步预生成器（暂不启动）
         RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(source);
         if (rls) {
             asyncGen = new AsyncChunkGenerator(rls, this, level);
@@ -60,6 +60,7 @@ public:
         return getChunk(x, z);
     }
 
+    // ★ 永远同步获取区块（必须的区块立即生成）
     LevelChunk* getChunk(int64_t x, int64_t z) {
         if (x == xLast && z == zLast && last != NULL) {
             return last;
@@ -74,17 +75,28 @@ public:
         }
 
         LevelChunk* newChunk = load(x, z);
+        bool updateLights = false;
         if (newChunk == NULL) {
             if (source == NULL) {
                 newChunk = emptyChunk;
             } else {
-                // 异步生成器必须已启动才走异步路径
-                if (asyncGen && asyncGenStarted) {
-                    asyncGen->requestChunk(x, z);
-                    newChunk = emptyChunk;
-                } else {
-                    // 世界创建阶段或未启用异步 → 同步生成
-                    newChunk = source->getChunk(x, z);
+                // 直接走同步生成，保证区块立即可用
+                newChunk = source->getChunk(x, z);
+            }
+        } else {
+            updateLights = true;
+        }
+        chunks[key] = newChunk;
+        newChunk->lightLava();
+
+        if (updateLights) {
+            for (int cx = 0; cx < 16; cx++) {
+                for (int cz = 0; cz < 16; cz++) {
+                    int height = level->getHeightmap((int)(cx + x * 16), (int)(cz + z * 16));
+                    for (int cy = height; cy >= 0; cy--) {
+                        level->updateLight(LightLayer::Sky, (int)(cx + x * 16), cy, (int)(cz + z * 16), (int)(cx + x * 16), cy, (int)(cz + z * 16));
+                        level->updateLight(LightLayer::Block, (int)(cx + x * 16 - 1), cy, (int)(cz + z * 16 - 1), (int)(cx + x * 16 + 1), cy, (int)(cz + z * 16 + 1));
+                    }
                 }
             }
         }
@@ -93,65 +105,91 @@ public:
             newChunk->load();
         }
 
+        if (!newChunk->terrainPopulated && hasChunk(x + 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x + 1, z))
+            postProcess(this, x, z);
+        if (hasChunk(x - 1, z) && !getChunk(x - 1, z)->terrainPopulated && hasChunk(x - 1, z + 1) && hasChunk(x, z + 1) && hasChunk(x - 1, z))
+            postProcess(this, x - 1, z);
+        if (hasChunk(x, z - 1) && !getChunk(x, z - 1)->terrainPopulated && hasChunk(x + 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x + 1, z))
+            postProcess(this, x, z - 1);
+        if (hasChunk(x - 1, z - 1) && !getChunk(x - 1, z - 1)->terrainPopulated && hasChunk(x - 1, z - 1) && hasChunk(x, z - 1) && hasChunk(x - 1, z))
+            postProcess(this, x - 1, z - 1);
+
         xLast = x;
         zLast = z;
         last = newChunk;
         return newChunk;
     }
 
+    // ★ 后台生成的区块通过此方法安静加入缓存
     void putChunk(int64_t x, int64_t z, LevelChunk* chunk) {
         auto key = std::make_pair(x, z);
         if (chunks.find(key) == chunks.end()) {
             chunks[key] = chunk;
             chunk->lightLava();
-            pendingInstall.push_back({x, z});
+            // 不需要光照更新，因为只是预先填充，真正需要时 getChunk 会再处理
         } else {
             chunk->deleteBlockData();
             delete chunk;
         }
     }
 
-    void processAsyncChunks() {
-        if (!asyncGen) return;
-        
-        asyncGen->processCompletedChunks();
+    // ★ 每帧调用：启动预生成器并提交任务
+    bool tick() {
+        // 首次 tick 或 asyncGen 存在即启动（仅一次）
+        if (asyncGen && !asyncGenStarted) {
+            asyncGen->start();
+            asyncGenStarted = true;
+        }
 
-        for (auto& pos : pendingInstall) {
-            LevelChunk* chunk = nullptr;
-            auto key = std::make_pair(pos.first, pos.second);
-            auto it = chunks.find(key);
-            if (it != chunks.end()) chunk = it->second;
-            if (!chunk) continue;
-
-            int64_t blockX = pos.first * 16;
-            int64_t blockZ = pos.second * 16;
-            for (int cx = 0; cx < 16; cx++) {
-                for (int cz = 0; cz < 16; cz++) {
-                    int height = level->getHeightmap(blockX + cx, blockZ + cz);
-                    for (int cy = height; cy >= 0; cy--) {
-                        level->updateLight(LightLayer::Sky, blockX + cx, cy, blockZ + cz,
-                                           blockX + cx, cy, blockZ + cz);
-                        level->updateLight(LightLayer::Block, blockX + cx - 1, cy, blockZ + cz - 1,
-                                           blockX + cx + 1, cy, blockZ + cz + 1);
+        // 分发后台任务：以每个玩家为中心，预生成周围半径内未加载的区块
+        if (asyncGen && asyncGenStarted) {
+            const int pregenRadius = 6;  // 预加载半径
+            const PlayerList& players = level->players;
+            for (size_t i = 0; i < players.size(); ++i) {
+                Player* player = players[i];
+                int cx = Mth::floor(player->x / 16.0);
+                int cz = Mth::floor(player->z / 16.0);
+                for (int dx = -pregenRadius; dx <= pregenRadius; ++dx) {
+                    for (int dz = -pregenRadius; dz <= pregenRadius; ++dz) {
+                        int nx = cx + dx;
+                        int nz = cz + dz;
+                        if (!hasChunk(nx, nz)) {
+                            asyncGen->requestChunk(nx, nz);
+                        }
                     }
                 }
             }
 
-            int64_t x = pos.first, z = pos.second;
-            if (!chunk->terrainPopulated &&
-                hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
-                postProcess(this, x, z);
-            if (hasChunk(x-1, z) && !getChunk(x-1, z)->terrainPopulated &&
-                hasChunk(x-1, z+1) && hasChunk(x, z+1) && hasChunk(x-1, z))
-                postProcess(this, x-1, z);
-            if (hasChunk(x, z-1) && !getChunk(x, z-1)->terrainPopulated &&
-                hasChunk(x+1, z-1) && hasChunk(x, z-1) && hasChunk(x+1, z))
-                postProcess(this, x, z-1);
-            if (hasChunk(x-1, z-1) && !getChunk(x-1, z-1)->terrainPopulated &&
-                hasChunk(x-1, z-1) && hasChunk(x, z-1) && hasChunk(x-1, z))
-                postProcess(this, x-1, z-1);
+            // 将后台完成的区块装入缓存
+            asyncGen->processCompletedChunks();
         }
-        pendingInstall.clear();
+
+        if (storage != NULL) storage->tick();
+        return source->tick();
+    }
+
+    void getLoadedChunks(std::vector<LevelChunk*>& out) const {
+        out.clear();
+        for (const auto& pair : chunks) {
+            if (pair.second && pair.second != emptyChunk) {
+                out.push_back(pair.second);
+            }
+        }
+    }
+
+    bool shouldSave() { return true; }
+    std::string gatherStats() { return "ChunkCache: async pregen"; }
+
+    void saveAll(bool onlyUnsaved) {
+        if (storage != NULL) {
+            std::vector<LevelChunk*> chunksToSave;
+            for (auto& pair : chunks) {
+                LevelChunk* chunk = pair.second;
+                if (!onlyUnsaved || chunk->shouldSave(false))
+                    chunksToSave.push_back(chunk);
+            }
+            storage->saveAll(level, chunksToSave);
+        }
     }
 
     Biome::MobList getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
@@ -172,40 +210,6 @@ public:
             chunk->clearUpdateMap();
         }
         depth--;
-    }
-
-    bool tick() {
-        if (asyncGen && !asyncGenStarted) {
-            asyncGen->start();
-            asyncGenStarted = true;
-        }
-        if (asyncGen) processAsyncChunks();
-        if (storage != NULL) storage->tick();
-        return source->tick();
-    }
-
-    void getLoadedChunks(std::vector<LevelChunk*>& out) const {
-        out.clear();
-        for (const auto& pair : chunks) {
-            if (pair.second && pair.second != emptyChunk) {
-                out.push_back(pair.second);
-            }
-        }
-    }
-
-    bool shouldSave() { return true; }
-    std::string gatherStats() { return "ChunkCache: async dynamic"; }
-
-    void saveAll(bool onlyUnsaved) {
-        if (storage != NULL) {
-            std::vector<LevelChunk*> chunksToSave;
-            for (auto& pair : chunks) {
-                LevelChunk* chunk = pair.second;
-                if (!onlyUnsaved || chunk->shouldSave(false))
-                    chunksToSave.push_back(chunk);
-            }
-            storage->saveAll(level, chunksToSave);
-        }
     }
 
 private:
@@ -231,7 +235,6 @@ private:
 
     AsyncChunkGenerator* asyncGen = nullptr;
     bool asyncGenStarted = false;
-    std::vector<std::pair<int64_t, int64_t>> pendingInstall;
 };
 
 #endif
