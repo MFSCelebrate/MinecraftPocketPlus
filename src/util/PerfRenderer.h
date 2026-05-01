@@ -17,6 +17,8 @@ public:
     void debugFpsMeterKeyPress(int key);
 
     void renderFpsMeter(float tickTime);
+    void setPieVisible(bool vis) { m_pieVisible = vis; }
+    bool isPieVisible() const { return m_pieVisible; }
 
 private:
     std::string toPercentString(float percentage);
@@ -29,6 +31,11 @@ private:
 	std::vector<float> tickTimes;
 	int frameTimePos;
 	float lastTimer;
+    bool m_pieVisible = false;          // 饼图可见性
+    int  m_lastFrameUpdated = -1;       // 上次更新饼图的帧号
+    GLuint m_pieVbo = 0;               // 饼图VBO
+    int    m_pieVertexCount = 0;        // VBO中的顶点数
+    std::vector<float> m_cachedPercentages; // 缓存的上次百分比数据
 };
 
 #endif /*NET_UTIL__PerfRenderer_H__*/
