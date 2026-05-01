@@ -216,7 +216,6 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/world/level/biome/Biome.cpp \
 ../../../src/world/level/biome/BiomeSource.cpp \
 ../../../src/world/level/chunk/LevelChunk.cpp \
-../../../src/world/level/chunk/AsyncChunkGenerator.cpp \
 ../../../src/world/level/dimension/Dimension.cpp \
 ../../../src/world/level/levelgen/CanyonFeature.cpp \
 ../../../src/world/level/levelgen/DungeonFeature.cpp \
