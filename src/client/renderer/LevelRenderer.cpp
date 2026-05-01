@@ -64,7 +64,7 @@ LevelRenderer::LevelRenderer( Minecraft* mc)
 	renderedEntities(0),
 	culledEntities(0),
 
-	occlusionCheck(false),
+	occlusionCheck(true),
 	totalChunks(0), offscreenChunks(0), renderedChunks(0), occludedChunks(0), emptyChunks(0),
 
 	chunkFixOffs(0),
