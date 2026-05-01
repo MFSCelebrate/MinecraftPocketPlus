@@ -1034,53 +1034,63 @@ void Gui::renderDebugInfo() {
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
-
     // ========== 精度丢失显示（替换原 ln[18] 噪声输入行） ==========
-    {
-        double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
-        double doubleStep;
-        float floatStep;   // 必须为 float
-        Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
+{
+    double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
+    double doubleStep;
+    float floatStep;
+    Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
 
-        float yPos = MGN + 18 * LH;
+    float yPos = MGN + 18 * LH;
 
-        // 预先格式化数字字符串，用于计算精确宽度
-        char bufDouble[64], bufFloat[64];
-        snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
-        snprintf(bufFloat,  sizeof(bufFloat),  "%.9f", floatStep);
+    // 格式化数字并移除尾部多余的零
+    char bufDouble[64], bufFloat[64];
+    snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
+    snprintf(bufFloat,  sizeof(bufFloat),  "%.9f", floatStep);
 
-        // 拼接部分文本（不包含颜色，仅计算宽度）
-        const char* labelText = "Current Precision: ";
-        const char* middleText = " (Float: ";
-        const char* endText = ")";
+    // 移除尾部零的辅助 lambda
+    auto trimZeros = [](char* str) {
+        if (!str || *str == '\0') return;
+        char* dot = strchr(str, '.');
+        if (!dot) return;
+        char* p = str + strlen(str) - 1;
+        while (p > dot && *p == '0') *p-- = '\0';
+        if (*p == '.') *p = '\0';
+    };
+    trimZeros(bufDouble);
+    trimZeros(bufFloat);
 
-        float totalWidth = font->width(labelText) +
-                           font->width(bufDouble) +
-                           font->width(middleText) +
-                           font->width(bufFloat) +
-                           font->width(endText);
+    // 拼接各部分计算精确宽度
+    const char* labelText = "Current Precision: ";
+    const char* middleText = " (Float: ";
+    const char* endText = ")";
 
-        // 绘制背景框
-        fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
+    float totalWidth = font->width(labelText) +
+                       font->width(bufDouble) +
+                       font->width(middleText) +
+                       font->width(bufFloat) +
+                       font->width(endText);
 
-        // 逐部分绘制文本
-        font->draw(labelText, MGN, yPos, 0xFFFFFFFF);
-        float xCursor = MGN + font->width(labelText);
+    // 背景框
+    fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
 
-        int colD = Mth::getPrecisionColor(doubleStep);
-        font->draw(bufDouble, xCursor, yPos, colD);
-        xCursor += font->width(bufDouble);
+    // 绘制
+    font->draw(labelText, MGN, yPos, 0xFFFFFFFF);
+    float xCursor = MGN + font->width(labelText);
 
-        font->draw(middleText, xCursor, yPos, 0xFFFFFFFF);
-        xCursor += font->width(middleText);
+    int colD = Mth::getPrecisionColor(doubleStep);
+    font->draw(bufDouble, xCursor, yPos, colD);
+    xCursor += font->width(bufDouble);
 
-        int colF = Mth::getPrecisionColor(floatStep);
-        font->draw(bufFloat, xCursor, yPos, colF);
-        xCursor += font->width(bufFloat);
+    font->draw(middleText, xCursor, yPos, 0xFFFFFFFF);
+    xCursor += font->width(middleText);
 
-        font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
-    }
+    int colF = Mth::getPrecisionColor(floatStep);
+    font->draw(bufFloat, xCursor, yPos, colF);
+    xCursor += font->width(bufFloat);
 
+    font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
+}
     glPopMatrix();
 }
 
