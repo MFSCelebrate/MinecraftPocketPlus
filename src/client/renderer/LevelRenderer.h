@@ -77,6 +77,7 @@ private:
     }
     int noEntityRenderFrames;
     int totalEntities;
+int cullSkipTimer = 0;   // 跳帧计数器
     int renderedEntities;
     int culledEntities;
 
