@@ -44,15 +44,15 @@ public:
 
     bool fits(int64_t x, int64_t z) { return true; }
 
-    bool hasChunk(int64_t x, int64_t z) {
+    bool hasChunk(int64_t x, int64_t z) override {
         return chunks.find(std::make_pair(x, z)) != chunks.end();
     }
 
-    LevelChunk* create(int64_t x, int64_t z) {
+    LevelChunk* create(int64_t x, int64_t z) override {
         return getChunk(x, z);
     }
 
-    LevelChunk* getChunk(int64_t x, int64_t z) {
+    LevelChunk* getChunk(int64_t x, int64_t z) override {
         if (x == xLast && z == zLast && last != NULL)
             return last;
 
@@ -64,7 +64,7 @@ public:
                 deferredLighting.erase(key);
             }
             if (deferredPostProcess.find(key) != deferredPostProcess.end()) {
-                doPostProcess(x, z);
+                postProcess(this, x, z);               // 修正调用
                 deferredPostProcess.erase(key);
             }
             xLast = x; zLast = z; last = it->second;
@@ -86,7 +86,7 @@ public:
             chunks[key] = newChunk;
             newChunk->lightLava();
             doFullLighting(newChunk, x, z);
-            doPostProcess(x, z);
+            postProcess(this, x, z);                   // 修正调用
             newChunk->load();
         }
 
@@ -113,8 +113,8 @@ public:
         }
     }
 
-    bool tick() {
-        // 1. 延迟光照：每帧最多 2 个
+    bool tick() override {
+        // 延迟光照，每帧最多2个
         int lightCount = 0;
         auto lit = deferredLighting.begin();
         while (lit != deferredLighting.end() && lightCount < 2) {
@@ -129,16 +129,16 @@ public:
             }
         }
 
-        // 2. 延迟后处理：每帧最多 1 个
+        // 延迟后处理，每帧最多1个
         auto ppit = deferredPostProcess.begin();
         while (ppit != deferredPostProcess.end()) {
             auto key = *ppit;
-            doPostProcess(key.first, key.second);
+            postProcess(this, key.first, key.second);   // 修正调用
             ppit = deferredPostProcess.erase(ppit);
-            break; // 每帧只做 1 个
+            break;
         }
 
-        // 3. 预生成玩家周围未加载区块（每帧最多 2 个）
+        // 预生成玩家周围区块，每帧最多2个
         int pregen = 0;
         for (size_t pi = 0; pi < level->players.size() && pregen < 2; ++pi) {
             Player* player = level->players[pi];
@@ -164,6 +164,19 @@ public:
         return source->tick();
     }
 
+    void postProcess(ChunkSource* parent, int64_t x, int64_t z) override {
+        if (!fits(x, z)) return;
+        LevelChunk* chunk = getChunk(x, z);
+        if (!chunk->terrainPopulated) {
+            chunk->terrainPopulated = true;
+            if (source != NULL && hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
+                source->postProcess(parent, x, z);
+            else
+                chunk->terrainPopulated = false;
+            chunk->clearUpdateMap();
+        }
+    }
+
     void getLoadedChunks(std::vector<LevelChunk*>& out) const {
         out.clear();
         for (const auto& pair : chunks) {
@@ -171,10 +184,10 @@ public:
         }
     }
 
-    bool shouldSave() { return true; }
-    std::string gatherStats() { return "ChunkCache: optimized sync pregen"; }
+    bool shouldSave() override { return true; }
+    std::string gatherStats() override { return "ChunkCache: optimized sync pregen"; }
 
-    void saveAll(bool onlyUnsaved) {
+    void saveAll(bool onlyUnsaved) override {
         if (storage != NULL) {
             std::vector<LevelChunk*> chunksToSave;
             for (auto& pair : chunks) {
@@ -186,24 +199,9 @@ public:
         }
     }
 
-    Biome::MobList getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
+    Biome::MobList getMobsAt(const MobCategory& mobCategory, int x, int y, int z) override {
         return source->getMobsAt(mobCategory, x, y, z);
     }
-
-void postProcess(ChunkSource* parent, int64_t x, int64_t z) override {
-        if (!fits(x, z)) return;
-        LevelChunk* chunk = getChunk(x, z);
-        if (!chunk->terrainPopulated) {
-            chunk->terrainPopulated = true;
-            if (source != NULL) {
-                if (hasChunk(x+1, z+1) && hasChunk(x, z+1) && hasChunk(x+1, z))
-                    source->postProcess(parent, x, z);
-                else
-                    chunk->terrainPopulated = false;
-            }
-            chunk->clearUpdateMap();
-        }
-}
 
 private:
     void doFullLighting(LevelChunk* chunk, int64_t x, int64_t z) {
