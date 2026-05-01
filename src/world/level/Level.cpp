@@ -1095,115 +1095,137 @@ void Level::addToTickNextTick(int64_t x, int y, int64_t z, int tileId, int tickD
 }
 
 void Level::tickEntities() {
-	TIMER_PUSH("entities");
+    TIMER_PUSH("entities");
 
-	TIMER_PUSH("remove");
-	EntityList pendingRemovedEntities;
-	std::vector<Zombie*> zombies;
+    TIMER_PUSH("remove");
+    EntityList pendingRemovedEntities;
+    std::vector<Zombie*> zombies;
 
-	TIMER_POP_PUSH("regular");
+    // 参考玩家（取列表第一个），用于距离判断
+    Player* refPlayer = players.empty() ? nullptr : players[0];
+
+    TIMER_POP_PUSH("regular");
     for (unsigned int i = 0; i < entities.size(); i++) {
         Entity* e = entities[i];
 
+        // 对存活实体进行降频更新
         if (!e->removed) {
-            tick(e);
-			if (e->getEntityTypeId() == MobTypes::Zombie) {
-				zombies.push_back((Zombie*)e);
-				((Zombie*)e)->setUseNewAi(false);
-			}
+            bool shouldTick = true;
+            if (refPlayer) {
+                float distSqr = e->distanceToSqr(refPlayer);
+                long now = levelData.getTime();          // 世界时间，代替全局 ticks
+                // 先判断更远的距离，避免永远进不了更长的间隔
+                if (distSqr > 256 * 256) {
+                    if ((now + e->entityId) % 10 != 0) shouldTick = false;
+                } else if (distSqr > 128 * 128) {
+                    if ((now + e->entityId) % 4 != 0) shouldTick = false;
+                }
+            }
+
+            if (shouldTick) {
+                tick(e);
+                if (e->getEntityTypeId() == MobTypes::Zombie) {
+                    zombies.push_back((Zombie*)e);
+                    ((Zombie*)e)->setUseNewAi(false);
+                }
+            }
         }
 
-		TIMER_PUSH("remove");
+        // 移除逻辑：无论实体是否被 tick，都必须执行，防止遗留
+        TIMER_PUSH("remove");
         if (e->removed && (!e->isPlayer() || e->reallyRemoveIfPlayer)) {
             int xc = e->xChunk;
             int zc = e->zChunk;
             if (e->inChunk && hasChunk(xc, zc)) {
                 getChunk(xc, zc)->removeEntity(e);
             }
-			entityIdLookup.erase(e->entityId);
-			entities.erase(entities.begin() + (i--));
+            entityIdLookup.erase(e->entityId);
+            entities.erase(entities.begin() + (i--));
             entityRemoved(e);
-			pendingRemovedEntities.push_back(e);
+            pendingRemovedEntities.push_back(e);
         }
-		TIMER_POP();
+        TIMER_POP();
     }
-	
-	TIMER_POP_PUSH("remove");
-	for (unsigned int i = 0; i < pendingRemovedEntities.size(); ++i) {
-		Entity* e = pendingRemovedEntities[i];
-		if (e->isPlayer())
-			_pendingPlayerRemovals.push_back( PRInfo(e, 16) );
-		else
-			delete e;
 
-	} pendingRemovedEntities.clear();
+    // 延迟销毁待移除实体
+    TIMER_POP_PUSH("remove");
+    for (unsigned int i = 0; i < pendingRemovedEntities.size(); ++i) {
+        Entity* e = pendingRemovedEntities[i];
+        if (e->isPlayer())
+            _pendingPlayerRemovals.push_back( PRInfo(e, 16) );
+        else
+            delete e;
+    }
+    pendingRemovedEntities.clear();
 
-	for (int i = (int)_pendingPlayerRemovals.size()-1; i >= 0; --i) {
-		PRInfo& pr = _pendingPlayerRemovals[i];
-		if (--pr.ticks <= 0) {
-			LOGI("deleting: %p\n", pr.e);
-			delete pr.e;
-			_pendingPlayerRemovals.erase(_pendingPlayerRemovals.begin() + i);
-		}
-	}
+    for (int i = (int)_pendingPlayerRemovals.size()-1; i >= 0; --i) {
+        PRInfo& pr = _pendingPlayerRemovals[i];
+        if (--pr.ticks <= 0) {
+            LOGI("deleting: %p\n", pr.e);
+            delete pr.e;
+            _pendingPlayerRemovals.erase(_pendingPlayerRemovals.begin() + i);
+        }
+    }
 
-	TIMER_POP_PUSH("tileEntities");
-	updatingTileEntities = true;
-	for (unsigned int i = 0; i < tileEntities.size(); ++i) {
-		TileEntity* te = tileEntities[i];
-		if (!te->isRemoved() && te->level != NULL) {
-			if (hasChunkAt(te->x, te->y, te->z)) {
-				te->tick();
-			}
-		}
+    // 方块实体更新
+    TIMER_POP_PUSH("tileEntities");
+    updatingTileEntities = true;
+    for (unsigned int i = 0; i < tileEntities.size(); ++i) {
+        TileEntity* te = tileEntities[i];
+        if (!te->isRemoved() && te->level != NULL) {
+            if (hasChunkAt(te->x, te->y, te->z)) {
+                te->tick();
+            }
+        }
 
-		if (te->isRemoved()) {
-			tileEntities.erase(tileEntities.begin() + (i--));
+        if (te->isRemoved()) {
+            tileEntities.erase(tileEntities.begin() + (i--));
 
-			if (hasChunk(te->x >> 4, te->z >> 4)) {
-				LevelChunk* lc = getChunk(te->x >> 4, te->z >> 4);
-				if (lc != NULL) {
-					lc->removeTileEntity(te->x & 15, te->y, te->z & 15);
-				}
-			}
-			delete te;
-		}
-	}
-	updatingTileEntities = false;
+            if (hasChunk(te->x >> 4, te->z >> 4)) {
+                LevelChunk* lc = getChunk(te->x >> 4, te->z >> 4);
+                if (lc != NULL) {
+                    lc->removeTileEntity(te->x & 15, te->y, te->z & 15);
+                }
+            }
+            delete te;
+        }
+    }
+    updatingTileEntities = false;
 
-	TIMER_POP_PUSH("pendingTileEntities");
-	if (!pendingTileEntities.empty()) {
-		for (unsigned int i = 0; i < pendingTileEntities.size(); ++i) {
-			TileEntity* e = pendingTileEntities[i];
-			if (!e->isRemoved()) {
-				bool found = false;
-				for (unsigned int j = 0; j < tileEntities.size(); ++j) {
-					if (tileEntities[j] == e) {
-						found = true;
-						break;
-					}
-				}
-				int xx = e->x, yy = e->y, zz = e->z;
+    // 待处理的方块实体
+    TIMER_POP_PUSH("pendingTileEntities");
+    if (!pendingTileEntities.empty()) {
+        for (unsigned int i = 0; i < pendingTileEntities.size(); ++i) {
+            TileEntity* e = pendingTileEntities[i];
+            if (!e->isRemoved()) {
+                bool found = false;
+                for (unsigned int j = 0; j < tileEntities.size(); ++j) {
+                    if (tileEntities[j] == e) {
+                        found = true;
+                        break;
+                    }
+                }
+                int xx = e->x, yy = e->y, zz = e->z;
 
-				LevelChunk* lc = getChunk(xx >> 4, zz >> 4);
-				bool has = lc && lc->hasTileEntityAt(e);
-				if (!found) {
-					if (!has) tileEntities.push_back(e);
-					else {
-						delete e;
-						e = NULL;
-					}
-				}
+                LevelChunk* lc = getChunk(xx >> 4, zz >> 4);
+                bool has = lc && lc->hasTileEntityAt(e);
+                if (!found) {
+                    if (!has) tileEntities.push_back(e);
+                    else {
+                        delete e;
+                        e = NULL;
+                    }
+                }
 
-				if (e && lc) lc->setTileEntity(xx & 15, yy, zz & 15, e);
-				sendTileUpdated(xx, yy, zz);
-			}
-		}
-		pendingTileEntities.clear();
-	}
+                if (e && lc) lc->setTileEntity(xx & 15, yy, zz & 15, e);
+                sendTileUpdated(xx, yy, zz);
+            }
+        }
+        pendingTileEntities.clear();
+    }
 
-	TIMER_POP();
-	TIMER_POP();
+    TIMER_POP();
+    TIMER_POP();
 }
 
 class DistanceEntitySorter {
