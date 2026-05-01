@@ -7,6 +7,7 @@
 #include "../Level.h"
 #include "../LevelConstants.h"
 #include "AsyncChunkGenerator.h"   // ★ 新增
+#include "../levelgen/RandomLevelSource.h"
 #include <unordered_map>
 
 struct pair_hash {
