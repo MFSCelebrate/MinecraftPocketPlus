@@ -754,7 +754,7 @@ void Gui::onLevelGenerated() {
     }
 }
 
-    void Gui::renderDebugInfo() {
+void Gui::renderDebugInfo() {
     // FPS counter (updates once per second)
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
@@ -1036,41 +1036,54 @@ void Gui::onLevelGenerated() {
     t.endOverrideAndDraw();
 
     // ========== 精度丢失显示（替换原 ln[18] 噪声输入行） ==========
-{
-    double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
-    double doubleStep;
-    float floatStep;
-    Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
+    {
+        double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
+        double doubleStep;
+        float floatStep;   // 必须为 float
+        Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
 
-    float yPos = MGN + 18 * LH;   // 对应原 ln[18] 的位置
+        float yPos = MGN + 18 * LH;
 
-    // 绘制 "Current Precision: "
-    font->draw("Current Precision: ", MGN, yPos, 0xFFFFFFFF);
-    float xCursor = MGN + font->width("Current Precision: ");
+        // 预先格式化数字字符串，用于计算精确宽度
+        char bufDouble[64], bufFloat[64];
+        snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
+        snprintf(bufFloat,  sizeof(bufFloat),  "%.9f", floatStep);
 
-    // 绘制 double 步长（带颜色）
-    char buf[64];
-    snprintf(buf, sizeof(buf), "%.8f", doubleStep);
-    int colD = Mth::getPrecisionColor(doubleStep);
-    font->draw(buf, xCursor, yPos, colD);
-    xCursor += font->width(buf);
+        // 拼接部分文本（不包含颜色，仅计算宽度）
+        const char* labelText = "Current Precision: ";
+        const char* middleText = " (Float: ";
+        const char* endText = ")";
 
-    // 绘制 " (Float: "
-    font->draw(" (Float: ", xCursor, yPos, 0xFFFFFFFF);
-    xCursor += font->width(" (Float: ");
+        float totalWidth = font->width(labelText) +
+                           font->width(bufDouble) +
+                           font->width(middleText) +
+                           font->width(bufFloat) +
+                           font->width(endText);
 
-    // 绘制 float 步长（带颜色）
-    snprintf(buf, sizeof(buf), "%.8f", floatStep);
-    int colF = Mth::getPrecisionColor(floatStep);
-    font->draw(buf, xCursor, yPos, colF);
-    xCursor += font->width(buf);
+        // 绘制背景框
+        fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
 
-    // 结尾括号
-    font->draw(")", xCursor, yPos, 0xFFFFFFFF);
-}
-		
+        // 逐部分绘制文本
+        font->draw(labelText, MGN, yPos, 0xFFFFFFFF);
+        float xCursor = MGN + font->width(labelText);
+
+        int colD = Mth::getPrecisionColor(doubleStep);
+        font->draw(bufDouble, xCursor, yPos, colD);
+        xCursor += font->width(bufDouble);
+
+        font->draw(middleText, xCursor, yPos, 0xFFFFFFFF);
+        xCursor += font->width(middleText);
+
+        int colF = Mth::getPrecisionColor(floatStep);
+        font->draw(bufFloat, xCursor, yPos, colF);
+        xCursor += font->width(bufFloat);
+
+        font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
+    }
+
     glPopMatrix();
 }
+
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
