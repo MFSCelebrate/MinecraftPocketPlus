@@ -17,11 +17,18 @@ ParticleEngine::~ParticleEngine() {
 }
 
 void ParticleEngine::add(Particle* p) {
-    if (particles.size() >= 200) {
-        delete p;   // 直接丢
+    // 计算所有纹理组的粒子总数
+    int total = 0;
+    for (int i = 0; i < TEXTURE_COUNT; ++i) {
+        total += particles[i].size();
+    }
+    // 超过 200 个粒子时丢弃新的
+    if (total >= 200) {
+        delete p;
         return;
     }
-    particles.push_back(p);
+    int t = p->getParticleTexture();
+    particles[t].push_back(p);
 }
 
 void ParticleEngine::tick() {
