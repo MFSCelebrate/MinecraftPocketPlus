@@ -755,7 +755,7 @@ void Gui::onLevelGenerated() {
 }
 
     void Gui::renderDebugInfo() {
-    // FPS counter (updates once per second) az
+    // FPS counter (updates once per second)
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
     static int fpsFrames = 0;
@@ -849,39 +849,38 @@ void Gui::onLevelGenerated() {
     }
 
     // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
-    // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
-double noiseVals[8] = {0.0};
-double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
-if (rls) {
-    double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
-    double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
-    double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+    double noiseVals[8] = {0.0};
+    double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
+    if (rls) {
+        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
+        double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
+        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
 
-    const double s = 684.412;
-    const double scale_large_XZ = s / 80.0;
-    const double scale_large_Y  = s / 160.0;
+        const double s = 684.412;
+        const double scale_large_XZ = s / 80.0;
+        const double scale_large_Y  = s / 160.0;
 
-    nx_large = sampleWorldX * scale_large_XZ;
-    ny_large = sampleWorldY * scale_large_Y;
-    nz_large = sampleWorldZ * scale_large_XZ;
+        nx_large = sampleWorldX * scale_large_XZ;
+        ny_large = sampleWorldY * scale_large_Y;
+        nz_large = sampleWorldZ * scale_large_XZ;
 
-    // 直接使用 double 参数，不再强制转换为 float
-    noiseVals[0] = rls->getLPerlinNoise1(nx_large, ny_large, nz_large);
-    noiseVals[1] = rls->getLPerlinNoise2(nx_large, ny_large, nz_large);
-    noiseVals[2] = rls->getPerlinNoise1(nx_large, ny_large, nz_large);
+        noiseVals[0] = rls->getLPerlinNoise1(nx_large, ny_large, nz_large);
+        noiseVals[1] = rls->getLPerlinNoise2(nx_large, ny_large, nz_large);
+        noiseVals[2] = rls->getPerlinNoise1(nx_large, ny_large, nz_large);
 
-    const double scale_sand       = 1.0 / 32.0;
-    const double scale_depth      = 1.0 / 64.0;
-    const double scale_scale      = 1.0 / 80.0;
-    const double scale_depth_noise= 1.0 / 200.0;
-    const double scale_forest     = 0.5;
+        const double scale_sand       = 1.0 / 32.0;
+        const double scale_depth      = 1.0 / 64.0;
+        const double scale_scale      = 1.0 / 80.0;
+        const double scale_depth_noise= 1.0 / 200.0;
+        const double scale_forest     = 0.5;
 
-    noiseVals[3] = rls->getPerlinNoise2(sampleWorldX * scale_sand, sampleWorldZ * scale_sand);
-    noiseVals[4] = rls->getPerlinNoise3(sampleWorldX * scale_depth, sampleWorldZ * scale_depth);
-    noiseVals[5] = rls->getScaleNoise(sampleWorldX * scale_scale, sampleWorldZ * scale_scale);
-    noiseVals[6] = rls->getDepthNoise(sampleWorldX * scale_depth_noise, sampleWorldZ * scale_depth_noise);
-    noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
-}
+        noiseVals[3] = rls->getPerlinNoise2(sampleWorldX * scale_sand, sampleWorldZ * scale_sand);
+        noiseVals[4] = rls->getPerlinNoise3(sampleWorldX * scale_depth, sampleWorldZ * scale_depth);
+        noiseVals[5] = rls->getScaleNoise(sampleWorldX * scale_scale, sampleWorldZ * scale_scale);
+        noiseVals[6] = rls->getDepthNoise(sampleWorldX * scale_depth_noise, sampleWorldZ * scale_depth_noise);
+        noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
+    }
+
     // ===================== 噪声计算（Float 精度） =====================
     float noiseValsF[8] = {0.0f};
     if (rls) {
@@ -914,7 +913,7 @@ if (rls) {
         noiseValsF[7] = rls->getForestNoise((float)(sampleWorldX * scale_forest), (float)(sampleWorldZ * scale_forest));
     }
 
-    // ===================== 构建显示行 (扩展为 27 行) =====================
+    // ===================== 构建显示行 (25 行，替换第18行为精度) =====================
     static char ln[27][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
     sprintf(ln[1], "%.2f fps", fps);
@@ -974,12 +973,8 @@ if (rls) {
     snprintf(ln[16], sizeof(ln[16]), "Terrain Noise(Float): %s", firstPartF);
     snprintf(ln[17], sizeof(ln[17]), "Surface Noise(Float): %s", secondPartF);
 
-    // 噪声输入坐标
-    if (rls) {
-        snprintf(ln[18], sizeof(ln[18]), "Noise Input: %.1f / %.1f / %.1f", nx_large, ny_large, nz_large);
-    } else {
-        ln[18][0] = '\0';
-    }
+    // ★ 第18行留空，稍后手动绘制精度
+    ln[18][0] = '\0';
 
     ln[19][0] = '\0';
     sprintf(ln[20], "--- Other Information ---");
@@ -989,16 +984,17 @@ if (rls) {
     sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
     ln[24][0] = '\0';
 
-    // ========== 新增：条纹修复关闭时的警告行 ==========
+    // 条纹修复警告行
     bool stripeRepairOn = minecraft->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     if (!stripeRepairOn) {
-        snprintf(ln[25], sizeof(ln[26]), "Warning: Entity Rendering Has Become Invalid!!! (Enable Stripe Repair)");
+        snprintf(ln[25], sizeof(ln[25]), "Warning: Entity Rendering Has Become Invalid!!! (Enable Stripe Repair)");
     } else {
         ln[25][0] = '\0';
     }
+    ln[26][0] = '\0';   // 额外空行占位
 
     // ===================== 渲染 =====================
-    const int N = 27;                     // 总共 27 行（索引 0 ~ 26）
+    const int N = 27;
     const float LH  = (float)Font::DefaultLineHeight;
     const float MGN = 2.0f;
     const float PAD = 2.0f;
@@ -1024,23 +1020,56 @@ if (rls) {
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float y = MGN + i * LH;
-        int col = 0xffffffff;               // 默认白色
+        int col = 0xffffffff;
 
         if (i == 0)
-            col = 0xffFFFF55;               // 标题黄色
+            col = 0xffFFFF55;
         else if (i == 11)
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;   // 64Bit 绿/红
+            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;
         else if (i == 16 || i == 17)
-            col = 0xFFFF8080;               // Float 噪声行浅红
-        else if (i == 25)                   // 新增警告行强制红色
+            col = 0xFFFF8080;
+        else if (i == 25)
             col = 0xffff0000;
 
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
+
+    // ========== 精度丢失显示（替换原 ln[18] 噪声输入行） ==========
+    {
+        double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
+        double doubleStep, floatStep;
+        Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
+
+        float yPos = MGN + 18 * LH;   // 对应原 ln[18] 的位置
+
+        // 绘制 "Current Precision: "
+        font->draw("Current Precision: ", MGN, yPos, 0xFFFFFFFF);
+        float xCursor = MGN + font->width("Current Precision: ");
+
+        // 绘制 double 步长（带颜色）
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%.8f", doubleStep);
+        int colD = getPrecisionColor(doubleStep);
+        font->draw(buf, xCursor, yPos, colD);
+        xCursor += font->width(buf);
+
+        // 绘制 " (Float: "
+        font->draw(" (Float: ", xCursor, yPos, 0xFFFFFFFF);
+        xCursor += font->width(" (Float: ");
+
+        // 绘制 float 步长（带颜色）
+        snprintf(buf, sizeof(buf), "%.8f", floatStep);
+        int colF = getPrecisionColor(floatStep);
+        font->draw(buf, xCursor, yPos, colF);
+        xCursor += font->width(buf);
+
+        // 结尾括号
+        font->draw(")", xCursor, yPos, 0xFFFFFFFF);
+    }
+
     glPopMatrix();
 }
-
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
