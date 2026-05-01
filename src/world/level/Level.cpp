@@ -444,7 +444,6 @@ bool Level::isEmptyTile(int64_t x, int y, int64_t z) {
 }
 
 bool Level::hasChunkAt(int64_t x, int64_t y, int64_t z) {
-    if (y < 0 || y >= Level::DEPTH) return false;
     return hasChunk(x >> 4, z >> 4);
 }
 
@@ -454,7 +453,6 @@ bool Level::hasChunksAt(int x, int y, int z, int r) {
 }
 
 bool Level::hasChunksAt(int64_t x0, int64_t y0, int64_t z0, int64_t x1, int64_t y1, int64_t z1) {
-    if (y1 < 0 || y0 >= Level::DEPTH) return false;
     int64_t xc0 = x0 >> 4;
     int64_t zc0 = z0 >> 4;
     int64_t xc1 = x1 >> 4;
