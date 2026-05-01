@@ -36,7 +36,7 @@ private:
 	float lastTimer;
     bool m_pieVisible = false;          // 饼图可见性
     int  m_lastFrameUpdated = -1;       // 上次更新饼图的帧号
-    GLuint m_pieVbo = 0;               // 饼图VBO
+    unsigned int m_pieVbo = 0;         // 饼图VBO
     int    m_pieVertexCount = 0;        // VBO中的顶点数
     std::vector<float> m_cachedPercentages; // 缓存的上次百分比数据
 };
