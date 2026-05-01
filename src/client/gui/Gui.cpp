@@ -755,7 +755,7 @@ void Gui::onLevelGenerated() {
 }
 
     void Gui::renderDebugInfo() {
-    // FPS counter (updates once per second)
+    // FPS counter (updates once per second) az
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
     static int fpsFrames = 0;
