@@ -1506,23 +1506,20 @@ int Level::getLightsToUpdate() {
 }
 
 bool Level::updateLights() {
-    if (_maxRecurse >= 50) {
-        return false;
-    }
+    if (_maxRecurse >= 50) return false;
     _maxRecurse++;
-        int max = 500;
-        while ((int)_lightUpdates.size() > 0) {
-            if (--max <= 0)
-			{
-				_maxRecurse--;
-				return true;
-			}
-			LightUpdate l = _lightUpdates.back();
-            _lightUpdates.pop_back();
-			l.update(this);
+    int max = 50;   // 从 500 降至 50，大幅降低峰值
+    while ((int)_lightUpdates.size() > 0) {
+        if (--max <= 0) {
+            _maxRecurse--;
+            return true;   // 没处理完，下帧继续
         }
-		_maxRecurse--;
-        return false;
+        LightUpdate l = _lightUpdates.back();
+        _lightUpdates.pop_back();
+        l.update(this);
+    }
+    _maxRecurse--;
+    return false;
 }
 
 void Level::setUpdateLights(bool doUpdate) {
