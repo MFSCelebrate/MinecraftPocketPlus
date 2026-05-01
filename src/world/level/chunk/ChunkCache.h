@@ -6,7 +6,7 @@
 #include "EmptyLevelChunk.h"
 #include "../Level.h"
 #include "../LevelConstants.h"
-#include "AsyncChunkGenerator.h"   // ★ 新增
+#include "AsyncChunkGenerator.h"
 #include "../levelgen/RandomLevelSource.h"
 #include <unordered_map>
 
@@ -28,20 +28,19 @@ public:
         isChunkCache = true;
         emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
 
-        // ★ 如果底层源是随机地形生成器，则启动异步生成
+        // 若底层源是随机地形生成器，则创建异步生成器，但先不启动
         RandomLevelSource* rls = dynamic_cast<RandomLevelSource*>(source);
-if (rls) {
-    asyncGen = new AsyncChunkGenerator(rls, this, level);
-    // 不在此处启动，等首次 tick 再启动
-} else {
-    asyncGen = nullptr;
-}
+        if (rls) {
+            asyncGen = new AsyncChunkGenerator(rls, this, level);
+        } else {
+            asyncGen = nullptr;
+        }
     }
 
     ~ChunkCache() {
         delete source;
         delete emptyChunk;
-        if (asyncGen) delete asyncGen;   // ★ 停止线程
+        if (asyncGen) delete asyncGen;
         for (auto& pair : chunks) {
             if (pair.second) {
                 pair.second->deleteBlockData();
@@ -61,7 +60,6 @@ if (rls) {
         return getChunk(x, z);
     }
 
-    // ★ 核心改动：异步获取区块
     LevelChunk* getChunk(int64_t x, int64_t z) {
         if (x == xLast && z == zLast && last != NULL) {
             return last;
@@ -75,20 +73,19 @@ if (rls) {
             return last;
         }
 
-        // 尝试从磁盘加载
         LevelChunk* newChunk = load(x, z);
         if (newChunk == NULL) {
             if (source == NULL) {
                 newChunk = emptyChunk;
             } else {
-                // ★ 异步请求生成，主线程立即获得占位区块
-                if (asyncGen) {
+                // 异步生成器必须已启动才走异步路径
+                if (asyncGen && asyncGenStarted) {
                     asyncGen->requestChunk(x, z);
+                    newChunk = emptyChunk;
                 } else {
-                    // 无异步生成器时回退到同步生成
+                    // 世界创建阶段或未启用异步 → 同步生成
                     newChunk = source->getChunk(x, z);
                 }
-                newChunk = emptyChunk;
             }
         }
 
@@ -102,7 +99,6 @@ if (rls) {
         return newChunk;
     }
 
-    // ★ 新增：异步生成器将生成的区块交还给缓存
     void putChunk(int64_t x, int64_t z, LevelChunk* chunk) {
         auto key = std::make_pair(x, z);
         if (chunks.find(key) == chunks.end()) {
@@ -115,14 +111,11 @@ if (rls) {
         }
     }
 
-    // ★ 新增：每帧调用，安装已完成的区块
     void processAsyncChunks() {
         if (!asyncGen) return;
         
-        // 接收后台线程完成的区块
         asyncGen->processCompletedChunks();
 
-        // 对刚刚安装的区块执行需要主线程完成的后续处理
         for (auto& pos : pendingInstall) {
             LevelChunk* chunk = nullptr;
             auto key = std::make_pair(pos.first, pos.second);
@@ -182,13 +175,13 @@ if (rls) {
     }
 
     bool tick() {
-    if (asyncGen && !asyncGenStarted) {
-        asyncGen->start();
-        asyncGenStarted = true;
-    }
-    if (asyncGen) processAsyncChunks();
-    if (storage != NULL) storage->tick();
-    return source->tick();
+        if (asyncGen && !asyncGenStarted) {
+            asyncGen->start();
+            asyncGenStarted = true;
+        }
+        if (asyncGen) processAsyncChunks();
+        if (storage != NULL) storage->tick();
+        return source->tick();
     }
 
     void getLoadedChunks(std::vector<LevelChunk*>& out) const {
@@ -236,9 +229,7 @@ private:
     Level* level;
     LevelChunk* last;
 
-    // ★ 异步生成相关
     AsyncChunkGenerator* asyncGen = nullptr;
-
     bool asyncGenStarted = false;
     std::vector<std::pair<int64_t, int64_t>> pendingInstall;
 };
