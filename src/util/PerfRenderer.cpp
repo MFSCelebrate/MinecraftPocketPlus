@@ -53,7 +53,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ---------- 帧时间记录 ----------
+    // ---------- 帧时间、波形图参数 ----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -62,159 +62,152 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     lastTimer = now;
     if (++frameTimePos >= (int)frameTimes.size()) frameTimePos = 0;
 
-    // ---------- 准备绘制环境 ----------
+    // ---------- 投影 ----------
     glClear(GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
-    glEnable(GL_COLOR_MATERIAL);
-    glLoadIdentity();
+    glEnable2(GL_COLOR_MATERIAL);
+    glLoadIdentity2();
     glOrthof(0, (GLfloat)_mc->width, (GLfloat)_mc->height, 0, 1000, 3000);
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glTranslatef(0, 0, -2000);
+    glLoadIdentity2();
+    glTranslatef2(0, 0, -2000);
 
-    // ---------- 绘制 FPS 波形图 ----------
-glLineWidth(1);
-glDisable(GL_TEXTURE_2D);
-Tesselator& t = Tesselator::instance;
+    // ---------- 底部 FPS 波形图（始终保持） ----------
+    glLineWidth(1);
+    glDisable2(GL_TEXTURE_2D);
+    Tesselator& t = Tesselator::instance;
 
-t.begin(GL_TRIANGLES);
-int hh1 = (int) (usPer60Fps / 200);
-float count = (float)frameTimes.size();
-t.color(0x20000000);
-t.vertex(0, (float)(_mc->height - hh1), 0);
-t.vertex(0, (float)_mc->height, 0);
-t.vertex(count, (float)_mc->height, 0);
-t.vertex(count, (float)(_mc->height - hh1), 0);
+    {
+        int hh1 = (int) (usPer60Fps / 200);
+        float count = (float)frameTimes.size();
+        t.begin(GL_TRIANGLES);
+        t.color(0x20000000);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
 
-t.color(0x20200000);
-t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
-t.vertex(0, (float)(_mc->height - hh1), 0);
-t.vertex(count, (float)(_mc->height - hh1), 0);
-t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
+        t.color(0x20200000);
+        t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
+        t.draw();
 
-t.draw();
-float totalTime = 0;
-for (unsigned int i = 0; i < frameTimes.size(); i++) {
-    totalTime += frameTimes[i];
-}
-int hh = (int) (totalTime / 200 / frameTimes.size());
-t.begin();
-t.color(0x20400000);
-t.vertex(0, (float)(_mc->height - hh), 0);
-t.vertex(0, (float)_mc->height, 0);
-t.vertex(count, (float)_mc->height, 0);
-t.vertex(count, (float)(_mc->height - hh), 0);
-t.draw();
+        float totalTime = 0;
+        for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
+        int hh = (int) (totalTime / 200 / frameTimes.size());
+        t.begin();
+        t.color(0x20400000);
+        t.vertex(0, (float)(_mc->height - hh), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh), 0);
+        t.draw();
 
-t.begin(GL_LINES);
-for (unsigned int i = 0; i < frameTimes.size(); i++) {
-    int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
-    int cc = col * col / 255;
-    cc = cc * cc / 255;
-    int cc2 = cc * cc / 255;
-    cc2 = cc2 * cc2 / 255;
-    if (frameTimes[i] > usPer60Fps) {
-        t.color(0xff000000 + cc * 65536);
-    } else {
-        t.color(0xff000000 + cc * 256);
+        t.begin(GL_LINES);
+        for (unsigned int i = 0; i < frameTimes.size(); i++) {
+            int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
+            int cc = col * col / 255;
+            cc = cc * cc / 255;
+            int cc2 = cc * cc / 255;
+            cc2 = cc2 * cc2 / 255;
+            if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
+            else t.color(0xff000000 + cc * 256);
+
+            float time = 10 * 1000 * frameTimes[i] / 200;
+            float time2 = 10 * 1000 * tickTimes[i] / 200;
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
+            t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
+        }
+        t.draw();
     }
 
-    float time = 10 * 1000 * frameTimes[i] / 200;
-    float time2 = 10 * 1000 * tickTimes[i] / 200;
-
-    t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-    t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
-
-    t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
-    t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-    t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
-}
-t.draw();
-    // ================= 饼图优化部分 =================
+    // ---------- 饼图与文字区域（由 m_pieVisible 控制） ----------
     if (!m_pieVisible) {
-        // 只绘制文字，不画饼图，不画圆背景
+        // 只显示当前节点标题（保留简洁的性能信息）
         drawTextLegend(node, list);
         return;
     }
 
-    // 每4帧重新生成饼图几何体，其他帧复用VBO
-    static int frameCounter = 0;
-    frameCounter++;
+    // 背景矩形
+    int r = 160;
+    int x = _mc->width - r - 10;
+    int y = _mc->height - r * 2;
+    glEnable(GL_BLEND);
+    t.begin();
+    t.color(0x000000, 200);
+    t.vertex(x - r * 1.1f, y - r * 0.6f - 16, 0);
+    t.vertex(x - r * 1.1f, y + r * 2.0f, 0);
+    t.vertex(x + r * 1.1f, y + r * 2.0f, 0);
+    t.vertex(x + r * 1.1f, y - r * 0.6f - 16, 0);
+    t.draw();
+    glDisable(GL_BLEND);
 
-    bool needsRebuild = false;
-    if (m_pieVbo == 0 || (frameCounter - m_lastFrameUpdated) >= 4) {
-        needsRebuild = true;
-    }
+    glDisable(GL_CULL_FACE);
 
-    // 检查数据是否变化（可选，若不想每4帧强制重绘可注释）
+    // 更新饼图缓存（每4帧或数据变化时重建）
+    static int frameSkip = 0;
+    frameSkip++;
     std::vector<float> currentPcts;
     for (auto& f : list) currentPcts.push_back(f.percentage);
-    if (currentPcts != m_cachedPercentages) {
-        needsRebuild = true;
-        m_cachedPercentages = currentPcts;
-    }
-
-    if (needsRebuild) {
-        // 重新生成VBO
-        if (m_pieVbo != 0) {
-            glDeleteBuffers(1, &m_pieVbo);
-        }
+    if (m_pieVbo == 0 || (frameSkip % 4 == 0) || currentPcts != m_cachedPercentages) {
+        if (m_pieVbo != 0) glDeleteBuffers(1, &m_pieVbo);
         glGenBuffers(1, &m_pieVbo);
+        m_cachedPercentages = currentPcts;
 
-        Tesselator& t2 = Tesselator::instance; // 或者直接用同一个？
-        // 但为保证状态，我们用独立的 Tesselator 或者直接使用当前 t
         t.begin();
         float totalPercentage = 0;
-        const int pieSteps = 8;                    // 固定分段数
-        const float radius = 120.0f;
-        float cx = _mc->width - radius - 10;
-        float cy = _mc->height - radius * 2;
-        const float angleConv = Mth::PI * 2.0f / 100.0f;
-
-        for (size_t i = 0; i < list.size(); ++i) {
+        const int pieSteps = 8;          // 固定分段数，三角形数量适中
+        for (size_t i = 0; i < list.size(); i++) {
             PerfTimer::ResultField& result = list[i];
-            float segmentAngle = result.percentage * angleConv;
-            int steps = pieSteps;   // 直接固定
+            float segmentAngle = result.percentage * (Mth::PI * 2.0f / 100.0f);
 
             // 扇形主体
-            for (int j = 0; j < steps; ++j) {
-                float a1 = totalPercentage * angleConv + segmentAngle * (j / (float)steps);
-                float a2 = totalPercentage * angleConv + segmentAngle * ((j+1) / (float)steps);
-                t.color(result.getColor());
-                t.vertex(cx, cy, 0);
-                t.vertex(cx + sin(a1)*radius, cy - cos(a1)*radius*0.5f, 0);
-                t.vertex(cx + sin(a2)*radius, cy - cos(a2)*radius*0.5f, 0);
+            t.color(result.getColor());
+            for (int j = 0; j < pieSteps; ++j) {
+                float a1 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * (j / (float)pieSteps);
+                float a2 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * ((j+1) / (float)pieSteps);
+                t.vertex((float)x, (float)y, 0);
+                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f, 0);
+                t.vertex(x + sin(a2) * r, y - cos(a2) * r * 0.5f, 0);
             }
 
-            // 颜色条带（简单矩形表示，也可省略）
-            // 这里简化：画一个很小的三角条表示三维效果，但不重要，可省略以提速
+            // 颜色条带（可选，保留原版立体感）
+            t.color((result.getColor() & 0xfefefe) >> 1);
+            for (int j = 0; j < pieSteps; ++j) {
+                float a1 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * (j / (float)pieSteps);
+                float a2 = totalPercentage * (Mth::PI * 2.0f / 100.0f) + segmentAngle * ((j+1) / (float)pieSteps);
+                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f, 0);
+                t.vertex(x + sin(a1) * r, y - cos(a1) * r * 0.5f + 10, 0);
+                t.vertex(x + sin(a2) * r, y - cos(a2) * r * 0.5f, 0);
+            }
+
             totalPercentage += result.percentage;
         }
-        // 结束
         RenderChunk rc = t.end(true, m_pieVbo);
         m_pieVertexCount = rc.vertexCount;
-        m_lastFrameUpdated = frameCounter;
     }
 
-    // 绘制VBO（如果存在）
+    // 绘制饼图VBO
     if (m_pieVbo != 0 && m_pieVertexCount > 0) {
-        glEnableClientState(GL_VERTEX_ARRAY);
-        // 我们生成的顶点包含位置和颜色，需要设置对应指针
-        // 但 t.begin() 默认生成的是顶点+颜色+纹理坐标？取决于模式。
-        // 为简单，我们在重建时只用了颜色和位置，纹理坐标未设置，所以使用 VTC 方式：
-        glBindBuffer(GL_ARRAY_BUFFER, m_pieVbo);
-        glVertexPointer(3, GL_FLOAT, sizeof(VERTEX), 0);
-        glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(VERTEX), (void*)(5*4));
-        glEnableClientState(GL_COLOR_ARRAY);
-        glDrawArrays(GL_TRIANGLES, 0, m_pieVertexCount);
-        glDisableClientState(GL_COLOR_ARRAY);
-        glDisableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState2(GL_VERTEX_ARRAY);
+        glEnableClientState2(GL_COLOR_ARRAY);
+        glBindBuffer2(GL_ARRAY_BUFFER, m_pieVbo);
+        glVertexPointer2(3, GL_FLOAT, sizeof(VERTEX), 0);
+        glColorPointer2(4, GL_UNSIGNED_BYTE, sizeof(VERTEX), (GLvoid*)(5 * 4));
+        glDrawArrays2(GL_TRIANGLES, 0, m_pieVertexCount);
+        glDisableClientState2(GL_COLOR_ARRAY);
+        glDisableClientState2(GL_VERTEX_ARRAY);
     }
 
-    // 绘制文字（始终绘制）
+    glEnable(GL_TEXTURE_2D);
+    // 文字始终显示（会被 pieVisible 控制，所以只有开启时才会调用）
     drawTextLegend(node, list);
 }
-
 void PerfRenderer::drawTextLegend(const PerfTimer::ResultField& node,
                                   const std::vector<PerfTimer::ResultField>& list) {
     int r = 160;
