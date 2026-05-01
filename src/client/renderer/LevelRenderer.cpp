@@ -909,16 +909,44 @@ void LevelRenderer::setTilesDirty( int x0, int y0, int z0, int x1, int y1, int z
 }
 
 
-void LevelRenderer::cull( Culler* culler, float a )
-{
-	for (int i = 0; i < chunksLength; i++) {
-		if (!chunks[i]->isEmpty()) {
-			if (!chunks[i]->visible || ((i + cullStep) & 15) == 0) {
-				chunks[i]->cull(culler);
-			}
-		}
-	}
-	cullStep++;
+void LevelRenderer::cull(Culler* culler, float a) {
+    // 缓存快速路径：摄像机没怎么动，直接跳过
+    Mob* player = mc->cameraTargetPlayer;
+    if (player) {
+        double xOff = player->xOld + (player->x - player->xOld) * a;
+        double yOff = player->yOld + (player->y - player->yOld) * a;
+        double zOff = player->zOld + (player->z - player->zOld) * a;
+        float yRot = player->yRot;
+        float xRot = player->xRot;
+
+        if (cullCacheValid &&
+            fabs(xOff - lastCullCamX) < 2.0 &&
+            fabs(yOff - lastCullCamY) < 2.0 &&
+            fabs(zOff - lastCullCamZ) < 2.0 &&
+            fabs(yRot - lastCullYRot) < 5.0f &&
+            fabs(xRot - lastCullXRot) < 5.0f) {
+            return;   // 缓存命中，完全跳过
+        }
+
+        // 缓存不命中，更新缓存（但不立即执行，需经过跳帧判断）
+        lastCullCamX = xOff; lastCullCamY = yOff; lastCullCamZ = zOff;
+        lastCullYRot = yRot; lastCullXRot = xRot;
+    }
+
+    // 跳帧：每两帧只执行一次真实剔除
+    cullSkipTimer++;
+    if (cullSkipTimer & 1) return;   // 奇数帧跳过
+
+    // 真正执行视锥体剔除
+    for (int i = 0; i < chunksLength; i++) {
+        if (!chunks[i]->isEmpty()) {
+            if (!chunks[i]->visible || ((i + cullStep) & 15) == 0) {
+                chunks[i]->cull(culler);
+            }
+        }
+    }
+    cullStep++;
+    cullCacheValid = true;   // 标记缓存有效
 }
 
 void LevelRenderer::skyColorChanged()
