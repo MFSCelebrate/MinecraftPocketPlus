@@ -133,9 +133,25 @@ public:
 
     // 每帧调用，进行少量预生成以平滑突发卡顿
     bool tick() {
-        pregenerateNearbyChunks(2);   // 每帧最多生成 2 个新区块
-        if (storage != NULL) storage->tick();
-        return source->tick();
+    // 动态预生成
+    static float lastFrameTime = 0.016f;  // 前一帧耗时
+    int maxPregen = 2;
+    if (lastFrameTime < 0.010f) maxPregen = 4;   // 上一帧很快，多干点
+    else if (lastFrameTime > 0.030f) maxPregen = 1; // 上一帧卡，少干
+
+    pregenerateNearbyChunks(maxPregen);
+
+    if (storage != NULL) storage->tick();
+    bool result = source->tick();
+
+    // 记录本帧耗时（粗略：可结合 PerfTimer）
+    // 实际使用时在外部记录帧间隔，这里直接假设可用 getTimeS()
+    static float prevTime = getTimeS();
+    float now = getTimeS();
+    lastFrameTime = now - prevTime;
+    prevTime = now;
+
+    return result;
     }
 
     void getLoadedChunks(std::vector<LevelChunk*>& out) const {
