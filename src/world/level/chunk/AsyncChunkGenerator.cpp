@@ -1,7 +1,7 @@
 #include "AsyncChunkGenerator.h"
-#include "LevelChunk.h"                     // 同一目录下
-#include "ChunkCache.h"                     // 同一目录下
-#include "../levelgen/RandomLevelSource.h"  // 往上一级到 levelgen
+#include "LevelChunk.h"
+#include "ChunkCache.h"
+#include "../levelgen/RandomLevelSource.h"
 
 AsyncChunkGenerator::AsyncChunkGenerator(RandomLevelSource* source, ChunkCache* cache, Level* level)
     : source(source), cache(cache), level(level), running(false) {}
@@ -36,7 +36,11 @@ void AsyncChunkGenerator::processCompletedChunks() {
         std::lock_guard<std::mutex> lock(mutex);
         completed.swap(resultMap);
     }
-    for (auto& [pos, chunk] : completed) {
+
+    // 兼容旧版 Clang，不使用结构化绑定
+    for (auto it = completed.begin(); it != completed.end(); ++it) {
+        const std::pair<int64_t, int64_t>& pos = it->first;
+        LevelChunk* chunk = it->second;
         if (chunk) {
             cache->putChunk(pos.first, pos.second, chunk);
         }
