@@ -51,15 +51,29 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
 }
 
 void PerfRenderer::renderFpsMeter(float tickTime) {
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
-    if (list.empty()) return;
-    PerfTimer::ResultField node = list[0];
-    list.erase(list.begin());
+    // 每 4 帧才重新获取剖析数据，避免每帧都做昂贵的字符串遍历和排序
+    static int frameSkip = 0;
+    static std::vector<PerfTimer::ResultField> cachedList;
+    static PerfTimer::ResultField cachedNode("", 0, 0);
 
-    if (!m_pieVisible) return;   // 隐藏时不绘制，性能零开销
+    frameSkip++;
+    if (frameSkip % 4 == 0 || cachedList.empty()) {
+        cachedList = PerfTimer::getLog(_debugPath);
+        if (!cachedList.empty()) {
+            cachedNode = cachedList[0];
+            cachedList.erase(cachedList.begin());
+        }
+    }
 
-    // === 以下为完全原始的稳定饼图代码 ===
+    if (cachedList.empty() || !m_pieVisible) return;
+
+    // 使用缓存数据
+    PerfTimer::ResultField node = cachedNode;
+    std::vector<PerfTimer::ResultField> list = cachedList;
+
+    // --- 下面所有代码（波形图、饼图、文字）保持原来不动，直接使用 node 和 list ---
     long usPer60Fps = 1000000l / 60;
+    // ...（完全不变的原始饼图代码）
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
     tickTimes[ frameTimePos ] = tickTime;
