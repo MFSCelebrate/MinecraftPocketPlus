@@ -25,22 +25,27 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     if (list.empty()) return;
 
     if (key == 0) {
+        // 在根节点，0键用于开关饼图
         if (_debugPath == "root") {
-            m_pieVisible = !m_pieVisible;   // 在根节点切换饼图
+            m_pieVisible = !m_pieVisible;
             return;
         }
-        // 原来的向上导航逻辑
+        // 非根节点，0键用于向上导航
         PerfTimer::ResultField node = list[0];
         if (node.name.length() > 0) {
             int pos = _debugPath.rfind(".");
-            if (pos != std::string::npos) _debugPath = _debugPath.substr(0, pos);
+            if (pos != std::string::npos) {
+                _debugPath = _debugPath.substr(0, pos);
+            } else {
+                _debugPath = "root";   // 已经在第一层，回到根
+            }
         }
-    } else {
+    } else if (key >= 1 && key <= 9) {
         // 进入子项
-        key--;
-        if (key < (int)list.size() && list[key].name != "unspecified") {
+        int index = key - 1;
+        if (index < (int)list.size() && list[index].name != "unspecified") {
             if (_debugPath.length() > 0) _debugPath += ".";
-            _debugPath += list[key].name;
+            _debugPath += list[index].name;
         }
     }
 }
@@ -52,8 +57,12 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ---------- 帧时间、波形图参数 ----------
+    // ★ 如果饼图隐藏，立即返回，不做任何绘制，避免污染GL状态
+    if (!m_pieVisible) return;
+
+    // --- 以下原有代码不变 (波形图、饼图、文字) ---
     long usPer60Fps = 1000000l / 60;
+    // ... 全部保留
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
     tickTimes[ frameTimePos ] = tickTime;
