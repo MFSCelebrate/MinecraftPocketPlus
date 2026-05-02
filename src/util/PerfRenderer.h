@@ -1,4 +1,3 @@
-// PerfRenderer.h
 #ifndef NET_UTIL__PerfRenderer_H__
 #define NET_UTIL__PerfRenderer_H__
 
@@ -13,12 +12,12 @@ class Font;
 class PerfRenderer {
 public:
     PerfRenderer( Minecraft* mc, Font* font );
-
     void debugFpsMeterKeyPress(int key);
     void renderFpsMeter(float tickTime);
-    void navigateBack();   // ★ 新增：返回上级剖析节点
+    void navigateBack();
 
 private:
+    void togglePie();
     std::string toPercentString(float percentage);
 
     Minecraft* _mc;
@@ -29,6 +28,8 @@ private:
     std::vector<float> tickTimes;
     int frameTimePos;
     float lastTimer;
+
+    bool m_pieVisible = false;
 };
 
 #endif
