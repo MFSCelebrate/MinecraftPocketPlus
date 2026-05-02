@@ -155,7 +155,7 @@ void DebugScreen::keyPressed(int key)
 {
     if (key == 27) { mc->setScreen(NULL); return; }
 
-    if (key == 8) {   // Backspace
+    if (key == 8) {   // Backspace 后退
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->navigateBack();
@@ -169,6 +169,10 @@ void DebugScreen::keyPressed(int key)
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->debugFpsMeterKeyPress(id);
+            // 只在按 0 的时候提示状态
+            if (id == 0) {
+                mc->gui.addMessage(pr->isPieVisible() ? "Pie chart enabled" : "Pie chart disabled");
+            }
         }
         return;
     }
@@ -192,6 +196,9 @@ void DebugScreen::buttonClicked(Button* button)
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->debugFpsMeterKeyPress(id);
+            if (id == 0) {
+                mc->gui.addMessage(pr->isPieVisible() ? "Pie chart enabled" : "Pie chart disabled");
+            }
         }
         return;
     }
