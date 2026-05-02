@@ -17,7 +17,7 @@
 #include "../../../world/Difficulty.h"
 #include "../../../util/PerfRenderer.h"
 #include "../../../util/PerfTimer.h"
-#include "../gui/Gui.h"
+#include "../../../client/gui/Gui.h"
 
 DebugScreen::DebugScreen(Minecraft* mc)
     : mc(mc)
