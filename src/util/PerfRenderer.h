@@ -1,3 +1,4 @@
+// PerfRenderer.h
 #ifndef NET_UTIL__PerfRenderer_H__
 #define NET_UTIL__PerfRenderer_H__
 
@@ -9,31 +10,25 @@
 class Minecraft;
 class Font;
 
-//package net.minecraft.client;
-class PerfRenderer
-{
+class PerfRenderer {
 public:
-    PerfRenderer( Minecraft* mc, Font* font);
+    PerfRenderer( Minecraft* mc, Font* font );
 
     void debugFpsMeterKeyPress(int key);
-
     void renderFpsMeter(float tickTime);
-    void setPieVisible(bool vis) { m_pieVisible = vis; }
-    void navigateBack();
-    bool isPieVisible() const { return m_pieVisible; }
+    void navigateBack();   // ★ 新增：返回上级剖析节点
 
 private:
     std::string toPercentString(float percentage);
 
-	Minecraft*	_mc;
-    Font*		_font;
+    Minecraft* _mc;
+    Font*      _font;
     std::string _debugPath;
 
-	std::vector<float> frameTimes;
-	std::vector<float> tickTimes;
-	int frameTimePos;
-	float lastTimer;
-    bool m_pieVisible = false;          // 饼图可见性
+    std::vector<float> frameTimes;
+    std::vector<float> tickTimes;
+    int frameTimePos;
+    float lastTimer;
 };
 
-#endif /*NET_UTIL__PerfRenderer_H__*/
+#endif
