@@ -159,7 +159,40 @@ void DebugScreen::render(int xm, int ym, float a)
 
 void DebugScreen::keyPressed(int key)
 {
-    if (key == 27) mc->setScreen(NULL);
+    if (key == 27) {
+        mc->setScreen(NULL);
+        return;
+    }
+
+    // 数字键 0-9：与按钮点击行为完全一致
+    if (key >= '0' && key <= '9') {
+        int id = key - '0';
+
+        // 0 键始终有效（它是开关本身）
+        if (id == 0) {
+            PerfRenderer* pr = mc->getPerfRenderer();
+            if (pr) {
+                pr->debugFpsMeterKeyPress(0);
+                mc->gui.addMessage("Profiler toggled");
+            }
+            return;
+        }
+
+        // 1-9 键：需要剖析器已启用
+        if (!PerfTimer::enabled) {
+            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+            return;
+        }
+
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) {
+            pr->debugFpsMeterKeyPress(id);
+            mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+        } else {
+            mc->gui.addMessage("Error: PerfRenderer not available.");
+        }
+        return;
+    }
 }
 
 void DebugScreen::buttonClicked(Button* button)
@@ -167,18 +200,27 @@ void DebugScreen::buttonClicked(Button* button)
     int id = button->id;
     if (id == 99) { mc->setScreen(NULL); return; }
 
-    // 数字按钮：切换性能剖析页面（若未启用则提示）
     if (id >= 0 && id <= 9) {
-        if (!PerfTimer::enabled) {
-            mc->gui.addMessage("Performance profiling not active. Press F3 to enable.");
-        } else {
+        if (id == 0) {
             PerfRenderer* pr = mc->getPerfRenderer();
             if (pr) {
-                pr->debugFpsMeterKeyPress(id);
-                mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
-            } else {
-                mc->gui.addMessage("Error: PerfRenderer not available.");
+                pr->debugFpsMeterKeyPress(0);
+                mc->gui.addMessage("Profiler toggled");
             }
+            return;
+        }
+
+        if (!PerfTimer::enabled) {
+            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+            return;
+        }
+
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) {
+            pr->debugFpsMeterKeyPress(id);
+            mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+        } else {
+            mc->gui.addMessage("Error: PerfRenderer not available.");
         }
         return;
     }
