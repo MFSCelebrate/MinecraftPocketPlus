@@ -150,7 +150,6 @@ void DebugScreen::render(int xm, int ym, float a)
     Screen::render(xm, ym, a);
 }
 
-// DebugScreen.cpp 相关片段
 void DebugScreen::keyPressed(int key)
 {
     if (key == 27) { mc->setScreen(NULL); return; }
@@ -162,16 +161,8 @@ void DebugScreen::keyPressed(int key)
     }
 
     if (key >= '0' && key <= '9') {
-        int id = key - '0';
-        if (id == 0) {
-            mc->togglePie();
-            mc->gui.addMessage(mc->m_pieEnabled ? "Performance profiling enabled" : "Performance profiling disabled");
-        } else if (!PerfTimer::enabled) {
-            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
-        } else {
-            PerfRenderer* pr = mc->getPerfRenderer();
-            if (pr) pr->debugFpsMeterKeyPress(id);
-        }
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) pr->debugFpsMeterKeyPress(key - '0');
         return;
     }
 }
@@ -188,15 +179,8 @@ void DebugScreen::buttonClicked(Button* button)
     }
 
     if (id >= 0 && id <= 9) {
-        if (id == 0) {
-            mc->togglePie();
-            mc->gui.addMessage(mc->m_pieEnabled ? "Performance profiling enabled" : "Performance profiling disabled");
-        } else if (!PerfTimer::enabled) {
-            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
-        } else {
-            PerfRenderer* pr = mc->getPerfRenderer();
-            if (pr) pr->debugFpsMeterKeyPress(id);
-        }
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) pr->debugFpsMeterKeyPress(id);
         return;
     }
 
