@@ -22,7 +22,7 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
 
 void PerfRenderer::debugFpsMeterKeyPress( int key )
 {
-	std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
+	std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
 	if (list.empty()) return;
 
 	PerfTimer::ResultField node = list[0];
