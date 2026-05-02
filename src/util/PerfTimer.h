@@ -61,9 +61,9 @@ public:
 
     static bool enabled;
     static int  s_sampleInterval;   // 采样间隔，默认 4（每4帧记录一次）
+    static int  s_frameCounter;     // 统一帧计数器
 
 private:
-    static int  s_frameCounter;     // 统一帧计数器
     static std::vector<ResultField> s_cachedLog;
     static std::string s_cachedPath;
 
