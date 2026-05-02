@@ -168,14 +168,13 @@ void DebugScreen::keyPressed(int key)
 if (key >= '0' && key <= '9') {
     int id = key - '0';
     if (id == 0) {
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            bool newState = !pr->isPieVisible();
-            pr->setPieVisible(newState);
-            PerfTimer::enabled = newState;
-            mc->gui.addMessage(newState ? "Performance profiling enabled" : "Performance profiling disabled");
-        }
-        return;
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) {
+        pr->setPieVisible(!pr->isPieVisible());
+        PerfTimer::enabled = pr->isPieVisible();
+        mc->gui.addMessage(pr->isPieVisible() ? "Performance profiling enabled" : "Performance profiling disabled");
+    }
+    return;
     }
 
     if (!PerfTimer::enabled) {
@@ -211,14 +210,13 @@ void DebugScreen::buttonClicked(Button* button)
     // ========== 在 buttonClicked 中 ==========
 if (id >= 0 && id <= 9) {
     if (id == 0) {
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            bool newState = !pr->isPieVisible();
-            pr->setPieVisible(newState);
-            PerfTimer::enabled = newState;
-            mc->gui.addMessage(newState ? "Performance profiling enabled" : "Performance profiling disabled");
-        }
-        return;
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) {
+        pr->setPieVisible(!pr->isPieVisible());
+        PerfTimer::enabled = pr->isPieVisible();
+        mc->gui.addMessage(pr->isPieVisible() ? "Performance profiling enabled" : "Performance profiling disabled");
+    }
+    return;
     }
 
     // 1-9 键：需要剖析器已启用
