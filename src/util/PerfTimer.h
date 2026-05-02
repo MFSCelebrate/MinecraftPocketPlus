@@ -61,7 +61,8 @@ public:
     static int  s_warmupFrames;
 
 private:
-    static std::mutex            s_mutex;        // ★ 线程安全锁
+    static std::mutex            s_timesMutex;   // ★ 只保护 times 表
+    // ...
     static std::vector<std::string> paths;
     static std::vector<float>       startTimes;
     static std::string path;
