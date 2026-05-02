@@ -111,14 +111,27 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每 4 帧请求后台更新一次数据
+    // 主动请求：如果当前没有可用数据，立刻通知后台线程计算
+    bool needRequest = false;
+    {
+        std::lock_guard<std::mutex> lock(_mutex);
+        if (_latestList.empty() && !_needsUpdate.load()) {
+            _needsUpdate = true;
+            needRequest = true;
+        }
+    }
+    if (needRequest) {
+        _cv.notify_one();
+    }
+
+    // 每 4 帧也请求一次，保持更新
     static int frameCounter = 0;
     if (++frameCounter % 4 == 0) {
         _needsUpdate = true;
         _cv.notify_one();
     }
 
-    // 尝试获取后台最新数据
+    // 获取最新的数据（无锁读取）
     std::vector<PerfTimer::ResultField> list;
     PerfTimer::ResultField node("", 0, 0);
     {
@@ -138,9 +151,11 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
         _lastValidNode = node;
         _hasValidData = true;
     } else {
-        return;
+        return; // 没有任何数据可以显示
     }
 
+    // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字） ----------
+    // （保持不变，省略）
     // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
