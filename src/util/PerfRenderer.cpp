@@ -100,15 +100,34 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     }
 
     // 获取后台线程最新数据（无锁复制）
-    std::vector<PerfTimer::ResultField> list;
-    PerfTimer::ResultField node("", 0, 0);
-    {
-        std::lock_guard<std::mutex> lock(_dataMutex);
+    // 获取后台线程最新数据（无锁复制）
+std::vector<PerfTimer::ResultField> list;
+PerfTimer::ResultField node("", 0, 0);
+{
+    std::lock_guard<std::mutex> lock(_dataMutex);
+    // ★ 只有当后台数据非空时才更新，避免画面突然消失
+    if (!_latestList.empty()) {
         list = _latestList;
         node = _latestNode;
     }
+}
 
-    if (list.empty()) return;
+// ★ 如果拿不到最新数据，使用上一次的有效渲染数据（彻底防止消失）
+static std::vector<PerfTimer::ResultField> lastValidList;
+static PerfTimer::ResultField lastValidNode("", 0, 0);
+static bool hasValidData = false;
+
+if (list.empty() && hasValidData) {
+    list = lastValidList;
+    node = lastValidNode;
+} else if (!list.empty()) {
+    lastValidList = list;
+    lastValidNode = node;
+    hasValidData = true;
+} else {
+    // 完全没有数据，直接返回（波形图和饼图都不画）
+    return;
+}
 
     // ---------- 以下全部为原始稳定版的绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
