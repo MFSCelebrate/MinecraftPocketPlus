@@ -17,6 +17,7 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
 }
 
 void PerfRenderer::debugFpsMeterKeyPress( int key ) {
+    // 导航需要实时数据
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
@@ -38,23 +39,37 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
-    if (list.empty()) return;
+    // ---------- 隔帧缓存：每 4 帧获取一次饼图数据，大幅降低消耗 ----------
+    static int renderSkip = 0;
+    static std::vector<PerfTimer::ResultField> cachedList;
+    static PerfTimer::ResultField cachedNode("", 0, 0);
+    static std::string lastPath;
 
-    PerfTimer::ResultField node = list[0];
-    list.erase(list.begin());
-    
-    // 后面所有绘制代码（波形图、饼图、文字）完全不动
+    bool pathChanged = (_debugPath != lastPath);
+    if (pathChanged) lastPath = _debugPath;
+
+    renderSkip++;
+    if (renderSkip % 4 == 0 || cachedList.empty() || pathChanged) {
+        cachedList = PerfTimer::getLog(_debugPath);      // 使用缓存频率控制
+        if (!cachedList.empty()) {
+            cachedNode = cachedList[0];
+            cachedList.erase(cachedList.begin());
+        }
+    }
+
+    if (cachedList.empty()) return;
+
+    PerfTimer::ResultField node = cachedNode;
+    std::vector<PerfTimer::ResultField> list = cachedList;
+
+    // ---------- 下面全部是原始绘制代码（波形图、饼图、文字） ----------
     long usPer60Fps = 1000000l / 60;
-    // ... 保持原有代码 ...
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
     tickTimes[ frameTimePos ] = tickTime;
     frameTimes[frameTimePos ] = now - lastTimer;
     lastTimer = now;
-
-    if (++frameTimePos >= (int)frameTimes.size())
-        frameTimePos = 0;
+    if (++frameTimePos >= (int)frameTimes.size()) frameTimePos = 0;
 
     glClear(GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
@@ -69,58 +84,57 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     glDisable2(GL_TEXTURE_2D);
     Tesselator& t = Tesselator::instance;
 
-    // ---- 波形图 ----
-    int hh1 = (int) (usPer60Fps / 200);
-    float count = (float)frameTimes.size();
-    t.begin(GL_TRIANGLES);
-    t.color(0x20000000);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(0, (float)_mc->height, 0);
-    t.vertex(count, (float)_mc->height, 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
+    // 波形图
+    {
+        int hh1 = (int) (usPer60Fps / 200);
+        float count = (float)frameTimes.size();
+        t.begin(GL_TRIANGLES);
+        t.color(0x20000000);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
 
-    t.color(0x20200000);
-    t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
-    t.draw();
+        t.color(0x20200000);
+        t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
+        t.draw();
 
-    float totalTime = 0;
-    for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
-    int hh = (int) (totalTime / 200 / frameTimes.size());
-    t.begin();
-    t.color(0x20400000);
-    t.vertex(0, (float)(_mc->height - hh), 0);
-    t.vertex(0, (float)_mc->height, 0);
-    t.vertex(count, (float)_mc->height, 0);
-    t.vertex(count, (float)(_mc->height - hh), 0);
-    t.draw();
+        float totalTime = 0;
+        for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
+        int hh = (int) (totalTime / 200 / frameTimes.size());
+        t.begin();
+        t.color(0x20400000);
+        t.vertex(0, (float)(_mc->height - hh), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh), 0);
+        t.draw();
 
-    t.begin(GL_LINES);
-    for (unsigned int i = 0; i < frameTimes.size(); i++) {
-        int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
-        int cc = col * col / 255;
-        cc = cc * cc / 255;
-        int cc2 = cc * cc / 255;
-        cc2 = cc2 * cc2 / 255;
-        if (frameTimes[i] > usPer60Fps) {
-            t.color(0xff000000 + cc * 65536);
-        } else {
-            t.color(0xff000000 + cc * 256);
+        t.begin(GL_LINES);
+        for (unsigned int i = 0; i < frameTimes.size(); i++) {
+            int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
+            int cc = col * col / 255;
+            cc = cc * cc / 255;
+            int cc2 = cc * cc / 255;
+            cc2 = cc2 * cc2 / 255;
+            if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
+            else t.color(0xff000000 + cc * 256);
+
+            float time = 10 * 1000 * frameTimes[i] / 200;
+            float time2 = 10 * 1000 * tickTimes[i] / 200;
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
+            t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
         }
-
-        float time = 10 * 1000 * frameTimes[i] / 200;
-        float time2 = 10 * 1000 * tickTimes[i] / 200;
-        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-        t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
-        t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
-        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-        t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
+        t.draw();
     }
-    t.draw();
 
-    // ---- 饼图 ----
+    // 饼图
     int r = 160;
     int x = _mc->width - r - 10;
     int y = _mc->height - r * 2;
@@ -165,7 +179,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
 
     glEnable(GL_TEXTURE_2D);
 
-    // ---- 文字 ----
+    // 标题
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
