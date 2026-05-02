@@ -38,27 +38,15 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
-    // ---------- 隔帧缓存：每 4 帧重新计算饼图数据 ----------
-    static int renderSkip = 0;
-    static std::vector<PerfTimer::ResultField> cachedList;
-    static PerfTimer::ResultField cachedNode("", 0, 0);
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
+    if (list.empty()) return;
 
-    renderSkip++;
-    if (renderSkip % 4 == 0 || cachedList.empty()) {
-        cachedList = PerfTimer::getLog(_debugPath);
-        if (!cachedList.empty()) {
-            cachedNode = cachedList[0];
-            cachedList.erase(cachedList.begin());
-        }
-    }
-
-    if (cachedList.empty()) return;
-
-    PerfTimer::ResultField node = cachedNode;
-    std::vector<PerfTimer::ResultField> list = cachedList;
-
-    // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字） ----------
+    PerfTimer::ResultField node = list[0];
+    list.erase(list.begin());
+    
+    // 后面所有绘制代码（波形图、饼图、文字）完全不动
     long usPer60Fps = 1000000l / 60;
+    // ... 保持原有代码 ...
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
     tickTimes[ frameTimePos ] = tickTime;
