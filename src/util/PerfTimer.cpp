@@ -1,4 +1,3 @@
-// PerfTimer.cpp
 #include "PerfTimer.h"
 #include "../platform/time.h"
 #include <algorithm>
@@ -14,9 +13,7 @@ PerfTimer::TimeMap PerfTimer::times;
 
 void PerfTimer::tickFrame() {
     s_frameCounter++;
-    if (enabled && s_warmupFrames > 0) {
-        s_warmupFrames--;
-    }
+    if (enabled && s_warmupFrames > 0) s_warmupFrames--;
 }
 
 void PerfTimer::reset() {
@@ -25,7 +22,7 @@ void PerfTimer::reset() {
     startTimes.clear();
     path.clear();
     s_frameCounter = 0;
-    s_warmupFrames = 64;   // 快速积累数据
+    s_warmupFrames = 64;
 }
 
 void PerfTimer::push( const std::string& name ) {
@@ -58,22 +55,6 @@ void PerfTimer::popPush( const std::string& name ) {
 
 std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath, bool /*forceUpdate*/) {
     if (!enabled) return std::vector<ResultField>();
-
-    // 在 std::vector<PerfTimer::ResultField> PerfTimer::getLog( ... ) 函数内，紧跟 if (!enabled) 之后加入：
-
-    // ==== 自适应压缩：表太大时清除占比极低的琐碎条目 ====
-    if (times.size() > 128) {
-        float totalSum = 0.0f;
-        for (const auto& p : times) totalSum += p.second;
-        float threshold = totalSum * 0.0003f;   // 低于 0.03% 就删除
-        for (auto it = times.begin(); it != times.end(); ) {
-            if (it->second < threshold) {
-                it = times.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }
 
     std::string path = rawPath;
     TimeMap::const_iterator itRoot = times.find("root");
@@ -108,15 +89,22 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    // 清理长时间未更新的微弱条目，防止表无限膨胀
-    for (TimeMap::iterator it = times.begin(); it != times.end(); ) {
-        it->second *= 0.999f;
-        if (it->second < 0.001f) {
-            it = times.erase(it);
-        } else {
-            ++it;
+    // 自适应清理：表过大时剪除占比 < 0.01% 的条目
+    if (times.size() > 128) {
+        float totalSum = 0.0f;
+        for (auto& p : times) totalSum += p.second;
+        float threshold = totalSum * 0.0001f;
+        for (auto it = times.begin(); it != times.end(); ) {
+            if (it->second < threshold) {
+                it = times.erase(it);
+            } else {
+                ++it;
+            }
         }
     }
+
+    for (TimeMap::iterator it = times.begin(); it != times.end(); ++it)
+        it->second *= 0.999f;
 
     if (totalTime > oldTime)
         result.push_back(ResultField("unspecified", (totalTime - oldTime) * 100.0f / totalTime, (totalTime - oldTime) * 100.0f / globalTime));
