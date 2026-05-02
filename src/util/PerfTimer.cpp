@@ -4,6 +4,7 @@
 
 bool PerfTimer::enabled = false;
 int  PerfTimer::s_frameCounter = 0;
+int  PerfTimer::s_warmupFrames = 0;
 
 std::vector<std::string> PerfTimer::paths;
 std::vector<float> PerfTimer::startTimes;
@@ -12,14 +13,21 @@ PerfTimer::TimeMap PerfTimer::times;
 
 void PerfTimer::tickFrame() {
     s_frameCounter++;
+    if (enabled && s_warmupFrames > 0) {
+        s_warmupFrames--;
+    }
 }
 
 void PerfTimer::reset() {
     times.clear();
+    paths.clear();
+    startTimes.clear();
+    path.clear();
+    s_frameCounter = 0;
+    s_warmupFrames = 64;   // 每次重置时重新热身
 }
 
 void PerfTimer::push( const std::string& name ) {
-    // 不再检查 enabled，宏已检查
     if (path.length() > 0) path += ".";
     path += name;
     paths.push_back(path);
@@ -83,9 +91,9 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    // ★ 关键：衰减并清理长期未更新的细微条目，防止 map 无限膨胀
+    // 衰减但不立即清理（交给后台线程偶尔全清）
     for (TimeMap::iterator it = times.begin(); it != times.end(); ++it) {
-    it->second *= 0.999f;
+        it->second *= 0.999f;
     }
 
     if (totalTime > oldTime)
