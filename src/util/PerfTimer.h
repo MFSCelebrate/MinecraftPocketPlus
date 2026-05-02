@@ -5,19 +5,22 @@
 #include <vector>
 #include "StringUtils.h"
 
+// 采样间隔：每 4 帧记录一次性能数据
+#define PERF_TIMER_SKIP_FRAMES 4
+
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PerfTimer::s_sampleInterval == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
             PerfTimer::push(x); \
     } while(0)
 
     #define TIMER_POP() do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PerfTimer::s_sampleInterval == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
             PerfTimer::pop(); \
     } while(0)
 
     #define TIMER_POP_PUSH(x) do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PerfTimer::s_sampleInterval == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
             PerfTimer::popPush(x); \
     } while(0)
 #else
@@ -53,18 +56,16 @@ public:
     static void pop();
     static void popPush(const std::string& name);
 
-    // 每帧调用一次，推进全局帧计数
-    static void tickFrame();
+    // 获取日志，forceUpdate 暂未使用，保留以备导航强制刷新
     static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
-    // 注意：不再有其他重载
-    static bool enabled;
-    static int  s_sampleInterval;   // 采样间隔，默认 4（每4帧记录一次）
-    static int  s_frameCounter;     // 统一帧计数器
+
+    // 每帧调用一次，推进全局帧计数器
+    static void tickFrame();
+
+    static bool enabled;                // 总开关
+    static int  s_frameCounter;         // 帧计数器，用于采样控制
 
 private:
-    static std::vector<ResultField> s_cachedLog;
-    static std::string s_cachedPath;
-
     static std::vector<std::string> paths;
     static std::vector<float> startTimes;
     static std::string path;
