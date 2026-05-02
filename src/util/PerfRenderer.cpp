@@ -41,23 +41,21 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每帧实时获取最新数据，无缓存
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
+    // 每帧实时获取最新数据，没有任何缓存
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字）----------
+    // ---------- 以下全部为原始稳定版绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
     tickTimes[ frameTimePos ] = tickTime;
     frameTimes[frameTimePos ] = now - lastTimer;
     lastTimer = now;
-
-    if (++frameTimePos >= (int)frameTimes.size())
-        frameTimePos = 0;
+    if (++frameTimePos >= (int)frameTimes.size()) frameTimePos = 0;
 
     glClear(GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
@@ -107,11 +105,8 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
         cc = cc * cc / 255;
         int cc2 = cc * cc / 255;
         cc2 = cc2 * cc2 / 255;
-        if (frameTimes[i] > usPer60Fps) {
-            t.color(0xff000000 + cc * 65536);
-        } else {
-            t.color(0xff000000 + cc * 256);
-        }
+        if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
+        else t.color(0xff000000 + cc * 256);
 
         float time = 10 * 1000 * frameTimes[i] / 200;
         float time2 = 10 * 1000 * tickTimes[i] / 200;
