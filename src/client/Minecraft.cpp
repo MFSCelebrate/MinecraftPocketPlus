@@ -430,6 +430,7 @@ void Minecraft::update() {
 	if (Options::debugGl)
 		LOGI(">>>>>>>>>>\n");
 
+	TIMER_PUSH("root");
 
 	//if (level) {
 	//	LOGI("numplayers: %d\n", level->players.size());
@@ -441,7 +442,7 @@ void Minecraft::update() {
 	//}
 
 	// If we're paused (local world / invisible server), freeze gameplay and
-	// networking and only keep UI responsive.
+	// networking and only keep UI responsive. ???
 	bool freezeGame = pause;
 
 	if (!freezeGame) {
@@ -494,6 +495,7 @@ void Minecraft::update() {
 		PerfTimer::enabled = false;
 	}
 #endif
+	//LOGI("Exit Update\n");
 }
 
 void Minecraft::tick(int nTick, int maxTick) {
