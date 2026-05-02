@@ -84,13 +84,8 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
     }
 
     // ★ 关键：衰减并清理长期未更新的细微条目，防止 map 无限膨胀
-    for (TimeMap::iterator it = times.begin(); it != times.end(); ) {
-        it->second *= 0.999f;
-        if (it->second < 0.001f) {
-            it = times.erase(it);
-        } else {
-            ++it;
-        }
+    for (TimeMap::iterator it = times.begin(); it != times.end(); ++it) {
+    it->second *= 0.999f;
     }
 
     if (totalTime > oldTime)
