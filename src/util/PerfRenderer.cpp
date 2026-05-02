@@ -40,19 +40,17 @@ void PerfRenderer::navigateBack() {
 
 void PerfRenderer::debugFpsMeterKeyPress(int key) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
-    if (list.empty()) return;
 
-    // 移除第一个元素（当前节点自身）
-    list.erase(list.begin());
-
+    // 0 键在任何情况下都直接切换饼图/剖析器
     if (key == 0) {
-        if (_debugPath == "root") {
-            togglePie();
-            return;
-        }
-        navigateBack();
+        togglePie();
         return;
     }
+
+    // 1-9 键需要剖析器已经激活并有数据
+    if (list.empty()) return;
+
+    list.erase(list.begin());   // 移除当前节点
 
     int index = key - 1;
     if (index < (int)list.size() && list[index].name != "unspecified") {
@@ -60,7 +58,6 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
         _debugPath += list[index].name;
     }
 }
-
 void PerfRenderer::renderFpsMeter(float tickTime) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty() || !m_pieVisible) return;   // 隐藏时不绘制
