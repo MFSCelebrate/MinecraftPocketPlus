@@ -5,6 +5,7 @@
 bool PerfTimer::enabled = false;
 int  PerfTimer::s_frameCounter = 0;
 int  PerfTimer::s_warmupFrames = 0;
+std::mutex PerfTimer::s_mutex;
 
 std::vector<std::string> PerfTimer::paths;
 std::vector<float> PerfTimer::startTimes;
@@ -12,11 +13,13 @@ std::string PerfTimer::path;
 PerfTimer::TimeMap PerfTimer::times;
 
 void PerfTimer::tickFrame() {
+    std::lock_guard<std::mutex> lock(s_mutex);
     s_frameCounter++;
     if (enabled && s_warmupFrames > 0) s_warmupFrames--;
 }
 
 void PerfTimer::reset() {
+    std::lock_guard<std::mutex> lock(s_mutex);
     times.clear();
     paths.clear();
     startTimes.clear();
@@ -26,6 +29,7 @@ void PerfTimer::reset() {
 }
 
 void PerfTimer::push( const std::string& name ) {
+    std::lock_guard<std::mutex> lock(s_mutex);
     if (path.length() > 0) path += ".";
     path += name;
     paths.push_back(path);
@@ -33,6 +37,7 @@ void PerfTimer::push( const std::string& name ) {
 }
 
 void PerfTimer::pop() {
+    std::lock_guard<std::mutex> lock(s_mutex);
     if (paths.empty()) return;
     float endTime = getTimeS();
     float startTime = startTimes.back();
@@ -54,6 +59,7 @@ void PerfTimer::popPush( const std::string& name ) {
 }
 
 std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath, bool /*forceUpdate*/) {
+    std::lock_guard<std::mutex> lock(s_mutex);
     if (!enabled) return std::vector<ResultField>();
 
     std::string path = rawPath;
@@ -63,7 +69,6 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
     float totalTime2 = (itRoot != times.end())? itRoot->second : -1;
 
     std::vector<ResultField> result;
-
     if (path.length() > 0) path += ".";
     float totalTime = 0;
     for (TimeMap::const_iterator cit = times.begin(); cit != times.end(); ++cit) {
@@ -89,7 +94,7 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    // 自适应清理：表过大时剪除占比 < 0.01% 的条目
+    // 自适应清理
     if (times.size() > 128) {
         float totalSum = 0.0f;
         for (auto& p : times) totalSum += p.second;
