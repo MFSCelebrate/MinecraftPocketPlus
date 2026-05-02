@@ -24,7 +24,7 @@ void PerfTimer::reset() {
     startTimes.clear();
     path.clear();
     s_frameCounter = 0;
-    s_warmupFrames = 64;   // 快速积累数据
+    s_warmupFrames = 128;   // 加长热身，确保数据充足
 }
 
 void PerfTimer::push( const std::string& name ) {
