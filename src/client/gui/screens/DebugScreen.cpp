@@ -164,19 +164,32 @@ void DebugScreen::keyPressed(int key)
         return;
     }
 
-    if (key >= '0' && key <= '9') {
-        int id = key - '0';
-        if (!PerfTimer::enabled && id != 0) {
-            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
-            return;
-        }
+    // ========== 在 keyPressed 中 ==========
+if (key >= '0' && key <= '9') {
+    int id = key - '0';
+    if (id == 0) {
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-            mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+            bool newState = !pr->isPieVisible();
+            pr->setPieVisible(newState);
+            PerfTimer::enabled = newState;
+            mc->gui.addMessage(newState ? "Performance profiling enabled" : "Performance profiling disabled");
         }
         return;
     }
+
+    if (!PerfTimer::enabled) {
+        mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+        return;
+    }
+
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) {
+        pr->debugFpsMeterKeyPress(id);
+        mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+    }
+    return;
+}
 }
 
 void DebugScreen::buttonClicked(Button* button)
@@ -195,18 +208,32 @@ void DebugScreen::buttonClicked(Button* button)
     }
 
     // 数字按钮
-    if (id >= 0 && id <= 9) {
-        if (!PerfTimer::enabled && id != 0) {
-            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
-            return;
-        }
+    // ========== 在 buttonClicked 中 ==========
+if (id >= 0 && id <= 9) {
+    if (id == 0) {
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-            mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+            bool newState = !pr->isPieVisible();
+            pr->setPieVisible(newState);
+            PerfTimer::enabled = newState;
+            mc->gui.addMessage(newState ? "Performance profiling enabled" : "Performance profiling disabled");
         }
         return;
     }
+
+    // 1-9 键：需要剖析器已启用
+    if (!PerfTimer::enabled) {
+        mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+        return;
+    }
+
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) {
+        pr->debugFpsMeterKeyPress(id);
+        mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+    }
+    return;
+}
 
     executeExtraAction(id);
     if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) mc->setScreen(NULL);
