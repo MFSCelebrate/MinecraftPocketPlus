@@ -47,6 +47,9 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
 }
 
 void PerfRenderer::renderFpsMeter(float tickTime) {
+	if (!m_pieVisible && PerfTimer::enabled) {
+        PerfTimer::enabled = false;   // 防止状态不一致
+	}
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
