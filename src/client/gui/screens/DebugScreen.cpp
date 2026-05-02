@@ -164,8 +164,8 @@ void DebugScreen::keyPressed(int key)
     if (key >= '0' && key <= '9') {
         int id = key - '0';
         if (id == 0) {
-            PerfTimer::enabled = !PerfTimer::enabled;
-            mc->gui.addMessage(PerfTimer::enabled ? "Performance profiling enabled" : "Performance profiling disabled");
+            mc->togglePie();
+            mc->gui.addMessage(mc->m_pieEnabled ? "Performance profiling enabled" : "Performance profiling disabled");
         } else if (!PerfTimer::enabled) {
             mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
         } else {
@@ -189,8 +189,8 @@ void DebugScreen::buttonClicked(Button* button)
 
     if (id >= 0 && id <= 9) {
         if (id == 0) {
-            PerfTimer::enabled = !PerfTimer::enabled;
-            mc->gui.addMessage(PerfTimer::enabled ? "Performance profiling enabled" : "Performance profiling disabled");
+            mc->togglePie();
+            mc->gui.addMessage(mc->m_pieEnabled ? "Performance profiling enabled" : "Performance profiling disabled");
         } else if (!PerfTimer::enabled) {
             mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
         } else {
