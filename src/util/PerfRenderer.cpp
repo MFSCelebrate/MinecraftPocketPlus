@@ -14,77 +14,10 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
         frameTimes.push_back(0);
         tickTimes.push_back(0);
     }
-    _workerRunning = true;
-    _worker = std::thread(&PerfRenderer::workerLoop, this);
-}
-
-PerfRenderer::~PerfRenderer() {
-    _workerRunning = false;
-    _cv.notify_one();
-    if (_worker.joinable()) _worker.join();
-}
-
-void PerfRenderer::workerLoop() {
-    while (true) {
-        std::unique_lock<std::mutex> lock(_mutex);
-        _cv.wait(lock, [this]{ return _needsUpdate.load() || !_workerRunning.load(); });
-        if (!_workerRunning) break;
-        _needsUpdate = false;
-        lock.unlock();   // 解锁后再进行耗时计算
-
-        // 深拷贝整个 times 表，完全线程安全
-        PerfTimer::TimeMap timesCopy = PerfTimer::getTimesCopy();
-
-        // 利用拷贝后的数据计算当前路径的饼图数据
-        std::vector<PerfTimer::ResultField> tempList;
-        PerfTimer::ResultField tempNode("", 0, 0);
-
-        // ---------- 复刻 getLog 核心逻辑（但不修改原表） ----------
-        std::string path = _debugPath;
-        auto itRoot = timesCopy.find("root");
-        float globalTime = (itRoot != timesCopy.end())? itRoot->second : 0;
-        auto itPath = timesCopy.find(path);
-        float totalTime2 = (itRoot != timesCopy.end())? itRoot->second : -1;
-        std::vector<PerfTimer::ResultField> result;
-        if (path.length() > 0) path += ".";
-        float totalTime = 0;
-        for (auto& kv : timesCopy) {
-            const std::string& key = kv.first;
-            if (key.length() > path.length() && Util::startsWith(key, path) && key.find(".", path.length() + 1) == std::string::npos) {
-                totalTime += kv.second;
-            }
-        }
-        float oldTime = totalTime;
-        if (totalTime < totalTime2) totalTime = totalTime2;
-        if (globalTime < totalTime) globalTime = totalTime;
-        for (auto& kv : timesCopy) {
-            const std::string& key = kv.first;
-            if (key.length() > path.length() && Util::startsWith(key, path) && key.find(".", path.length() + 1) == std::string::npos) {
-                float time = kv.second;
-                float timePercentage = time * 100.0f / totalTime;
-                float globalPercentage = time * 100.0f / globalTime;
-                result.push_back(PerfTimer::ResultField(key.substr(path.length()), timePercentage, globalPercentage));
-            }
-        }
-        if (totalTime > oldTime)
-            result.push_back(PerfTimer::ResultField("unspecified", (totalTime - oldTime) * 100.0f / totalTime, (totalTime - oldTime) * 100.0f / globalTime));
-        std::sort(result.begin(), result.end());
-        result.insert(result.begin(), PerfTimer::ResultField(_debugPath, 100, totalTime * 100.0f / globalTime));
-        // ---------- 计算完毕 ----------
-
-        // 更新共享数据
-        lock.lock();
-        _latestList = std::move(result);
-        if (!_latestList.empty()) {
-            _latestNode = _latestList[0];
-            _latestList.erase(_latestList.begin());
-        }
-    }
 }
 
 void PerfRenderer::debugFpsMeterKeyPress( int key ) {
-    // 导航仍需主线程直接获取最新子项（使用 forceUpdate 保护）
-    auto list = PerfTimer::getLog(_debugPath, true);
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
@@ -102,61 +35,19 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
             _debugPath += list[key].name;
         }
     }
-
-    // 通知后台线程更新饼图
-    _needsUpdate = true;
-    _cv.notify_one();
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 主动请求：如果当前没有可用数据，立刻通知后台线程计算
-    bool needRequest = false;
-    {
-        std::lock_guard<std::mutex> lock(_mutex);
-        if (_latestList.empty() && !_needsUpdate.load()) {
-            _needsUpdate = true;
-            needRequest = true;
-        }
-    }
-    if (needRequest) {
-        _cv.notify_one();
-    }
+    // 每帧实时获取最新数据，无缓存，强制刷新
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
+    if (list.empty()) return;
 
-    // 每 4 帧也请求一次，保持更新
-    static int frameCounter = 0;
-    if (++frameCounter % 4 == 0) {
-        _needsUpdate = true;
-        _cv.notify_one();
-    }
+    PerfTimer::ResultField node = list[0];
+    list.erase(list.begin());
 
-    // 获取最新的数据（无锁读取）
-    std::vector<PerfTimer::ResultField> list;
-    PerfTimer::ResultField node("", 0, 0);
-    {
-        std::lock_guard<std::mutex> lock(_mutex);
-        if (!_latestList.empty()) {
-            list = _latestList;
-            node = _latestNode;
-        }
-    }
-
-    // 后备数据防止消失
-    if (list.empty() && _hasValidData) {
-        list = _lastValidList;
-        node = _lastValidNode;
-    } else if (!list.empty()) {
-        _lastValidList = list;
-        _lastValidNode = node;
-        _hasValidData = true;
-    } else {
-        return; // 没有任何数据可以显示
-    }
-
-    // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字） ----------
-    // （保持不变，省略）
-    // ---------- 以下为完全原始的绘制代码（波形图、饼图、文字）----------
+    // ---------- 原始稳定版绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -274,11 +165,12 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
-        if (node.name.empty()) msg << "ROOT ";
+        if (node.name.length() == 0) msg << "ROOT ";
         else msg << node.name << " ";
-        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r / 2 - 16), 0xffffff);
+        int col = 0xffffff;
+        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r / 2 - 16), col);
         std::string msg2 = toPercentString(node.globalPercentage);
-        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), 0xffffff);
+        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), col);
     }
 
     for (unsigned int i = 0; i < list.size(); i++) {
