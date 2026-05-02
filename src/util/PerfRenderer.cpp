@@ -43,7 +43,7 @@ void PerfRenderer::debugFpsMeterKeyPress( int key )
 
 void PerfRenderer::renderFpsMeter( float tickTime )
 {
-	std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
+	std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);  // 强制实时数据
 	if (list.empty())
 		return;
 
