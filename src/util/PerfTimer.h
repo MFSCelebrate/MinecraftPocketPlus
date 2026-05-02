@@ -53,9 +53,6 @@ public:
     static void pop();
     static void popPush(const std::string& name);
 
-    // 新的 getLog 签名：forceUpdate 强制忽略缓存
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);  // 强制刷新
-
     // 每帧调用一次，推进全局帧计数
     static void tickFrame();
 
