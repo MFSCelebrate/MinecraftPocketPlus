@@ -153,66 +153,40 @@ void DebugScreen::render(int xm, int ym, float a)
 // DebugScreen.cpp 相关片段
 void DebugScreen::keyPressed(int key)
 {
-    if (key == 27) {           // ESC 关闭面板
-        mc->setScreen(NULL);
-        return;
-    }
+    if (key == 27) { mc->setScreen(NULL); return; }
 
-    if (key == 8) {            // Backspace → 向上导航
+    if (key == 8) {   // Backspace 后退
         PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->navigateBack();
-            mc->gui.addMessage("Navigated back");
-        }
+        if (pr) pr->debugFpsMeterKeyPress(0);
         return;
     }
 
     if (key >= '0' && key <= '9') {
-        int id = key - '0';
         PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-            // 仅在按下 0 时给出开关状态提示
-            if (id == 0) {
-                mc->gui.addMessage(pr->isPieVisible() ? "Pie chart enabled" : "Pie chart disabled");
-            }
-        }
+        if (pr) pr->debugFpsMeterKeyPress(key - '0');
+        return;
     }
 }
 
 void DebugScreen::buttonClicked(Button* button)
 {
     int id = button->id;
-    if (id == 99) {            // “Close” 按钮
-        mc->setScreen(NULL);
-        return;
-    }
+    if (id == 99) { mc->setScreen(NULL); return; }
 
-    if (id == ACT_BACK) {      // “< Back” 按钮
+    if (id == ACT_BACK) {
         PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->navigateBack();
-            mc->gui.addMessage("Navigated back");
-        }
+        if (pr) pr->debugFpsMeterKeyPress(0);
         return;
     }
 
-    if (id >= 0 && id <= 9) {  // 数字按钮 0‑9
+    if (id >= 0 && id <= 9) {
         PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-            if (id == 0) {
-                mc->gui.addMessage(pr->isPieVisible() ? "Pie chart enabled" : "Pie chart disabled");
-            }
-        }
+        if (pr) pr->debugFpsMeterKeyPress(id);
         return;
     }
 
-    // 其他功能按钮
     executeExtraAction(id);
-    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) {
-        mc->setScreen(NULL);
-    }
+    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) mc->setScreen(NULL);
 }
 
 void DebugScreen::executeExtraAction(int id) {
