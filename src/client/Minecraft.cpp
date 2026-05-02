@@ -424,6 +424,14 @@ void Minecraft::prepareLevel(const std::string& title) {
 	progressStageStatusId = 0;
 }
 
+void Minecraft::togglePie() {
+    m_pieEnabled = !m_pieEnabled;
+    PerfTimer::enabled = m_pieEnabled;
+    if (m_pieEnabled) {
+        PerfTimer::reset();   // 清空旧数据，避免累积卡顿
+    }
+}
+
 void Minecraft::update() {
 	//LOGI("Enter Update\n");
 
@@ -482,7 +490,7 @@ void Minecraft::update() {
 #ifndef STANDALONE_SERVER
 	checkGlError("Update finished");
 
-		if (PerfTimer::enabled) {
+		if (m_pieEnabled) {
     _perfRenderer->renderFpsMeter(1);
 		}
 #endif
