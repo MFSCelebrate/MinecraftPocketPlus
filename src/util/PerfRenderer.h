@@ -16,6 +16,7 @@ public:
     void debugFpsMeterKeyPress(int key);
     void renderFpsMeter(float tickTime);
     void navigateBack();
+    bool isPieVisible() const { return m_pieVisible; }
 
 private:
     void togglePie();
