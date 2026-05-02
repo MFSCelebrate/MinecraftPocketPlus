@@ -5,7 +5,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-// 采样间隔：每 4 帧记录一次性能数据
+// 记录采样间隔：每 8 帧才真正 push/pop 一次
 #define PERF_TIMER_SKIP_FRAMES 8
 
 #ifdef PROFILER
@@ -56,14 +56,13 @@ public:
     static void pop();
     static void popPush(const std::string& name);
 
-    // 获取日志，forceUpdate 暂未使用，保留以备导航强制刷新
+    // forceUpdate: 导航时需要最新数据，饼图不需要
     static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
 
-    // 每帧调用一次，推进全局帧计数器
-    static void tickFrame();
+    static void tickFrame();               // 每游戏帧调用一次
 
-    static bool enabled;                // 总开关
-    static int  s_frameCounter;         // 帧计数器，用于采样控制
+    static bool enabled;                   // 剖析总开关
+    static int  s_frameCounter;            // 帧计数器，供采样宏使用
 
 private:
     static std::vector<std::string> paths;
