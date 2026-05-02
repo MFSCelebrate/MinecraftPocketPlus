@@ -166,13 +166,10 @@ void DebugScreen::keyPressed(int key)
         return;
     }
 
-    if (key >= '0' && key <= '9') {
-        int id = key - '0';
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-        }
-        return;
+    if (id >= 0 && id <= 9) {
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) pr->debugFpsMeterKeyPress(id);
+    return;
     }
 }
 
@@ -191,11 +188,9 @@ void DebugScreen::buttonClicked(Button* button)
     }
 
     if (id >= 0 && id <= 9) {
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->debugFpsMeterKeyPress(id);
-        }
-        return;
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) pr->debugFpsMeterKeyPress(id);
+    return;
     }
 
     executeExtraAction(id);
