@@ -1,3 +1,4 @@
+// PerfTimer.h
 #ifndef NET_UTIL__PerfTimer_H__
 #define NET_UTIL__PerfTimer_H__
 
@@ -5,7 +6,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-// 剖析器开关由外部全局变量控制（在 PerfRenderer 中）
+// 剖析器总开关，由 PerfRenderer 控制
 extern bool gPerfTimerEnabled;
 
 #ifdef PROFILER
