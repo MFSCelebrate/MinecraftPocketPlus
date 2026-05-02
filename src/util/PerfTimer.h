@@ -3,11 +3,9 @@
 
 #include <map>
 #include <vector>
-#include <string>
-#include <mutex>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 8       // 每8帧记录一次
+#define PERF_TIMER_SKIP_FRAMES 6       // 最佳平衡点
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
@@ -32,6 +30,7 @@
 
 class PerfTimer
 {
+    typedef std::map<std::string, float> TimeMap;
 public:
     class ResultField {
     public:
@@ -39,7 +38,7 @@ public:
         float globalPercentage;
         std::string name;
 
-        ResultField(const std::string& name = "", float percentage = 0, float globalPercentage = 0)
+        ResultField(const std::string& name, float percentage, float globalPercentage)
             : name(name), percentage(percentage), globalPercentage(globalPercentage) {}
 
         bool operator<(const ResultField& rf) const {
@@ -51,7 +50,6 @@ public:
         }
     };
 
-    typedef std::map<std::string, float> TimeMap;   // ★ 移到公有
     static void reset();
     static void push(const std::string& name);
     static void pop();
@@ -61,17 +59,13 @@ public:
 
     static bool enabled;
     static int  s_frameCounter;
-    static int  s_warmupFrames;
-
-    // 线程安全拷贝当前 times 表，供后台线程使用
-    static TimeMap getTimesCopy();
+    static int  s_warmupFrames;         // 每次 reset 后全速记录 64 帧
 
 private:
     static std::vector<std::string> paths;
     static std::vector<float> startTimes;
     static std::string path;
     static TimeMap times;
-    static std::mutex s_timesMutex;       // 保护 times 的互斥锁
 };
 
 #endif
