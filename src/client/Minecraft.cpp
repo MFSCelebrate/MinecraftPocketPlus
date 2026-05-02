@@ -482,18 +482,9 @@ void Minecraft::update() {
 #ifndef STANDALONE_SERVER
 	checkGlError("Update finished");
 
-		if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
-#ifndef PLATFORM_DESKTOP
-		if (!PerfTimer::enabled) {
-			PerfTimer::reset();
-			PerfTimer::enabled = true;
+		if (PerfTimer::enabled) {
+    _perfRenderer->renderFpsMeter(1);
 		}
-		_perfRenderer->renderFpsMeter(1);
-		checkGlError("render debug");
-#endif
-	} else {
-		PerfTimer::enabled = false;
-	}
 #endif
 }
 
