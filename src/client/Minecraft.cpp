@@ -484,6 +484,7 @@ void Minecraft::update() {
 
 	if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {}
 	//LOGI("Exit Update\n");
+  #endif
 }
 
 void Minecraft::tick(int nTick, int maxTick) {
