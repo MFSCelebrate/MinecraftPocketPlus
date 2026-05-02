@@ -37,20 +37,24 @@ private:
     int frameTimePos;
     float lastTimer;
 
-    // 多线程数据
+    // 多线程
     std::thread             _worker;
     std::mutex              _dataMutex;
     std::condition_variable _cv;
     std::atomic<bool>       _running{false};
-    std::atomic<bool>       _newDataReady{false};
+    std::atomic<bool>       _needsUpdate{true};
 
-    // 后台缓冲区
+    // 双缓冲数据
     std::vector<PerfTimer::ResultField> _backList;
     PerfTimer::ResultField              _backNode{"", 0.0f, 0.0f};
 
-    // 前台缓冲区（主线程绘制用）
     std::vector<PerfTimer::ResultField> _frontList;
     PerfTimer::ResultField              _frontNode{"", 0.0f, 0.0f};
+
+    // 后备数据（主线程使用）
+    std::vector<PerfTimer::ResultField> _lastList;
+    PerfTimer::ResultField              _lastNode{"", 0.0f, 0.0f};
+    bool _hasLast = false;
 };
 
 #endif
