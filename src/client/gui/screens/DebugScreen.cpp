@@ -162,8 +162,16 @@ void DebugScreen::keyPressed(int key)
     }
 
     if (key >= '0' && key <= '9') {
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) pr->debugFpsMeterKeyPress(key - '0');
+        int id = key - '0';
+        if (id == 0) {
+            PerfTimer::enabled = !PerfTimer::enabled;
+            mc->gui.addMessage(PerfTimer::enabled ? "Performance profiling enabled" : "Performance profiling disabled");
+        } else if (!PerfTimer::enabled) {
+            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+        } else {
+            PerfRenderer* pr = mc->getPerfRenderer();
+            if (pr) pr->debugFpsMeterKeyPress(id);
+        }
         return;
     }
 }
@@ -180,8 +188,15 @@ void DebugScreen::buttonClicked(Button* button)
     }
 
     if (id >= 0 && id <= 9) {
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) pr->debugFpsMeterKeyPress(id);
+        if (id == 0) {
+            PerfTimer::enabled = !PerfTimer::enabled;
+            mc->gui.addMessage(PerfTimer::enabled ? "Performance profiling enabled" : "Performance profiling disabled");
+        } else if (!PerfTimer::enabled) {
+            mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+        } else {
+            PerfRenderer* pr = mc->getPerfRenderer();
+            if (pr) pr->debugFpsMeterKeyPress(id);
+        }
         return;
     }
 
