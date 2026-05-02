@@ -6,7 +6,7 @@ on:
       disable_build:
         description: 'Disable build and publish (only archive source)'
         required: false
-        default: true
+        default: false
         type: boolean
   pull_request:
   push:
@@ -21,8 +21,6 @@ concurrency:
 env:
   BUILD_TYPE: Release
   CPM_SOURCE_CACHE: ${{ github.workspace }}/cpm-cache
-  # 强制使用 Node.js 24，消除弃用警告
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: write
@@ -34,13 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code (NEW)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: new_source
 
       - name: Checkout previous commit (OLD)
         if: github.event_name == 'push'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.before }}
           path: old_source
@@ -56,13 +54,13 @@ jobs:
 
       - name: Upload OLD source artifact
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Source_Code_Old
           path: Source_Code_Old.zip
 
       - name: Upload NEW source artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Source_Code
           path: Source_Code.zip
@@ -71,10 +69,9 @@ jobs:
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
-    # 自动触发时执行；手动触发时仅当 disable_build 不为 'true' 时执行
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.disable_build != 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup caches
         uses: ./.github/actions/setup-cache
@@ -113,7 +110,7 @@ jobs:
         run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
       
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: mcpe-windows
           path: |
@@ -142,11 +139,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache Android command-line tools
         id: cache-android-tools
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.ANDROID_SDK_ROOT }}
           key: android-cmdline-tools-v36
@@ -164,7 +161,7 @@ jobs:
 
       - name: Cache Android NDK r14b
         id: cache-android-ndk
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ github.workspace }}/android-ndk-r14b
           key: android-ndk-r14b
@@ -189,7 +186,7 @@ jobs:
           fi
 
       - name: Setup Java 25
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 25
@@ -210,7 +207,7 @@ jobs:
           ./build.sh
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
@@ -223,7 +220,7 @@ jobs:
     if: ${{ (github.event_name != 'workflow_dispatch' || github.event.inputs.disable_build != 'true') && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Declare Version Variables
         id: ref
@@ -232,7 +229,7 @@ jobs:
           echo "hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_OUTPUT
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
 
       - name: Zip Windows Artifacts
         uses: vimtor/action-zip@v1.2
