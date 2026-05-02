@@ -1,8 +1,8 @@
+// PerfTimer.cpp
 #include "PerfTimer.h"
 #include "../platform/time.h"
 #include <algorithm>
 
-// 全局开关，由 PerfRenderer 控制
 bool gPerfTimerEnabled = false;
 
 std::vector<std::string> PerfTimer::paths;
@@ -13,11 +13,13 @@ PerfTimer::TimeMap PerfTimer::times;
 void PerfTimer::reset()
 {
     times.clear();
+    paths.clear();
+    startTimes.clear();
+    path.clear();
 }
 
 void PerfTimer::push( const std::string& name )
 {
-    // 不再检查 enabled，由宏控制
     if (path.length() > 0) path += ".";
     path += name;
     paths.push_back(path);
@@ -26,6 +28,8 @@ void PerfTimer::push( const std::string& name )
 
 void PerfTimer::pop()
 {
+    if (paths.empty()) return;   // 防止栈空崩溃
+
     float endTime = getTimeS();
     float startTime = startTimes.back();
 
@@ -51,7 +55,8 @@ void PerfTimer::popPush( const std::string& name )
 }
 
 std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath) {
-    // 不再检查 enabled，调用者已保证数据有效
+    if (!gPerfTimerEnabled) return std::vector<ResultField>();
+
     std::string path = rawPath;
 
     TimeMap::const_iterator itRoot = times.find("root");
