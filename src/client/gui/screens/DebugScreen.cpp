@@ -153,9 +153,12 @@ void DebugScreen::render(int xm, int ym, float a)
 // DebugScreen.cpp 相关片段
 void DebugScreen::keyPressed(int key)
 {
-    if (key == 27) { mc->setScreen(NULL); return; }
+    if (key == 27) {           // ESC 关闭面板
+        mc->setScreen(NULL);
+        return;
+    }
 
-    if (key == 8) {   // Backspace 后退
+    if (key == 8) {            // Backspace → 向上导航
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->navigateBack();
@@ -169,21 +172,23 @@ void DebugScreen::keyPressed(int key)
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->debugFpsMeterKeyPress(id);
-            // 只在按 0 的时候提示状态
+            // 仅在按下 0 时给出开关状态提示
             if (id == 0) {
                 mc->gui.addMessage(pr->isPieVisible() ? "Pie chart enabled" : "Pie chart disabled");
             }
         }
-        return;
     }
 }
 
 void DebugScreen::buttonClicked(Button* button)
 {
     int id = button->id;
-    if (id == 99) { mc->setScreen(NULL); return; }
+    if (id == 99) {            // “Close” 按钮
+        mc->setScreen(NULL);
+        return;
+    }
 
-    if (id == ACT_BACK) {
+    if (id == ACT_BACK) {      // “< Back” 按钮
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->navigateBack();
@@ -192,7 +197,7 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
 
-    if (id >= 0 && id <= 9) {
+    if (id >= 0 && id <= 9) {  // 数字按钮 0‑9
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
             pr->debugFpsMeterKeyPress(id);
@@ -203,9 +208,13 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
 
+    // 其他功能按钮
     executeExtraAction(id);
-    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) mc->setScreen(NULL);
+    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) {
+        mc->setScreen(NULL);
+    }
 }
+
 void DebugScreen::executeExtraAction(int id) {
     switch (id) {
         case ACT_HEAL_RESET:          mc->onGraphicsReset(); mc->player->heal(100); break;
