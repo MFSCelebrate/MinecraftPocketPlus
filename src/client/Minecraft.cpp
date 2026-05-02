@@ -593,6 +593,7 @@ void Minecraft::tick(int nTick, int maxTick) {
 	//      Most likely keyboard and mouse could/should be reset here as well.
 	Multitouch::reset();
 #endif
+	TIMER_POP();
 }
 
 class InputRAII {
