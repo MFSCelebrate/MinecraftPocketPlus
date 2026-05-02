@@ -822,11 +822,11 @@ void Minecraft::tickInput() {
 					//setIsCreativeMode( !isCreativeMode() );
 				}
 
-				if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
-					if (key >= '0' && key <= '9') {
-						_perfRenderer->debugFpsMeterKeyPress(key - '0');
-					}
-				}
+				//if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
+				//	if (key >= '0' && key <= '9') {
+				//		_perfRenderer->debugFpsMeterKeyPress(key - '0');
+					//}
+			//	}
 			#endif
 
 			if (key == Keyboard::KEY_ESCAPE)
