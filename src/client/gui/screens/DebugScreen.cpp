@@ -150,12 +150,10 @@ void DebugScreen::render(int xm, int ym, float a)
     Screen::render(xm, ym, a);
 }
 
+// DebugScreen.cpp 相关片段
 void DebugScreen::keyPressed(int key)
 {
-    if (key == 27) {   // Escape
-        mc->setScreen(NULL);
-        return;
-    }
+    if (key == 27) { mc->setScreen(NULL); return; }
 
     if (key == 8) {   // Backspace
         PerfRenderer* pr = mc->getPerfRenderer();
@@ -199,10 +197,8 @@ void DebugScreen::buttonClicked(Button* button)
     }
 
     executeExtraAction(id);
-    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER)
-        mc->setScreen(NULL);
+    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) mc->setScreen(NULL);
 }
-
 void DebugScreen::executeExtraAction(int id) {
     switch (id) {
         case ACT_HEAL_RESET:          mc->onGraphicsReset(); mc->player->heal(100); break;
