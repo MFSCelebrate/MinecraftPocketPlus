@@ -1,3 +1,4 @@
+// PerfTimer.cpp
 #include "PerfTimer.h"
 #include "../platform/time.h"
 #include <algorithm>
@@ -24,7 +25,7 @@ void PerfTimer::reset() {
     startTimes.clear();
     path.clear();
     s_frameCounter = 0;
-    s_warmupFrames = 128;   // 加长热身，确保数据充足
+    s_warmupFrames = 64;   // 快速积累数据
 }
 
 void PerfTimer::push( const std::string& name ) {
@@ -91,8 +92,14 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    for (TimeMap::iterator it = times.begin(); it != times.end(); ++it) {
+    // 清理长时间未更新的微弱条目，防止表无限膨胀
+    for (TimeMap::iterator it = times.begin(); it != times.end(); ) {
         it->second *= 0.999f;
+        if (it->second < 0.001f) {
+            it = times.erase(it);
+        } else {
+            ++it;
+        }
     }
 
     if (totalTime > oldTime)
