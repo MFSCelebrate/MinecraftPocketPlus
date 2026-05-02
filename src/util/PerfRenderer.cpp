@@ -12,7 +12,8 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
 	_font(font),
 	_debugPath("root"),
 	frameTimePos(0),
-	lastTimer(-1)
+	lastTimer(-1),
+    m_pieVisible(false)
 {
 	for (int i = 0; i < 512; ++i) {
 		frameTimes.push_back(0);
