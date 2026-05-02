@@ -430,7 +430,6 @@ void Minecraft::update() {
 	if (Options::debugGl)
 		LOGI(">>>>>>>>>>\n");
 
-	TIMER_PUSH("root");
 
 	//if (level) {
 	//	LOGI("numplayers: %d\n", level->players.size());
@@ -448,10 +447,6 @@ void Minecraft::update() {
 	if (!freezeGame) {
 		timer.advanceTime();
 	}
-
-	// ★ 强制每帧记录一次 root，保证饼图数据源
-    TIMER_PUSH("root");
-    TIMER_POP();
 
 	if (raknetInstance && !freezeGame) {
 		raknetInstance->runEvents(netCallback);
