@@ -14,11 +14,51 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
         frameTimes.push_back(0);
         tickTimes.push_back(0);
     }
+    startWorkerThread();
+}
+
+PerfRenderer::~PerfRenderer() {
+    stopWorkerThread();
+}
+
+void PerfRenderer::startWorkerThread() {
+    _workerRunning = true;
+    _workerThread = std::thread(&PerfRenderer::workerLoop, this);
+}
+
+void PerfRenderer::stopWorkerThread() {
+    _workerRunning = false;
+    _cv.notify_one();
+    if (_workerThread.joinable()) {
+        _workerThread.join();
+    }
+}
+
+void PerfRenderer::workerLoop() {
+    while (_workerRunning) {
+        std::unique_lock<std::mutex> lock(_dataMutex);
+        _cv.wait(lock, [this]{ return _needsUpdate || !_workerRunning; });
+
+        if (!_workerRunning) break;
+
+        // 获取最新剖析数据（耗时操作，在后台线程完成）
+        auto list = PerfTimer::getLog(_debugPath);
+        if (!list.empty()) {
+            PerfTimer::ResultField node = list[0];
+            list.erase(list.begin());
+
+            // 原子地更新共享数据
+            _latestList = std::move(list);
+            _latestNode = node;
+        }
+
+        _needsUpdate = false;
+    }
 }
 
 void PerfRenderer::debugFpsMeterKeyPress( int key ) {
-    // 导航需要实时数据
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
+    // 导航需要在主线程获取最新子项（使用 forceUpdate）
+    auto list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
@@ -36,33 +76,41 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
             _debugPath += list[key].name;
         }
     }
+
+    // 通知后台线程更新数据
+    {
+        std::lock_guard<std::mutex> lock(_dataMutex);
+        _needsUpdate = true;
+    }
+    _cv.notify_one();
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
-    // ---------- 隔帧缓存：每 4 帧获取一次饼图数据，大幅降低消耗 ----------
-    static int renderSkip = 0;
-    static std::vector<PerfTimer::ResultField> cachedList;
-    static PerfTimer::ResultField cachedNode("", 0, 0);
-    static std::string lastPath;
+    if (!PerfTimer::enabled) return;
 
-    bool pathChanged = (_debugPath != lastPath);
-    if (pathChanged) lastPath = _debugPath;
-
-    renderSkip++;
-    if (renderSkip % 4 == 0 || cachedList.empty() || pathChanged) {
-        cachedList = PerfTimer::getLog(_debugPath);      // 使用缓存频率控制
-        if (!cachedList.empty()) {
-            cachedNode = cachedList[0];
-            cachedList.erase(cachedList.begin());
+    // 每 4 幀通知后台线程更新一次数据（避免过于频繁）
+    static int updateCounter = 0;
+    updateCounter++;
+    if (updateCounter % 4 == 0) {
+        {
+            std::lock_guard<std::mutex> lock(_dataMutex);
+            _needsUpdate = true;
         }
+        _cv.notify_one();
     }
 
-    if (cachedList.empty()) return;
+    // 获取后台线程最新数据（无锁复制）
+    std::vector<PerfTimer::ResultField> list;
+    PerfTimer::ResultField node("", 0, 0);
+    {
+        std::lock_guard<std::mutex> lock(_dataMutex);
+        list = _latestList;
+        node = _latestNode;
+    }
 
-    PerfTimer::ResultField node = cachedNode;
-    std::vector<PerfTimer::ResultField> list = cachedList;
+    if (list.empty()) return;
 
-    // ---------- 下面全部是原始绘制代码（波形图、饼图、文字） ----------
+    // ---------- 以下全部为原始稳定版的绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -85,54 +133,52 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     Tesselator& t = Tesselator::instance;
 
     // 波形图
-    {
-        int hh1 = (int) (usPer60Fps / 200);
-        float count = (float)frameTimes.size();
-        t.begin(GL_TRIANGLES);
-        t.color(0x20000000);
-        t.vertex(0, (float)(_mc->height - hh1), 0);
-        t.vertex(0, (float)_mc->height, 0);
-        t.vertex(count, (float)_mc->height, 0);
-        t.vertex(count, (float)(_mc->height - hh1), 0);
+    int hh1 = (int) (usPer60Fps / 200);
+    float count = (float)frameTimes.size();
+    t.begin(GL_TRIANGLES);
+    t.color(0x20000000);
+    t.vertex(0, (float)(_mc->height - hh1), 0);
+    t.vertex(0, (float)_mc->height, 0);
+    t.vertex(count, (float)_mc->height, 0);
+    t.vertex(count, (float)(_mc->height - hh1), 0);
 
-        t.color(0x20200000);
-        t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
-        t.vertex(0, (float)(_mc->height - hh1), 0);
-        t.vertex(count, (float)(_mc->height - hh1), 0);
-        t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
-        t.draw();
+    t.color(0x20200000);
+    t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
+    t.vertex(0, (float)(_mc->height - hh1), 0);
+    t.vertex(count, (float)(_mc->height - hh1), 0);
+    t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
+    t.draw();
 
-        float totalTime = 0;
-        for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
-        int hh = (int) (totalTime / 200 / frameTimes.size());
-        t.begin();
-        t.color(0x20400000);
-        t.vertex(0, (float)(_mc->height - hh), 0);
-        t.vertex(0, (float)_mc->height, 0);
-        t.vertex(count, (float)_mc->height, 0);
-        t.vertex(count, (float)(_mc->height - hh), 0);
-        t.draw();
+    float totalTime = 0;
+    for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
+    int hh = (int) (totalTime / 200 / frameTimes.size());
+    t.begin();
+    t.color(0x20400000);
+    t.vertex(0, (float)(_mc->height - hh), 0);
+    t.vertex(0, (float)_mc->height, 0);
+    t.vertex(count, (float)_mc->height, 0);
+    t.vertex(count, (float)(_mc->height - hh), 0);
+    t.draw();
 
-        t.begin(GL_LINES);
-        for (unsigned int i = 0; i < frameTimes.size(); i++) {
-            int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
-            int cc = col * col / 255;
-            cc = cc * cc / 255;
-            int cc2 = cc * cc / 255;
-            cc2 = cc2 * cc2 / 255;
-            if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
-            else t.color(0xff000000 + cc * 256);
+    t.begin(GL_LINES);
+    for (unsigned int i = 0; i < frameTimes.size(); i++) {
+        int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
+        int cc = col * col / 255;
+        cc = cc * cc / 255;
+        int cc2 = cc * cc / 255;
+        cc2 = cc2 * cc2 / 255;
+        if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
+        else t.color(0xff000000 + cc * 256);
 
-            float time = 10 * 1000 * frameTimes[i] / 200;
-            float time2 = 10 * 1000 * tickTimes[i] / 200;
-            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-            t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
-            t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
-            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-            t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
-        }
-        t.draw();
+        float time = 10 * 1000 * frameTimes[i] / 200;
+        float time2 = 10 * 1000 * tickTimes[i] / 200;
+        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+        t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
+        t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
+        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+        t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
     }
+    t.draw();
 
     // 饼图
     int r = 160;
@@ -179,7 +225,6 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
 
     glEnable(GL_TEXTURE_2D);
 
-    // 标题
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
