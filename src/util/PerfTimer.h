@@ -32,7 +32,6 @@
 
 class PerfTimer
 {
-    typedef std::map<std::string, float> TimeMap;
 public:
     class ResultField {
     public:
@@ -52,6 +51,7 @@ public:
         }
     };
 
+    typedef std::map<std::string, float> TimeMap;   // ★ 移到公有
     static void reset();
     static void push(const std::string& name);
     static void pop();
