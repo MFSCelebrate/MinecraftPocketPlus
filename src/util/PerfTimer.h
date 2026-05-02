@@ -5,22 +5,21 @@
 #include <vector>
 #include "StringUtils.h"
 
-// 记录采样间隔：每 8 帧才真正 push/pop 一次
-#define PERF_TIMER_SKIP_FRAMES 8
+#define PERF_TIMER_SKIP_FRAMES 8       // 常态记录间隔
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0 || PerfTimer::s_warmupFrames > 0)) \
             PerfTimer::push(x); \
     } while(0)
 
     #define TIMER_POP() do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0 || PerfTimer::s_warmupFrames > 0)) \
             PerfTimer::pop(); \
     } while(0)
 
     #define TIMER_POP_PUSH(x) do { \
-        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0)) \
+        if (PerfTimer::enabled && (PerfTimer::s_frameCounter % PERF_TIMER_SKIP_FRAMES == 0 || PerfTimer::s_warmupFrames > 0)) \
             PerfTimer::popPush(x); \
     } while(0)
 #else
@@ -55,14 +54,12 @@ public:
     static void push(const std::string& name);
     static void pop();
     static void popPush(const std::string& name);
-
-    // forceUpdate: 导航时需要最新数据，饼图不需要
     static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
+    static void tickFrame();
 
-    static void tickFrame();               // 每游戏帧调用一次
-
-    static bool enabled;                   // 剖析总开关
-    static int  s_frameCounter;            // 帧计数器，供采样宏使用
+    static bool enabled;
+    static int  s_frameCounter;
+    static int  s_warmupFrames;         // 热身帧数
 
 private:
     static std::vector<std::string> paths;
