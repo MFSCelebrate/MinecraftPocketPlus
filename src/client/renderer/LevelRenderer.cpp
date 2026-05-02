@@ -280,7 +280,7 @@ void LevelRenderer::deleteChunks()
 }
 
 void LevelRenderer::resortChunks( int xc, int yc, int zc ) {
-	TIMER_PUSH("resortChunks");
+	
 	xc -= CHUNK_SIZE / 2;
 	//yc -= CHUNK_SIZE / 2;
 	zc -= CHUNK_SIZE / 2;
@@ -332,7 +332,7 @@ void LevelRenderer::resortChunks( int xc, int yc, int zc ) {
 			}
 		}
 	}
-	TIMER_POP();
+	
 }
 
 int LevelRenderer::render(Mob* player, int layer, float alpha)
@@ -341,7 +341,7 @@ int LevelRenderer::render(Mob* player, int layer, float alpha)
         allChanged();
     }
 
-    TIMER_PUSH("sortchunks");
+    
     for (int i = 0; i < 10; i++) {
         chunkFixOffs = (chunkFixOffs + 1) % chunksLength;
         Chunk* c = chunks[chunkFixOffs];
@@ -446,7 +446,7 @@ double zOff = player->zOld + (player->z - player->zOld) * alpha;
         count += renderChunks(0, chunksLength, layer, alpha);
     }
 
-    TIMER_POP();
+    
     return count;
 }
 
@@ -570,7 +570,7 @@ void LevelRenderer::render(const AABB& b) const
 
 int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
 {
-	TIMER_PUSH("renderChunks_main");
+	
     _renderChunks.clear();
     int count = 0;
     for (int i = from; i < to; i++) {
@@ -611,7 +611,7 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
     }
 
     renderSameAsLast(layer, alpha);
-	TIMER_POP();
+	
     return count;
 }
 
@@ -627,7 +627,7 @@ void LevelRenderer::tick()
 
 bool LevelRenderer::updateDirtyChunks( Mob* player, bool force )
 {
-	TIMER_PUSH("updateDirtyChunks_main");
+	
 	bool slow = false;
 
 	if (slow) {
@@ -782,7 +782,7 @@ bool LevelRenderer::updateDirtyChunks( Mob* player, bool force )
 
 		return pendingChunkSize == (pendingChunkRemoved + secondaryRemoved);
 	}
-	TIMER_POP();
+	
 }
 
 void LevelRenderer::renderHit( Player* player, const HitResult& h, int mode, /*ItemInstance*/void* inventoryItem, float a )
@@ -877,7 +877,7 @@ void LevelRenderer::renderHitOutline( Player* player, const HitResult& h, int mo
 
 void LevelRenderer::setDirty( int x0, int y0, int z0, int x1, int y1, int z1 )
 {   
-	TIMER_PUSH("ChunkSetDirty");
+	
 	int _x0 = Mth::intFloorDiv(x0, CHUNK_SIZE);
 	int _y0 = Mth::intFloorDiv(y0, CHUNK_SIZE);
 	int _z0 = Mth::intFloorDiv(z0, CHUNK_SIZE);
@@ -904,7 +904,7 @@ void LevelRenderer::setDirty( int x0, int y0, int z0, int x1, int y1, int z1 )
 			}
 		}
 	}
-	TIMER_POP();
+	
 }
 
 void LevelRenderer::tileChanged( int x, int y, int z)
