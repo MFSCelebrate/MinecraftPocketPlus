@@ -19,6 +19,7 @@ void PerfTimer::reset() {
 }
 
 void PerfTimer::push( const std::string& name ) {
+    // 不再检查 enabled，宏已检查
     if (path.length() > 0) path += ".";
     path += name;
     paths.push_back(path);
@@ -59,7 +60,6 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
 
     if (path.length() > 0) path += ".";
     float totalTime = 0;
-
     for (TimeMap::const_iterator cit = times.begin(); cit != times.end(); ++cit) {
         const std::string& key = cit->first;
         const float& time = cit->second;
@@ -83,8 +83,15 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    for (TimeMap::iterator it = times.begin(); it != times.end(); ++it)
+    // ★ 关键：衰减并清理长期未更新的细微条目，防止 map 无限膨胀
+    for (TimeMap::iterator it = times.begin(); it != times.end(); ) {
         it->second *= 0.999f;
+        if (it->second < 0.001f) {
+            it = times.erase(it);
+        } else {
+            ++it;
+        }
+    }
 
     if (totalTime > oldTime)
         result.push_back(ResultField("unspecified", (totalTime - oldTime) * 100.0f / totalTime, (totalTime - oldTime) * 100.0f / globalTime));
