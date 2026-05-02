@@ -466,13 +466,17 @@ void Minecraft::update() {
 	TIMER_POP();
 
 	#ifndef STANDALONE_SERVER
-		if (gameMode != NULL) gameMode->render(timer.a);
-		TIMER_PUSH("sound");
-		soundEngine->update(player, timer.a);
-		TIMER_POP_PUSH("render");
-		gameRenderer->render(timer.a);
-		TIMER_POP();
-	#else
+        TIMER_PUSH("gameModeRender");        // ★ 给 gameMode->render 单独标签
+        if (gameMode != NULL) gameMode->render(timer.a);
+        TIMER_POP();                         // ★ 关闭 gameModeRender
+
+        TIMER_PUSH("sound");
+        soundEngine->update(player, timer.a);
+        TIMER_POP();                         // 额外确保 sound 单独闭合（避免嵌套）
+        TIMER_PUSH("render");
+        gameRenderer->render(timer.a);
+        TIMER_POP();
+#else
 	CThread::sleep(1);
 	#endif
 #ifndef STANDALONE_SERVER
@@ -499,101 +503,101 @@ void Minecraft::update() {
 }
 
 void Minecraft::tick(int nTick, int maxTick) {
-	if (missTime > 0) missTime--;
+    TIMER_PUSH("tick-work");          // ★ 包裹整个 tick 函数体
+
+    if (missTime > 0) missTime--;
 #ifndef STANDALONE_SERVER
-	if (!screen && player) {
-		if (player->health <= 0) {
-			setScreen(new DeathScreen());
-		}
-	}
+    if (!screen && player) {
+        if (player->health <= 0) {
+            setScreen(new DeathScreen());
+        }
+    }
 #endif
-	TIMER_PUSH("gameMode");
-	if (level && !pause) {
-		gameMode->tick();
-	}
+    TIMER_PUSH("gameMode");
+    if (level && !pause) {
+        gameMode->tick();
+    }
 
-	TIMER_POP_PUSH("commandServer");
-	if (level && _commandServer) {
-		_commandServer->tick();
-	}
+    TIMER_POP_PUSH("commandServer");
+    if (level && _commandServer) {
+        _commandServer->tick();
+    }
 
-	TIMER_POP_PUSH("input");
-	tickInput();
+    TIMER_POP_PUSH("input");
+    tickInput();
 #ifndef STANDALONE_SERVER
-	TIMER_POP_PUSH("gui");
-	gui.tick();
+    TIMER_POP_PUSH("gui");
+    gui.tick();
 #endif
-	//
-	// Ongoing level generation in a (perhaps) different thread. When it's
-	// ready, _levelGenerated() is called once and any threads are deleted.
-	//
-	if (isGeneratingLevel) {
-		return;
-	} else if (!_hasSignaledGeneratingLevelFinished) {
-		if (generateLevelThread) {
-			delete generateLevelThread;
-			generateLevelThread = NULL;
-		}
-		_levelGenerated();
-	}
+    //
+    // Ongoing level generation ...
+    //
+    if (isGeneratingLevel) {
+        TIMER_POP();   // ★ 弹出 tick-work，然后返回
+        return;
+    } else if (!_hasSignaledGeneratingLevelFinished) {
+        if (generateLevelThread) {
+            delete generateLevelThread;
+            generateLevelThread = NULL;
+        }
+        _levelGenerated();
+    }
 
-	//
-	// Normal game loop, run before or efter level generation
-	//
-	if (level != NULL)
-	{
-		if (!pause) {
+    //
+    // Normal game loop ...
+    //
+    if (level != NULL) {
+        if (!pause) {
 #ifndef STANDALONE_SERVER
-			TIMER_POP_PUSH("gameRenderer");
-			gameRenderer->tick(nTick, maxTick);
+            TIMER_POP_PUSH("gameRenderer");
+            gameRenderer->tick(nTick, maxTick);
 
-			TIMER_POP_PUSH("levelRenderer");
-			levelRenderer->tick();
+            TIMER_POP_PUSH("levelRenderer");
+            levelRenderer->tick();
 #endif
-			level->difficulty = options.getIntValue(OPTIONS_DIFFICULTY);
-			if (level->isClientSide) level->difficulty = Difficulty::EASY;
+            level->difficulty = options.getIntValue(OPTIONS_DIFFICULTY);
+            if (level->isClientSide) level->difficulty = Difficulty::EASY;
 
-			TIMER_POP_PUSH("level");
-			level->tickEntities();
-			level->tick();
+            TIMER_POP_PUSH("level");
+            level->tickEntities();
+            level->tick();
 #ifndef STANDALONE_SERVER
-			TIMER_POP_PUSH("animateTick");
-			if (player) {
-				level->animateTick(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
-			}
+            TIMER_POP_PUSH("animateTick");
+            if (player) {
+                level->animateTick(Mth::floor(player->x), Mth::floor(player->y), Mth::floor(player->z));
+            }
 #endif
-		}
-	}
+        }
+    }
 #ifndef STANDALONE_SERVER
-	textures->loadAndBindTexture("terrain.png");
-	if (!pause && !(screen && !screen->renderGameBehind())) {
-		#if !defined(RPI)
-			#ifdef __APPLE__
-			if (isSuperFast())
-			#endif
-			{
-			if (nTick == maxTick) {
-				TIMER_POP_PUSH("textures");
-				textures->tick(true);
-			}
-			}
-		#endif
-	}
-	TIMER_POP_PUSH("particles");
-	if (!pause) {
-		particleEngine->tick();
-	}
-	if (screen) {
-		screenMutex = true;
-		screen->tick();
-		screenMutex = false;
-	}
+    textures->loadAndBindTexture("terrain.png");
+    if (!pause && !(screen && !screen->renderGameBehind())) {
+        #if !defined(RPI)
+            #ifdef __APPLE__
+            if (isSuperFast())
+            #endif
+            {
+            if (nTick == maxTick) {
+                TIMER_POP_PUSH("textures");
+                textures->tick(true);
+            }
+            }
+        #endif
+    }
+    TIMER_POP_PUSH("particles");
+    if (!pause) {
+        particleEngine->tick();
+    }
+    if (screen) {
+        screenMutex = true;
+        screen->tick();
+        screenMutex = false;
+    }
 
-	// @note: fix to keep "isPressed" and "isReleased" as long as necessary.
-	//      Most likely keyboard and mouse could/should be reset here as well.
-	Multitouch::reset();
+    Multitouch::reset();
 #endif
-	TIMER_POP();
+    TIMER_POP();   // ★ 正常结束前弹出 tick-work
+    // 原有的最后一个 TIMER_POP() 已删除，因为 tick-work 的闭合已足够
 }
 
 class InputRAII {
