@@ -8,6 +8,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+
 #include "PerfTimer.h"
 
 class Minecraft;
@@ -22,8 +23,6 @@ public:
     void renderFpsMeter(float tickTime);
 
 private:
-    void startWorker();
-    void stopWorker();
     void workerLoop();
 
     std::string toPercentString(float percentage);
@@ -37,24 +36,21 @@ private:
     int frameTimePos;
     float lastTimer;
 
-    // 多线程
-    std::thread             _worker;
-    std::mutex              _dataMutex;
+    // 后台线程
+    std::thread _worker;
+    std::mutex  _mutex;
     std::condition_variable _cv;
-    std::atomic<bool>       _running{false};
-    std::atomic<bool>       _needsUpdate{true};
+    std::atomic<bool> _workerRunning{false};
+    std::atomic<bool> _needsUpdate{false};
 
-    // 双缓冲数据
-    std::vector<PerfTimer::ResultField> _backList;
-    PerfTimer::ResultField              _backNode{"", 0.0f, 0.0f};
+    // 共享数据
+    std::vector<PerfTimer::ResultField> _latestList;
+    PerfTimer::ResultField _latestNode;
 
-    std::vector<PerfTimer::ResultField> _frontList;
-    PerfTimer::ResultField              _frontNode{"", 0.0f, 0.0f};
-
-    // 后备数据（主线程使用）
-    std::vector<PerfTimer::ResultField> _lastList;
-    PerfTimer::ResultField              _lastNode{"", 0.0f, 0.0f};
-    bool _hasLast = false;
+    // 后备数据（防消失）
+    std::vector<PerfTimer::ResultField> _lastValidList;
+    PerfTimer::ResultField _lastValidNode{"", 0, 0};
+    bool _hasValidData = false;
 };
 
 #endif
