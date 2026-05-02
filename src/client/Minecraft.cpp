@@ -424,14 +424,6 @@ void Minecraft::prepareLevel(const std::string& title) {
 	progressStageStatusId = 0;
 }
 
-void Minecraft::togglePie() {
-    m_pieEnabled = !m_pieEnabled;
-    PerfTimer::enabled = m_pieEnabled;
-    if (m_pieEnabled) {
-        PerfTimer::reset();   // 清空旧数据，避免累积卡顿
-    }
-}
-
 void Minecraft::update() {
 	//LOGI("Enter Update\n");
 
@@ -490,9 +482,18 @@ void Minecraft::update() {
 #ifndef STANDALONE_SERVER
 	checkGlError("Update finished");
 
-		if (m_pieEnabled) {
-    _perfRenderer->renderFpsMeter(1);
+	if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
+#ifndef PLATFORM_DESKTOP
+		if (!PerfTimer::enabled) {
+			PerfTimer::reset();
+			PerfTimer::enabled = true;
 		}
+		_perfRenderer->renderFpsMeter(1);
+		checkGlError("render debug");
+#endif
+	} else {
+		PerfTimer::enabled = false;
+	}
 #endif
 }
 
@@ -822,11 +823,11 @@ void Minecraft::tickInput() {
 					//setIsCreativeMode( !isCreativeMode() );
 				}
 
-				//if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
-				//	if (key >= '0' && key <= '9') {
-				//		_perfRenderer->debugFpsMeterKeyPress(key - '0');
-					//}
-			//	}
+				if (options.getBooleanValue(OPTIONS_RENDER_DEBUG)) {
+					if (key >= '0' && key <= '9') {
+						_perfRenderer->debugFpsMeterKeyPress(key - '0');
+					}
+				}
 			#endif
 
 			if (key == Keyboard::KEY_ESCAPE)
