@@ -1,4 +1,3 @@
-// PerfRenderer.cpp
 #include "PerfRenderer.h"
 #include "PerfTimer.h"
 #include "Mth.h"
@@ -41,14 +40,13 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每帧实时获取最新数据，没有任何缓存
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ---------- 以下全部为原始稳定版绘制代码（波形图、饼图、文字）----------
+    // ---------- 绘制 FPS 波形图（与原版完全一致）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -70,7 +68,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     glDisable2(GL_TEXTURE_2D);
     Tesselator& t = Tesselator::instance;
 
-    // 波形图
+    // 背景参考线（60fps 参考等）
     int hh1 = (int) (usPer60Fps / 200);
     float count = (float)frameTimes.size();
     t.begin(GL_TRIANGLES);
@@ -87,6 +85,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
     t.draw();
 
+    // 平均帧时间参考线
     float totalTime = 0;
     for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
     int hh = (int) (totalTime / 200 / frameTimes.size());
@@ -98,6 +97,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     t.vertex(count, (float)(_mc->height - hh), 0);
     t.draw();
 
+    // 帧时间柱状图
     t.begin(GL_LINES);
     for (unsigned int i = 0; i < frameTimes.size(); i++) {
         int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
@@ -105,8 +105,11 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
         cc = cc * cc / 255;
         int cc2 = cc * cc / 255;
         cc2 = cc2 * cc2 / 255;
-        if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
-        else t.color(0xff000000 + cc * 256);
+        if (frameTimes[i] > usPer60Fps) {
+            t.color(0xff000000 + cc * 65536);
+        } else {
+            t.color(0xff000000 + cc * 256);
+        }
 
         float time = 10 * 1000 * frameTimes[i] / 200;
         float time2 = 10 * 1000 * tickTimes[i] / 200;
@@ -118,10 +121,12 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     }
     t.draw();
 
-    // 饼图
+    // ========== 重制版饼图 ==========
     int r = 160;
     int x = _mc->width - r - 10;
     int y = _mc->height - r * 2;
+
+    // 背景圆盘
     glEnable(GL_BLEND);
     t.begin();
     t.color(0x000000, 200);
@@ -133,34 +138,43 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     glDisable(GL_BLEND);
     glDisable(GL_CULL_FACE);
 
+    // 绘制扇形和颜色条带（立体边缘）
     float totalPercentage = 0;
+    const int pieSteps = 8;   // 固定分段数，平滑且高效
+
     for (unsigned int i = 0; i < list.size(); i++) {
         PerfTimer::ResultField& result = list[i];
-        int steps = Mth::floor(result.percentage / 4) + 1;
 
+        // 扇形主体
         t.begin(GL_TRIANGLE_FAN);
         t.color(result.getColor());
         t.vertex((float)x, (float)y, 0);
-        for (int j = steps; j >= 0; j--) {
-            float dir = (float) ((totalPercentage + (result.percentage * j / steps)) * Mth::PI * 2 / 100);
-            float xx = Mth::sin(dir) * r;
-            float yy = Mth::cos(dir) * r * 0.5f;
+        float angleStart = totalPercentage * (Mth::PI * 2.0f / 100.0f);
+        float angleStep  = result.percentage * (Mth::PI * 2.0f / 100.0f) / pieSteps;
+        for (int j = 0; j <= pieSteps; j++) {
+            float angle = angleStart + angleStep * j;
+            float xx = Mth::sin(angle) * r;
+            float yy = Mth::cos(angle) * r * 0.5f;
             t.vertex(x + xx, y - yy, 0);
         }
         t.draw();
+
+        // 颜色条带（稍暗，形成立体边缘）
         t.begin(GL_TRIANGLE_STRIP);
         t.color((result.getColor() & 0xfefefe) >> 1);
-        for (int j = steps; j >= 0; j--) {
-            float dir = (float) ((totalPercentage + (result.percentage * j / steps)) * Mth::PI * 2 / 100);
-            float xx = Mth::sin(dir) * r;
-            float yy = Mth::cos(dir) * r * 0.5f;
+        for (int j = 0; j <= pieSteps; j++) {
+            float angle = angleStart + angleStep * j;
+            float xx = Mth::sin(angle) * r;
+            float yy = Mth::cos(angle) * r * 0.5f;
             t.vertex(x + xx, y - yy, 0);
             t.vertex(x + xx, y - yy + 10, 0);
         }
         t.draw();
+
         totalPercentage += result.percentage;
     }
 
+    // ========== 文字标题与列表 ==========
     glEnable(GL_TEXTURE_2D);
 
     {
