@@ -74,8 +74,14 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
             result.push_back(ResultField(name, timePercentage, globalPercentage));
         }
     }
-    for (TimeMap::iterator it = times.begin(); it != times.end(); ++it)
-        it->second *= 0.999f;
+    for (TimeMap::iterator it = times.begin(); it != times.end(); ) {
+    it->second *= 0.999f;
+    if (it->second < 0.001f) {
+        it = times.erase(it);      // 删除长时间未更新的条目
+    } else {
+        ++it;
+    }
+    }
     if (totalTime > oldTime)
         result.push_back(ResultField("unspecified", (totalTime - oldTime) * 100.0f / totalTime, (totalTime - oldTime) * 100.0f / globalTime));
     std::sort(result.begin(), result.end());
