@@ -5,59 +5,47 @@
 #include <vector>
 #include "StringUtils.h"
 
-//package util;
-#ifdef PROFILER
-	#define TIMER_PUSH(x)		PerfTimer::push(x)
-	#define TIMER_POP()			PerfTimer::pop()
-	#define TIMER_POP_PUSH(x)	PerfTimer::popPush(x)
-// #elif defined(SERVER_PROFILER)
-//     #include "ServerProfiler.h"
+// 剖析器开关由外部全局变量控制（在 PerfRenderer 中）
+extern bool gPerfTimerEnabled;
 
-//     #define TIMER_PUSH(x)       ServerProfiler::push(x)
-//     #define TIMER_POP()         ServerProfiler::pop()
-//     #define TIMER_POP_PUSH(x)	ServerProfiler::popPush(x)
+#ifdef PROFILER
+    #define TIMER_PUSH(x)       do { if (gPerfTimerEnabled) PerfTimer::push(x); } while(0)
+    #define TIMER_POP()         do { if (gPerfTimerEnabled) PerfTimer::pop(); } while(0)
+    #define TIMER_POP_PUSH(x)   do { if (gPerfTimerEnabled) { PerfTimer::pop(); PerfTimer::push(x); } } while(0)
 #else
-	#define TIMER_PUSH(x)		((void*)0)
-	#define TIMER_POP()			((void*)0)
-	#define TIMER_POP_PUSH(x)	((void*)0)
+    #define TIMER_PUSH(x)       ((void*)0)
+    #define TIMER_POP()         ((void*)0)
+    #define TIMER_POP_PUSH(x)   ((void*)0)
 #endif
 
 class PerfTimer
 {
-	typedef std::map<std::string, float> TimeMap;
+    typedef std::map<std::string, float> TimeMap;
 public:
     class ResultField {
-	public:
+    public:
         float percentage;
         float globalPercentage;
         std::string name;
 
         ResultField(const std::string& name, float percentage, float globalPercentage)
-		:	name(name),
-			percentage(percentage),
-			globalPercentage(globalPercentage)
-		{}
+            : name(name), percentage(percentage), globalPercentage(globalPercentage) {}
 
         bool operator<(const ResultField& rf) const {
-			if (percentage != rf.percentage)
-				return percentage > rf.percentage;
-			return name > rf.name;
+            if (percentage != rf.percentage) return percentage > rf.percentage;
+            return name > rf.name;
         }
-
         int getColor() const {
             return (Util::hashCode(name) & 0xaaaaaa) + 0x444444;
         }
     };
 
     static void reset();
-
     static void push(const std::string& name);
     static void pop();
     static void popPush(const std::string& name);
+    static std::vector<ResultField> getLog(const std::string& path);
 
-	static std::vector<ResultField> getLog(const std::string& path);
-
-    static bool enabled;
 private:
     static std::vector<std::string> paths;
     static std::vector<float> startTimes;
@@ -65,4 +53,4 @@ private:
     static TimeMap times;
 };
 
-#endif /*NET_UTIL__PerfTimer_H__*/
+#endif
