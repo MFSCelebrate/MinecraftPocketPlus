@@ -1,3 +1,4 @@
+// PerfRenderer.cpp (关键部分)
 #include "PerfRenderer.h"
 #include "PerfTimer.h"
 #include "Mth.h"
@@ -6,7 +7,6 @@
 #include "../client/renderer/Tesselator.h"
 #include "../client/Minecraft.h"
 
-// 前向声明全局变量
 extern bool gPerfTimerEnabled;
 
 PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
@@ -18,13 +18,15 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
         frameTimes.push_back(0);
         tickTimes.push_back(0);
     }
-    // 默认剖析器关闭
     gPerfTimerEnabled = false;
 }
 
 void PerfRenderer::togglePie() {
     m_pieVisible = !m_pieVisible;
-    gPerfTimerEnabled = m_pieVisible;   // 同步全局开关
+    gPerfTimerEnabled = m_pieVisible;
+    if (!m_pieVisible) {
+        PerfTimer::reset();   // 关闭时彻底清理剖析栈，防止下次开启时崩溃
+    }
 }
 
 void PerfRenderer::navigateBack() {
@@ -60,14 +62,9 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
 
 void PerfRenderer::renderFpsMeter(float tickTime) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
-    if (list.empty()) return;
+    if (list.empty() || !m_pieVisible) return;   // 隐藏时完全不绘制
 
-    PerfTimer::ResultField node = list[0];
-    list.erase(list.begin());
-
-    if (!m_pieVisible) return;   // 不绘制，也不影响 GL 状态
-
-    // ===== 以下为完全原始的稳定饼图代码 =====
+    // === 以下为原始稳定饼图代码 ===
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
