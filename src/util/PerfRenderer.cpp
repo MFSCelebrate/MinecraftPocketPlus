@@ -14,51 +14,10 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
         frameTimes.push_back(0);
         tickTimes.push_back(0);
     }
-    startWorkerThread();
-}
-
-PerfRenderer::~PerfRenderer() {
-    stopWorkerThread();
-}
-
-void PerfRenderer::startWorkerThread() {
-    _workerRunning = true;
-    _workerThread = std::thread(&PerfRenderer::workerLoop, this);
-}
-
-void PerfRenderer::stopWorkerThread() {
-    _workerRunning = false;
-    _cv.notify_one();
-    if (_workerThread.joinable()) {
-        _workerThread.join();
-    }
-}
-
-void PerfRenderer::workerLoop() {
-    while (_workerRunning) {
-        std::unique_lock<std::mutex> lock(_dataMutex);
-        _cv.wait(lock, [this]{ return _needsUpdate || !_workerRunning; });
-
-        if (!_workerRunning) break;
-
-        // 获取最新剖析数据（耗时操作，在后台线程完成）
-        auto list = PerfTimer::getLog(_debugPath);
-        if (!list.empty()) {
-            PerfTimer::ResultField node = list[0];
-            list.erase(list.begin());
-
-            // 原子地更新共享数据
-            _latestList = std::move(list);
-            _latestNode = node;
-        }
-
-        _needsUpdate = false;
-    }
 }
 
 void PerfRenderer::debugFpsMeterKeyPress( int key ) {
-    // 导航需要在主线程获取最新子项（使用 forceUpdate）
-    auto list = PerfTimer::getLog(_debugPath, true);
+    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
@@ -76,60 +35,33 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
             _debugPath += list[key].name;
         }
     }
-
-    // 通知后台线程更新数据
-    {
-        std::lock_guard<std::mutex> lock(_dataMutex);
-        _needsUpdate = true;
-    }
-    _cv.notify_one();
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每 4 幀通知后台线程更新一次数据（避免过于频繁）
-    static int updateCounter = 0;
-    updateCounter++;
-    if (updateCounter % 4 == 0) {
-        {
-            std::lock_guard<std::mutex> lock(_dataMutex);
-            _needsUpdate = true;
+    // ===== 每隔4帧，且路径不变时复用缓存 =====
+    static int renderCounter = 0;
+    static std::vector<PerfTimer::ResultField> cachedList;
+    static PerfTimer::ResultField cachedNode("", 0, 0);
+    static std::string cachedPath;
+
+    renderCounter++;
+    if (renderCounter % 4 == 0 || _debugPath != cachedPath || cachedList.empty()) {
+        cachedList = PerfTimer::getLog(_debugPath);
+        if (!cachedList.empty()) {
+            cachedNode = cachedList[0];
+            cachedList.erase(cachedList.begin());
         }
-        _cv.notify_one();
+        cachedPath = _debugPath;
     }
 
-    // 获取后台线程最新数据（无锁复制）
-    // 获取后台线程最新数据（无锁复制）
-std::vector<PerfTimer::ResultField> list;
-PerfTimer::ResultField node("", 0, 0);
-{
-    std::lock_guard<std::mutex> lock(_dataMutex);
-    // ★ 只有当后台数据非空时才更新，避免画面突然消失
-    if (!_latestList.empty()) {
-        list = _latestList;
-        node = _latestNode;
-    }
-}
+    if (cachedList.empty()) return;
 
-// ★ 如果拿不到最新数据，使用上一次的有效渲染数据（彻底防止消失）
-static std::vector<PerfTimer::ResultField> lastValidList;
-static PerfTimer::ResultField lastValidNode("", 0, 0);
-static bool hasValidData = false;
+    PerfTimer::ResultField node = cachedNode;
+    std::vector<PerfTimer::ResultField> list = cachedList;
 
-if (list.empty() && hasValidData) {
-    list = lastValidList;
-    node = lastValidNode;
-} else if (!list.empty()) {
-    lastValidList = list;
-    lastValidNode = node;
-    hasValidData = true;
-} else {
-    // 完全没有数据，直接返回（波形图和饼图都不画）
-    return;
-}
-
-    // ---------- 以下全部为原始稳定版的绘制代码（波形图、饼图、文字）----------
+    // ---------- 以下为原始稳定版的绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
