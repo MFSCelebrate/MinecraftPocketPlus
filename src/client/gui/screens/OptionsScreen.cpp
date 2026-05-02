@@ -222,13 +222,15 @@ void OptionsScreen::generateOptionScreens() {
 	for (int i = OPTIONS_KEY_FORWARD; i <= OPTIONS_KEY_USE; ++i)
 		optionPanes[2]->addOptionItem((OptionId)i, minecraft);
 	// Graphics
-	optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
-		.addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
-		.addOptionItem(OPTIONS_VSYNC, minecraft)
-		.addOptionItem(OPTIONS_RENDER_DEBUG, minecraft)
-		.addOptionItem(OPTIONS_ANAGLYPH_3D, minecraft)
-		.addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
-		.addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft);
+	// Graphics
+optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
+    .addOptionItem(OPTIONS_LIMIT_FRAMERATE, minecraft)
+    .addOptionItem(OPTIONS_VSYNC, minecraft)
+    .addOptionItem(OPTIONS_RENDER_DEBUG, minecraft)
+    .addOptionItem(OPTIONS_ANAGLYPH_3D, minecraft)
+    .addOptionItem(OPTIONS_VIEW_BOBBING, minecraft)
+    .addOptionItem(OPTIONS_AMBIENT_OCCLUSION, minecraft)
+    .addOptionItem(OPTIONS_VIEW_DISTANCE, minecraft);   // 新加视距
 	optionPanes[3]->addOptionItem(OPTIONS_DEBUG_SCREEN_SIZE, minecraft);
 	// Tweaks
 	optionPanes[4]->addOptionItem(OPTIONS_ALLOW_SPRINT, minecraft)
