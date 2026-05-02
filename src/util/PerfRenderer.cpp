@@ -40,7 +40,6 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // ===== 每隔4帧，且路径不变时复用缓存 =====
     static int renderCounter = 0;
     static std::vector<PerfTimer::ResultField> cachedList;
     static PerfTimer::ResultField cachedNode("", 0, 0);
@@ -61,6 +60,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     PerfTimer::ResultField node = cachedNode;
     std::vector<PerfTimer::ResultField> list = cachedList;
 
+    // ... 绘制代码不变
     // ---------- 以下为原始稳定版的绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
