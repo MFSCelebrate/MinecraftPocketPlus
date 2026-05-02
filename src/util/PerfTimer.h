@@ -5,30 +5,10 @@
 #include <vector>
 #include "StringUtils.h"
 
-//package util;
 #ifdef PROFILER
-    #define PERF_TIMER_SKIP_FRAMES 8
-
-    #define TIMER_PUSH(x)   do { \
-        static int perfSkip = 0; \
-        if ((++perfSkip % PERF_TIMER_SKIP_FRAMES) == 0) { \
-            PerfTimer::push(x); \
-        } \
-    } while(0)
-
-    #define TIMER_POP()      do { \
-        static int perfSkip = 0; \
-        if ((++perfSkip % PERF_TIMER_SKIP_FRAMES) == 0) { \
-            PerfTimer::pop(); \
-        } \
-    } while(0)
-
-    #define TIMER_POP_PUSH(x) do { \
-        static int perfSkip = 0; \
-        if ((++perfSkip % PERF_TIMER_SKIP_FRAMES) == 0) { \
-            PerfTimer::popPush(x); \
-        } \
-    } while(0)
+    #define TIMER_PUSH(x)       PerfTimer::push(x)
+    #define TIMER_POP()         PerfTimer::pop()
+    #define TIMER_POP_PUSH(x)   PerfTimer::popPush(x)
 #else
     #define TIMER_PUSH(x)       ((void*)0)
     #define TIMER_POP()         ((void*)0)
@@ -65,6 +45,7 @@ public:
 
     static void push(const std::string& name);
     static void pop();
+    static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
     static void popPush(const std::string& name);
 
 	static std::vector<ResultField> getLog(const std::string& path);
@@ -75,6 +56,9 @@ private:
     static std::vector<float> startTimes;
     static std::string path;
     static TimeMap times;
+    static int s_frameCounter;              // 调用计数器
+    static std::vector<ResultField> s_cachedLog; // 缓存结果
+    static std::string s_cachedPath;        // 缓存对应的路径
 };
 
 #endif /*NET_UTIL__PerfTimer_H__*/
