@@ -449,6 +449,10 @@ void Minecraft::update() {
 		timer.advanceTime();
 	}
 
+	// ★ 强制每帧记录一次 root，保证饼图数据源
+    TIMER_PUSH("root");
+    TIMER_POP();
+
 	if (raknetInstance && !freezeGame) {
 		raknetInstance->runEvents(netCallback);
 	}
