@@ -1,4 +1,4 @@
-// PerfRenderer.cpp (关键部分)
+// PerfRenderer.cpp (完整版本，可直接编译)
 #include "PerfRenderer.h"
 #include "PerfTimer.h"
 #include "Mth.h"
@@ -25,7 +25,7 @@ void PerfRenderer::togglePie() {
     m_pieVisible = !m_pieVisible;
     gPerfTimerEnabled = m_pieVisible;
     if (!m_pieVisible) {
-        PerfTimer::reset();   // 关闭时彻底清理剖析栈，防止下次开启时崩溃
+        PerfTimer::reset();   // 关闭时清理剖析栈，防止下次开启崩溃
     }
 }
 
@@ -42,7 +42,8 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
-    list.erase(list.begin());   // 移除当前节点
+    // 移除第一个元素（当前节点自身）
+    list.erase(list.begin());
 
     if (key == 0) {
         if (_debugPath == "root") {
@@ -62,9 +63,13 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
 
 void PerfRenderer::renderFpsMeter(float tickTime) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
-    if (list.empty() || !m_pieVisible) return;   // 隐藏时完全不绘制
+    if (list.empty() || !m_pieVisible) return;   // 隐藏时不绘制
 
-    // === 以下为原始稳定饼图代码 ===
+    // 保存当前节点信息（用于文字标题）
+    PerfTimer::ResultField node = list[0];
+    list.erase(list.begin());   // 移除当前节点
+
+    // ---- 帧时间、波形图等完全不变的代码 ----
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -73,6 +78,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     lastTimer = now;
     if (++frameTimePos >= (int)frameTimes.size()) frameTimePos = 0;
 
+    // 投影与状态设置
     glClear(GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
     glEnable2(GL_COLOR_MATERIAL);
@@ -82,59 +88,61 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     glLoadIdentity2();
     glTranslatef2(0, 0, -2000);
 
+    // ---------- FPS 波形图（保持不变） ----------
     glLineWidth(1);
     glDisable2(GL_TEXTURE_2D);
     Tesselator& t = Tesselator::instance;
 
-    // FPS 波形图
-    int hh1 = (int) (usPer60Fps / 200);
-    float count = (float)frameTimes.size();
-    t.begin(GL_TRIANGLES);
-    t.color(0x20000000);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(0, (float)_mc->height, 0);
-    t.vertex(count, (float)_mc->height, 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
+    {
+        int hh1 = (int) (usPer60Fps / 200);
+        float count = (float)frameTimes.size();
+        t.begin(GL_TRIANGLES);
+        t.color(0x20000000);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
 
-    t.color(0x20200000);
-    t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
-    t.draw();
+        t.color(0x20200000);
+        t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
+        t.vertex(0, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1), 0);
+        t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
+        t.draw();
 
-    float totalTime = 0;
-    for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
-    int hh = (int) (totalTime / 200 / frameTimes.size());
-    t.begin();
-    t.color(0x20400000);
-    t.vertex(0, (float)(_mc->height - hh), 0);
-    t.vertex(0, (float)_mc->height, 0);
-    t.vertex(count, (float)_mc->height, 0);
-    t.vertex(count, (float)(_mc->height - hh), 0);
-    t.draw();
+        float totalTime = 0;
+        for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
+        int hh = (int) (totalTime / 200 / frameTimes.size());
+        t.begin();
+        t.color(0x20400000);
+        t.vertex(0, (float)(_mc->height - hh), 0);
+        t.vertex(0, (float)_mc->height, 0);
+        t.vertex(count, (float)_mc->height, 0);
+        t.vertex(count, (float)(_mc->height - hh), 0);
+        t.draw();
 
-    t.begin(GL_LINES);
-    for (unsigned int i = 0; i < frameTimes.size(); i++) {
-        int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
-        int cc = col * col / 255;
-        cc = cc * cc / 255;
-        int cc2 = cc * cc / 255;
-        cc2 = cc2 * cc2 / 255;
-        if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
-        else t.color(0xff000000 + cc * 256);
+        t.begin(GL_LINES);
+        for (unsigned int i = 0; i < frameTimes.size(); i++) {
+            int col = ((i - frameTimePos) & (frameTimes.size() - 1)) * 255 / frameTimes.size();
+            int cc = col * col / 255;
+            cc = cc * cc / 255;
+            int cc2 = cc * cc / 255;
+            cc2 = cc2 * cc2 / 255;
+            if (frameTimes[i] > usPer60Fps) t.color(0xff000000 + cc * 65536);
+            else t.color(0xff000000 + cc * 256);
 
-        float time = 10 * 1000 * frameTimes[i] / 200;
-        float time2 = 10 * 1000 * tickTimes[i] / 200;
-        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-        t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
-        t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
-        t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
-        t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
+            float time = 10 * 1000 * frameTimes[i] / 200;
+            float time2 = 10 * 1000 * tickTimes[i] / 200;
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height + 0.5f, 0);
+            t.color(0xff000000 + cc * 65536 + cc * 256 + cc * 1);
+            t.vertex(i + 0.5f, _mc->height - time + 0.5f, 0);
+            t.vertex(i + 0.5f, _mc->height - (time - time2) + 0.5f, 0);
+        }
+        t.draw();
     }
-    t.draw();
 
-    // 饼图
+    // ---------- 饼图 ----------
     int r = 160;
     int x = _mc->width - r - 10;
     int y = _mc->height - r * 2;
@@ -179,7 +187,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
 
     glEnable(GL_TEXTURE_2D);
 
-    // 标题文字
+    // ---------- 文字标题与列表 ----------
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
@@ -190,7 +198,6 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
         _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), 0xffffff);
     }
 
-    // 子项列表
     for (unsigned int i = 0; i < list.size(); i++) {
         PerfTimer::ResultField& result = list[i];
         std::stringstream msg;
