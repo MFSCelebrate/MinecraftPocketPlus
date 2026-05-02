@@ -17,7 +17,7 @@
 #include "../../../world/Difficulty.h"
 #include "../../../util/PerfRenderer.h"
 #include "../../../util/PerfTimer.h"
-#include "../../../client/gui/Gui.h"
+#include "../gui/Gui.h"
 
 DebugScreen::DebugScreen(Minecraft* mc)
     : mc(mc)
@@ -81,7 +81,6 @@ void DebugScreen::addDigitButton(int digit)
 
 void DebugScreen::setupPositions()
 {
-    // 与之前完全一致，根据屏幕宽度动态排列
     if (width <= 0 && mc && mc->width > 0 && Gui::InvGuiScale > 0)
         width = (int)(mc->width * Gui::InvGuiScale);
     if (height <= 0 && mc && mc->height > 0 && Gui::InvGuiScale > 0)
@@ -153,33 +152,28 @@ void DebugScreen::render(int xm, int ym, float a)
 
 void DebugScreen::keyPressed(int key)
 {
-    if (key == 27) { mc->setScreen(NULL); return; }
-
-    // ========== 在 keyPressed 中 ==========
-
-// buttonClicked 中
-if (id == ACT_BACK) {
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) pr->navigateBack();
-    return;
-}
-if (id >= 0 && id <= 9) {
-    if (id != 0 && !PerfTimer::enabled) {
-        mc->gui.addMessage("Performance profiling not active. Press F3 to enable.");
+    if (key == 27) {   // Escape
+        mc->setScreen(NULL);
         return;
     }
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) pr->debugFpsMeterKeyPress(id);
-    return;
-}
 
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) {
-        pr->debugFpsMeterKeyPress(id);
-        mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
+    if (key == 8) {   // Backspace
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) {
+            pr->navigateBack();
+            mc->gui.addMessage("Navigated back");
+        }
+        return;
     }
-    return;
-}
+
+    if (key >= '0' && key <= '9') {
+        int id = key - '0';
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) {
+            pr->debugFpsMeterKeyPress(id);
+        }
+        return;
+    }
 }
 
 void DebugScreen::buttonClicked(Button* button)
@@ -187,7 +181,6 @@ void DebugScreen::buttonClicked(Button* button)
     int id = button->id;
     if (id == 99) { mc->setScreen(NULL); return; }
 
-    // 后退按钮
     if (id == ACT_BACK) {
         PerfRenderer* pr = mc->getPerfRenderer();
         if (pr) {
@@ -197,35 +190,17 @@ void DebugScreen::buttonClicked(Button* button)
         return;
     }
 
-    // 数字按钮
-    // ========== 在 buttonClicked 中 ==========
-if (id >= 0 && id <= 9) {
-    if (id == 0) {
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) {
-        pr->setPieVisible(!pr->isPieVisible());
-        PerfTimer::enabled = pr->isPieVisible();
-        mc->gui.addMessage(pr->isPieVisible() ? "Performance profiling enabled" : "Performance profiling disabled");
-    }
-    return;
-    }
-
-    // 1-9 键：需要剖析器已启用
-    if (!PerfTimer::enabled) {
-        mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+    if (id >= 0 && id <= 9) {
+        PerfRenderer* pr = mc->getPerfRenderer();
+        if (pr) {
+            pr->debugFpsMeterKeyPress(id);
+        }
         return;
     }
 
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) {
-        pr->debugFpsMeterKeyPress(id);
-        mc->gui.addMessage(std::string("Profiler page: digit ") + (char)('0' + id));
-    }
-    return;
-}
-
     executeExtraAction(id);
-    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER) mc->setScreen(NULL);
+    if (id != ACT_OPEN_ARMOR && id != ACT_PRERENDER)
+        mc->setScreen(NULL);
 }
 
 void DebugScreen::executeExtraAction(int id) {
