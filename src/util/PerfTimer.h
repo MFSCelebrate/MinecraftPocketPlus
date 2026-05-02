@@ -48,8 +48,6 @@ public:
     static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
     static void popPush(const std::string& name);
 
-	static std::vector<ResultField> getLog(const std::string& path);
-
     static bool enabled;
 private:
     static std::vector<std::string> paths;
