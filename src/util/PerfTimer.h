@@ -55,7 +55,8 @@ public:
 
     // 每帧调用一次，推进全局帧计数
     static void tickFrame();
-
+    static std::vector<ResultField> getLog(const std::string& path, bool forceUpdate = false);
+    // 注意：不再有其他重载
     static bool enabled;
     static int  s_sampleInterval;   // 采样间隔，默认 4（每4帧记录一次）
     static int  s_frameCounter;     // 统一帧计数器
