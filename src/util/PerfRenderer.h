@@ -19,6 +19,7 @@ public:
 
     void renderFpsMeter(float tickTime);
     void setPieVisible(bool vis) { m_pieVisible = vis; }
+    void navigateBack();
     bool isPieVisible() const { return m_pieVisible; }
 
 private:
