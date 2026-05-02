@@ -25,19 +25,18 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     if (list.empty()) return;
 
     if (key == 0) {
-        // 如果在根节点，则切换饼图显示
         if (_debugPath == "root") {
-            m_pieVisible = !m_pieVisible;
+            m_pieVisible = !m_pieVisible;   // 在根节点切换饼图
             return;
         }
-        // 否则向上一级
+        // 原来的向上导航逻辑
         PerfTimer::ResultField node = list[0];
         if (node.name.length() > 0) {
             int pos = _debugPath.rfind(".");
             if (pos != std::string::npos) _debugPath = _debugPath.substr(0, pos);
         }
     } else {
-        // 数字 1-9 进入子项
+        // 进入子项
         key--;
         if (key < (int)list.size() && list[key].name != "unspecified") {
             if (_debugPath.length() > 0) _debugPath += ".";
@@ -128,8 +127,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
 
     // ---------- 饼图与文字：由开关控制 ----------
     if (!m_pieVisible) {
-        // 关闭时彻底隐藏，不绘制任何文字和几何体
-        return;
+        return;   // 关闭饼图，完全不画
     }
 
     // 背景矩形
@@ -148,107 +146,66 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
 
     glDisable(GL_CULL_FACE);
 
-    // 更新饼图缓存（每4帧或数据变化时重建）
-    static int frameSkip = 0;
-    frameSkip++;
-    std::vector<float> currentPcts;
-    for (auto& f : list) currentPcts.push_back(f.percentage);
+    // ========== 原始饼图绘制（完全恢复） ==========
+    float totalPercentage = 0;
+    for (unsigned int i = 0; i < list.size(); i++) {
+        PerfTimer::ResultField& result = list[i];
 
-    // 更精确的缓存比较：容忍0.01%的变化
-    bool pctsChanged = false;
-    if (currentPcts.size() == m_cachedPercentages.size()) {
-        for (size_t i = 0; i < currentPcts.size(); ++i) {
-            if (fabsf(currentPcts[i] - m_cachedPercentages[i]) > 0.01f) {
-                pctsChanged = true;
-                break;
-            }
+        int steps = Mth::floor(result.percentage / 4) + 1;
+
+        t.begin(GL_TRIANGLE_FAN);
+        t.color(result.getColor());
+        t.vertex((float)x, (float)y, 0);
+        for (int j = steps; j >= 0; j--) {
+            float dir = (float) ((totalPercentage + (result.percentage * j / steps)) * Mth::PI * 2 / 100);
+            float xx = Mth::sin(dir) * r;
+            float yy = Mth::cos(dir) * r * 0.5f;
+            t.vertex(x + xx, y - yy, 0);
         }
-    } else {
-        pctsChanged = true;
-    }
-
-    if (m_pieVbo == 0 || (frameSkip % 4 == 0) || pctsChanged) {
-        if (m_pieVbo != 0) glDeleteBuffers(1, &m_pieVbo);
-        glGenBuffers(1, &m_pieVbo);
-        m_cachedPercentages = currentPcts;
-
-        t.begin();
-        float totalPercentage = 0;
-        const float radConv = Mth::PI * 2.0f / 100.0f;
-        const int pieSteps = 8;          // 扇形分段数
-        for (size_t i = 0; i < list.size(); i++) {
-            PerfTimer::ResultField& result = list[i];
-            if (result.percentage <= 0.0f) continue; // 跳过空扇形
-
-            float segAngle = result.percentage * radConv;
-            t.color(result.getColor());
-
-            // 扇形主体
-            for (int j = 0; j < pieSteps; ++j) {
-                float a1 = totalPercentage * radConv + segAngle * (j / (float)pieSteps);
-                float a2 = totalPercentage * radConv + segAngle * ((j+1) / (float)pieSteps);
-                t.vertex((float)x, (float)y, 0);
-                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f, 0);
-                t.vertex(x + sinf(a2) * r, y - cosf(a2) * r * 0.5f, 0);
-            }
-
-            // 颜色条带（立体效果）
-            t.color((result.getColor() & 0xfefefe) >> 1);
-            for (int j = 0; j < pieSteps; ++j) {
-                float a1 = totalPercentage * radConv + segAngle * (j / (float)pieSteps);
-                float a2 = totalPercentage * radConv + segAngle * ((j+1) / (float)pieSteps);
-                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f, 0);
-                t.vertex(x + sinf(a1) * r, y - cosf(a1) * r * 0.5f + 10, 0);
-                t.vertex(x + sinf(a2) * r, y - cosf(a2) * r * 0.5f, 0);
-            }
-
-            totalPercentage += result.percentage;
+        t.draw();
+        t.begin(GL_TRIANGLE_STRIP);
+        t.color((result.getColor() & 0xfefefe) >> 1);
+        for (int j = steps; j >= 0; j--) {
+            float dir = (float) ((totalPercentage + (result.percentage * j / steps)) * Mth::PI * 2 / 100);
+            float xx = Mth::sin(dir) * r;
+            float yy = Mth::cos(dir) * r * 0.5f;
+            t.vertex(x + xx, y - yy, 0);
+            t.vertex(x + xx, y - yy + 10, 0);
         }
-        RenderChunk rc = t.end(true, m_pieVbo);
-        m_pieVertexCount = rc.vertexCount;
-    }
+        t.draw();
 
-    // 绘制VBO
-    if (m_pieVbo != 0 && m_pieVertexCount > 0) {
-        glEnableClientState2(GL_VERTEX_ARRAY);
-        glEnableClientState2(GL_COLOR_ARRAY);
-        glBindBuffer2(GL_ARRAY_BUFFER, m_pieVbo);
-        glVertexPointer2(3, GL_FLOAT, sizeof(VERTEX), 0);
-        glColorPointer2(4, GL_UNSIGNED_BYTE, sizeof(VERTEX), (GLvoid*)(5 * 4));
-        glDrawArrays2(GL_TRIANGLES, 0, m_pieVertexCount);
-        glDisableClientState2(GL_COLOR_ARRAY);
-        glDisableClientState2(GL_VERTEX_ARRAY);
+        totalPercentage += result.percentage;
     }
+    // ========== 原始饼图结束 ==========
 
     glEnable(GL_TEXTURE_2D);
-    // 仅当饼图开启时显示文字
-    drawTextLegend(node, list);
-}
-void PerfRenderer::drawTextLegend(const PerfTimer::ResultField& node,
-                                  const std::vector<PerfTimer::ResultField>& list) {
-    int r = 160;
-    int x = _mc->width - r - 10;
-    int y = _mc->height - r * 2;
 
-    glEnable(GL_TEXTURE_2D);
-    // 绘制标题
+    // ========== 原始文字绘制 ==========
     {
         std::stringstream msg;
-        if (node.name != "unspecified") msg << "[0] ";
-        if (node.name.empty()) msg << "ROOT ";
-        else msg << node.name << " ";
+        if (node.name != "unspecified") {
+            msg << "[0] ";
+        }
+        if (node.name.length() == 0) {
+            msg << "ROOT ";
+        } else {
+            msg << node.name << " ";
+        }
         int col = 0xffffff;
-        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r/2 - 16), col);
+        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r / 2 - 16), col);
         std::string msg2 = toPercentString(node.globalPercentage);
-        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r/2 - 16), col);
+        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), col);
     }
 
-    // 子项列表
-    for (size_t i = 0; i < list.size(); i++) {
-        const PerfTimer::ResultField& result = list[i];
+    for (unsigned int i = 0; i < list.size(); i++) {
+        PerfTimer::ResultField& result = list[i];
         std::stringstream msg;
-        if (result.name != "unspecified") msg << "[" << (i+1) << "] ";
-        else msg << "[?] ";
+        if (result.name != "unspecified") {
+            msg << "[" << (i + 1) << "] ";
+        } else {
+            msg << "[?] ";
+        }
+
         msg << result.name;
         float xx = (float)(x - r);
         float yy = (float)(y + r/2 + i * 8 + 20);
@@ -258,6 +215,7 @@ void PerfRenderer::drawTextLegend(const PerfTimer::ResultField& node,
         msg2 = toPercentString(result.globalPercentage);
         _font->drawShadow(msg2, xx - _font->width(msg2), yy, result.getColor());
     }
+    // ========== 原始文字结束 ==========
 }
 
 std::string PerfRenderer::toPercentString( float percentage )
