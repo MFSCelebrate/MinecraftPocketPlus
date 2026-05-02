@@ -598,6 +598,7 @@ void Minecraft::tick(int nTick, int maxTick) {
 #endif
     TIMER_POP();   // ★ 正常结束前弹出 tick-work
     // 原有的最后一个 TIMER_POP() 已删除，因为 tick-work 的闭合已足够
+	TIMER_POP();
 }
 
 class InputRAII {
