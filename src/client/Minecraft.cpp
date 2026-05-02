@@ -500,6 +500,9 @@ void Minecraft::update() {
 
 void Minecraft::tick(int nTick, int maxTick) {
 	PerfTimer::tickFrame();
+
+    TIMER_PUSH("MCfunction_Tick");
+
 	if (missTime > 0) missTime--;
 #ifndef STANDALONE_SERVER
 	if (!screen && player) {
