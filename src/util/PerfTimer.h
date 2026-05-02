@@ -1,3 +1,4 @@
+// PerfTimer.h
 #ifndef NET_UTIL__PerfTimer_H__
 #define NET_UTIL__PerfTimer_H__
 
@@ -5,7 +6,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 2       // 更密集的记录
+#define PERF_TIMER_SKIP_FRAMES 12      // 每12帧记录一次，低负载
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
@@ -59,7 +60,7 @@ public:
 
     static bool enabled;
     static int  s_frameCounter;
-    static int  s_warmupFrames;         // 每次 reset 后全速记录 128 帧
+    static int  s_warmupFrames;         // 刚开启时全速记录64帧
 
 private:
     static std::vector<std::string> paths;
