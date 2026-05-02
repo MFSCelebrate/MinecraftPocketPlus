@@ -6,7 +6,7 @@
 #include "StringUtils.h"
 
 // 采样间隔：每 4 帧记录一次性能数据
-#define PERF_TIMER_SKIP_FRAMES 4
+#define PERF_TIMER_SKIP_FRAMES 8
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
