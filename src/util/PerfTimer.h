@@ -3,10 +3,11 @@
 
 #include <map>
 #include <vector>
+#include <string>
 #include <mutex>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 4
+#define PERF_TIMER_SKIP_FRAMES 8       // 每8帧记录一次
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
@@ -38,8 +39,10 @@ public:
         float percentage;
         float globalPercentage;
         std::string name;
-        ResultField(const std::string& name, float percentage, float globalPercentage)
+
+        ResultField(const std::string& name = "", float percentage = 0, float globalPercentage = 0)
             : name(name), percentage(percentage), globalPercentage(globalPercentage) {}
+
         bool operator<(const ResultField& rf) const {
             if (percentage != rf.percentage) return percentage > rf.percentage;
             return name > rf.name;
@@ -60,13 +63,15 @@ public:
     static int  s_frameCounter;
     static int  s_warmupFrames;
 
+    // 线程安全拷贝当前 times 表，供后台线程使用
+    static TimeMap getTimesCopy();
+
 private:
-    static std::mutex            s_timesMutex;   // ★ 只保护 times 表
-    // ...
     static std::vector<std::string> paths;
-    static std::vector<float>       startTimes;
+    static std::vector<float> startTimes;
     static std::string path;
     static TimeMap times;
+    static std::mutex s_timesMutex;       // 保护 times 的互斥锁
 };
 
 #endif
