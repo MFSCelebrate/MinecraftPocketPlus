@@ -58,6 +58,7 @@ private:
     static const int ACT_IMMUTABLE        = 116;
     static const int ACT_NAMETAGS         = 117;
     static const int ACT_PARTICLES        = 118;
+    static const int ACT_BACK             = 119;   // 新增
 };
 
 #endif // DEBUGSCREEN_H
