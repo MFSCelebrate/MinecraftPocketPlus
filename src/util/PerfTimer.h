@@ -5,7 +5,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 8       // 常态记录间隔
+#define PERF_TIMER_SKIP_FRAMES 4       // 每4帧记录一次，快速积累数据
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
@@ -59,7 +59,7 @@ public:
 
     static bool enabled;
     static int  s_frameCounter;
-    static int  s_warmupFrames;         // 热身帧数
+    static int  s_warmupFrames;         // 每次 reset 后全速记录64帧
 
 private:
     static std::vector<std::string> paths;
