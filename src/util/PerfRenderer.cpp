@@ -21,6 +21,15 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
 	PerfTimer::enabled = false;
 }
 
+void PerfRenderer::navigateBack() {
+    if (_debugPath == "root") return;
+    size_t pos = _debugPath.rfind(".");
+    if (pos != std::string::npos)
+        _debugPath = _debugPath.substr(0, pos);
+    else
+        _debugPath = "root";
+}
+
 void PerfRenderer::debugFpsMeterKeyPress(int key) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
@@ -28,8 +37,12 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     list.erase(list.begin());   // 移除当前节点
 
     if (key == 0) {
-        // 向上导航
-        if (_debugPath == "root") return;   // 已在顶层，不操作
+        if (_debugPath == "root") {
+            m_pieVisible = !m_pieVisible;
+            PerfTimer::enabled = m_pieVisible;
+            return;
+        }
+        // 非 root 时向上导航
         size_t pos = _debugPath.rfind(".");
         if (pos != std::string::npos)
             _debugPath = _debugPath.substr(0, pos);
@@ -37,8 +50,7 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
             _debugPath = "root";
         return;
     }
-
-    // 1-9 键进入子项
+    // 其他数字键进入子项...
     int index = key - 1;
     if (index < (int)list.size() && list[index].name != "unspecified") {
         if (!_debugPath.empty()) _debugPath += ".";
