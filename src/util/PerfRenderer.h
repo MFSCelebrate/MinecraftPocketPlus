@@ -1,4 +1,3 @@
-// PerfRenderer.h
 #ifndef NET_UTIL__PerfRenderer_H__
 #define NET_UTIL__PerfRenderer_H__
 
