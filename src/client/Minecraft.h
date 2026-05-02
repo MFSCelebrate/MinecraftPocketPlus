@@ -52,8 +52,6 @@ protected:
 public:
     static Minecraft* instance;
 	virtual ~Minecraft();
-    bool m_pieEnabled = false;      // ★ 饼图/剖析器状态
-    void togglePie();               // ★ 开关
     
 	void init();
 	void setSize(int width, int height);
