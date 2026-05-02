@@ -28,23 +28,21 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     list.erase(list.begin());   // 移除当前节点
 
     if (key == 0) {
-        if (_debugPath == "root") {
-            m_pieVisible = !m_pieVisible;
-            PerfTimer::enabled = m_pieVisible;   // ★ 饼图可见时才记录性能数据
-            return;
-        }
-        // 非根节点时，0键返回上级
-        if (_debugPath.rfind(".") != std::string::npos) {
-            _debugPath = _debugPath.substr(0, _debugPath.rfind("."));
-        } else {
+        // 向上导航
+        if (_debugPath == "root") return;   // 已在顶层，不操作
+        size_t pos = _debugPath.rfind(".");
+        if (pos != std::string::npos)
+            _debugPath = _debugPath.substr(0, pos);
+        else
             _debugPath = "root";
-        }
-    } else if (key >= 1 && key <= 9) {
-        int index = key - 1;
-        if (index < (int)list.size() && list[index].name != "unspecified") {
-            if (!_debugPath.empty()) _debugPath += ".";
-            _debugPath += list[index].name;
-        }
+        return;
+    }
+
+    // 1-9 键进入子项
+    int index = key - 1;
+    if (index < (int)list.size() && list[index].name != "unspecified") {
+        if (!_debugPath.empty()) _debugPath += ".";
+        _debugPath += list[index].name;
     }
 }
 
