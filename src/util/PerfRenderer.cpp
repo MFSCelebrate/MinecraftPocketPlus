@@ -1,4 +1,3 @@
-// PerfRenderer.cpp (完整替换)
 #include "PerfRenderer.h"
 #include "PerfTimer.h"
 #include "Mth.h"
@@ -7,14 +6,25 @@
 #include "../client/renderer/Tesselator.h"
 #include "../client/Minecraft.h"
 
+// 前向声明全局变量
+extern bool gPerfTimerEnabled;
+
 PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
     : _mc(mc), _font(font), _debugPath("root"),
-      frameTimePos(0), lastTimer(-1)
+      frameTimePos(0), lastTimer(-1),
+      m_pieVisible(false)
 {
     for (int i = 0; i < 512; ++i) {
         frameTimes.push_back(0);
         tickTimes.push_back(0);
     }
+    // 默认剖析器关闭
+    gPerfTimerEnabled = false;
+}
+
+void PerfRenderer::togglePie() {
+    m_pieVisible = !m_pieVisible;
+    gPerfTimerEnabled = m_pieVisible;   // 同步全局开关
 }
 
 void PerfRenderer::navigateBack() {
@@ -30,16 +40,17 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
-    // 移除当前节点（保持与 renderFpsMeter 一致）
-    list.erase(list.begin());
+    list.erase(list.begin());   // 移除当前节点
 
     if (key == 0) {
-        // 向上导航（root 下无动作）
+        if (_debugPath == "root") {
+            togglePie();
+            return;
+        }
         navigateBack();
         return;
     }
 
-    // 进入子项
     int index = key - 1;
     if (index < (int)list.size() && list[index].name != "unspecified") {
         if (!_debugPath.empty()) _debugPath += ".";
@@ -54,6 +65,9 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
+    if (!m_pieVisible) return;   // 不绘制，也不影响 GL 状态
+
+    // ===== 以下为完全原始的稳定饼图代码 =====
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -75,7 +89,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     glDisable2(GL_TEXTURE_2D);
     Tesselator& t = Tesselator::instance;
 
-    // ---- FPS 波形图 ----
+    // FPS 波形图
     int hh1 = (int) (usPer60Fps / 200);
     float count = (float)frameTimes.size();
     t.begin(GL_TRIANGLES);
@@ -123,7 +137,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
     }
     t.draw();
 
-    // ---- 饼图 ----
+    // 饼图
     int r = 160;
     int x = _mc->width - r - 10;
     int y = _mc->height - r * 2;
@@ -168,7 +182,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
 
     glEnable(GL_TEXTURE_2D);
 
-    // ---- 文字 ----
+    // 标题文字
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
@@ -179,6 +193,7 @@ void PerfRenderer::renderFpsMeter(float tickTime) {
         _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), 0xffffff);
     }
 
+    // 子项列表
     for (unsigned int i = 0; i < list.size(); i++) {
         PerfTimer::ResultField& result = list[i];
         std::stringstream msg;
