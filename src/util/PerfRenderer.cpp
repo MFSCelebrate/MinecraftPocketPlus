@@ -5,6 +5,7 @@
 #include "../client/renderer/gles.h"
 #include "../client/renderer/Tesselator.h"
 #include "../client/Minecraft.h"
+#include <chrono>
 
 PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
     : _mc(mc), _font(font), _debugPath("root"),
@@ -35,24 +36,29 @@ void PerfRenderer::stopWorker() {
 void PerfRenderer::workerLoop() {
     while (_running) {
         std::unique_lock<std::mutex> lock(_dataMutex);
-        _cv.wait(lock, [this]{ return _newDataReady == false || !_running; });
+        _cv.wait(lock, [this]{ return _needsUpdate || !_running; });
 
         if (!_running) break;
 
-        // 执行耗时的 getLog 计算（放在后台线程）
-        std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
+        // 执行耗时的计算
+        auto list = PerfTimer::getLog(_debugPath, true);
         if (!list.empty()) {
             _backNode = list[0];
             list.erase(list.begin());
             _backList = std::move(list);
-            _newDataReady = true;   // 通知主线程新数据已就绪
+
+            // 交换前后台缓冲区
+            std::lock_guard<std::mutex> lock(_dataMutex);
+            _frontList.swap(_backList);
+            _frontNode = _backNode;
         }
+
+        _needsUpdate = false;
     }
 }
 
 void PerfRenderer::debugFpsMeterKeyPress( int key ) {
-    // 导航操作仍在主线程，需要实时数据（临时加锁获取）
-    std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
+    auto list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
@@ -71,52 +77,43 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
         }
     }
 
-    // 唤醒后台线程，因为路径可能已改变
-    _newDataReady = false;
+    // 通知后台线程路径已改变
+    {
+        std::lock_guard<std::mutex> lock(_dataMutex);
+        _needsUpdate = true;
+    }
     _cv.notify_one();
 }
 
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每 8 帧唤醒一次后台线程更新数据（普通场景下足够实时）
+    // 每 8 帧要求后台线程更新一次
     static int wakeCounter = 0;
     if (++wakeCounter % 8 == 0) {
-        _newDataReady = false;
+        {
+            std::lock_guard<std::mutex> lock(_dataMutex);
+            _needsUpdate = true;
+        }
         _cv.notify_one();
     }
 
-    // 检查是否有新数据，若有则拷贝到前台缓冲区（无锁读取）
-    if (_newDataReady.load()) {
+    // 获取最新前台数据（如果存在则更新后备）
+    {
         std::lock_guard<std::mutex> lock(_dataMutex);
-        if (_newDataReady) {   // 双重检查，避免条件竞争
-            _frontList = _backList;
-            _frontNode = _backNode;
-            _newDataReady = false;
+        if (!_frontList.empty()) {
+            _lastList = _frontList;
+            _lastNode = _frontNode;
+            _hasLast = true;
         }
     }
 
-    // 如果前台缓冲区仍为空，则使用上一次的有效数据（后备）
-    static std::vector<PerfTimer::ResultField> lastList;
-    static PerfTimer::ResultField lastNode("", 0.0f, 0.0f);
-    static bool hasLast = false;
+    if (!_hasLast) return;   // 尚无任何有效数据
 
-    std::vector<PerfTimer::ResultField> list;
-    PerfTimer::ResultField node("", 0.0f, 0.0f);
-    if (!_frontList.empty()) {
-        list = _frontList;
-        node = _frontNode;
-        lastList = list;
-        lastNode = node;
-        hasLast = true;
-    } else if (hasLast) {
-        list = lastList;
-        node = lastNode;
-    } else {
-        return;   // 没有任何数据，不绘制
-    }
+    PerfTimer::ResultField node = _lastNode;
+    std::vector<PerfTimer::ResultField> list = _lastList;
 
-    // ---------- 以下全部为原始稳定版绘制代码（波形图、饼图、文字）----------
+    // ---------- 原版绘制代码（波形图、饼图、文字）----------
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
