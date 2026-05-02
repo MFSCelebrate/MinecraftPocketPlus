@@ -24,7 +24,7 @@ void PerfTimer::reset() {
     startTimes.clear();
     path.clear();
     s_frameCounter = 0;
-    s_warmupFrames = 64;   // 每次重置时重新热身
+    s_warmupFrames = 64;   // 快速积累数据
 }
 
 void PerfTimer::push( const std::string& name ) {
@@ -91,7 +91,6 @@ std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath
         }
     }
 
-    // 衰减但不立即清理（交给后台线程偶尔全清）
     for (TimeMap::iterator it = times.begin(); it != times.end(); ++it) {
         it->second *= 0.999f;
     }
