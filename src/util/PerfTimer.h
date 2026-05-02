@@ -6,7 +6,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 12      // 每12帧记录一次，低负载
+#define PERF_TIMER_SKIP_FRAMES 2      // 每12帧记录一次，低负载
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
