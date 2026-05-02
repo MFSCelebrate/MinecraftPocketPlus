@@ -59,6 +59,22 @@ void PerfTimer::popPush( const std::string& name ) {
 std::vector<PerfTimer::ResultField> PerfTimer::getLog(const std::string& rawPath, bool /*forceUpdate*/) {
     if (!enabled) return std::vector<ResultField>();
 
+    // 在 std::vector<PerfTimer::ResultField> PerfTimer::getLog( ... ) 函数内，紧跟 if (!enabled) 之后加入：
+
+    // ==== 自适应压缩：表太大时清除占比极低的琐碎条目 ====
+    if (times.size() > 128) {
+        float totalSum = 0.0f;
+        for (const auto& p : times) totalSum += p.second;
+        float threshold = totalSum * 0.0003f;   // 低于 0.03% 就删除
+        for (auto it = times.begin(); it != times.end(); ) {
+            if (it->second < threshold) {
+                it = times.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
     std::string path = rawPath;
     TimeMap::const_iterator itRoot = times.find("root");
     float globalTime = (itRoot != times.end())? itRoot->second : 0;
