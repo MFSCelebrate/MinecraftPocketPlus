@@ -606,17 +606,6 @@ public:
 	}
 };
 
-
-class InputRAII {
-public:
-	~InputRAII() {
-#ifndef STANDALONE_SERVER
-		Mouse::reset();
-		Keyboard::reset();
-#endif
-	}
-};
-
 void Minecraft::tickInput() {
 #ifndef STANDALONE_SERVER
 	InputRAII raiiInput;
