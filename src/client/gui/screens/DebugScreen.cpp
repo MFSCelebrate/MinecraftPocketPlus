@@ -155,32 +155,23 @@ void DebugScreen::keyPressed(int key)
 {
     if (key == 27) { mc->setScreen(NULL); return; }
 
-    if (key == 8) {   // Backspace
-        PerfRenderer* pr = mc->getPerfRenderer();
-        if (pr) {
-            pr->navigateBack();
-            mc->gui.addMessage("Navigated back");
-        }
-        return;
-    }
-
     // ========== 在 keyPressed 中 ==========
-if (key >= '0' && key <= '9') {
-    int id = key - '0';
-    if (id == 0) {
-    PerfRenderer* pr = mc->getPerfRenderer();
-    if (pr) {
-        pr->setPieVisible(!pr->isPieVisible());
-        PerfTimer::enabled = pr->isPieVisible();
-        mc->gui.addMessage(pr->isPieVisible() ? "Performance profiling enabled" : "Performance profiling disabled");
-    }
-    return;
-    }
 
-    if (!PerfTimer::enabled) {
-        mc->gui.addMessage("Performance profiling not active. Press 0 to enable.");
+// buttonClicked 中
+if (id == ACT_BACK) {
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) pr->navigateBack();
+    return;
+}
+if (id >= 0 && id <= 9) {
+    if (id != 0 && !PerfTimer::enabled) {
+        mc->gui.addMessage("Performance profiling not active. Press F3 to enable.");
         return;
     }
+    PerfRenderer* pr = mc->getPerfRenderer();
+    if (pr) pr->debugFpsMeterKeyPress(id);
+    return;
+}
 
     PerfRenderer* pr = mc->getPerfRenderer();
     if (pr) {
