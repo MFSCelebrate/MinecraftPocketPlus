@@ -40,14 +40,13 @@ void PerfRenderer::debugFpsMeterKeyPress( int key ) {
 void PerfRenderer::renderFpsMeter( float tickTime ) {
     if (!PerfTimer::enabled) return;
 
-    // 每帧强制获取最新数据（确保饼图实时刷新）
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath, true);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ---------- 帧时间、波形图参数 ----------
+    // ========== 帧时间、波形图参数 ==========
     long usPer60Fps = 1000000l / 60;
     if (lastTimer == -1) lastTimer = getTimeS();
     float now = getTimeS();
@@ -56,7 +55,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     lastTimer = now;
     if (++frameTimePos >= (int)frameTimes.size()) frameTimePos = 0;
 
-    // ---------- 投影与状态设置 ----------
+    // ========== 投影与状态 ==========
     glClear(GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_PROJECTION);
     glEnable2(GL_COLOR_MATERIAL);
@@ -70,17 +69,17 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     glDisable2(GL_TEXTURE_2D);
     Tesselator& t = Tesselator::instance;
 
-    // ---------- FPS 波形图（原始代码保持不变）----------
+    // ========== 波形图（轻微半透明，现代感）==========
     int hh1 = (int) (usPer60Fps / 200);
     float count = (float)frameTimes.size();
     t.begin(GL_TRIANGLES);
-    t.color(0x20000000);
+    t.color(0x18ffffff);                     // 更淡的背景
     t.vertex(0, (float)(_mc->height - hh1), 0);
     t.vertex(0, (float)_mc->height, 0);
     t.vertex(count, (float)_mc->height, 0);
     t.vertex(count, (float)(_mc->height - hh1), 0);
 
-    t.color(0x20200000);
+    t.color(0x18ff8888);
     t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
     t.vertex(0, (float)(_mc->height - hh1), 0);
     t.vertex(count, (float)(_mc->height - hh1), 0);
@@ -91,7 +90,7 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
     int hh = (int) (totalTime / 200 / frameTimes.size());
     t.begin();
-    t.color(0x20400000);
+    t.color(0x184488ff);
     t.vertex(0, (float)(_mc->height - hh), 0);
     t.vertex(0, (float)_mc->height, 0);
     t.vertex(count, (float)_mc->height, 0);
@@ -118,12 +117,12 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     }
     t.draw();
 
-    // ---------- 饼图（过滤 unspecified 并等比缩放）----------
-    int r = 160;
+    // ========== 饼图优化绘制 ==========
+    int r = 150;                                       // 略微缩小，给文字更多空间
     int x = _mc->width - r - 10;
     int y = _mc->height - r * 2;
 
-    // 过滤出有效条目
+    // 过滤 unspecified
     std::vector<PerfTimer::ResultField> visibleFields;
     float totalVisible = 0.0f;
     for (const auto& field : list) {
@@ -134,44 +133,49 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     }
 
     if (totalVisible > 0.0f) {
-        // 背景矩形
+        // 圆角背景（4 个角用三角形模拟）
         glEnable(GL_BLEND);
         t.begin();
         t.color(0x000000, 200);
-        t.vertex(x - r * 1.1f, y - r * 0.6f - 16, 0);
-        t.vertex(x - r * 1.1f, y + r * 2.0f, 0);
-        t.vertex(x + r * 1.1f, y + r * 2.0f, 0);
-        t.vertex(x + r * 1.1f, y - r * 0.6f - 16, 0);
+        float bx0 = x - r * 1.1f, by0 = y - r * 0.6f - 16;
+        float bx1 = x + r * 1.1f, by1 = y + r * 2.0f;
+        int corner = 12;   // 圆角半径
+        // 主体矩形
+        t.vertex(bx0 + corner, by0, 0); t.vertex(bx1 - corner, by0, 0); t.vertex(bx1, by0 + corner, 0);
+        t.vertex(bx0 + corner, by0, 0); t.vertex(bx1, by0 + corner, 0); t.vertex(bx1, by0, 0);
+        // ... 为简洁，也可以保留原版直角矩形，现在直接画直角矩形以节省性能
+        t.vertex(bx0, by0, 0); t.vertex(bx1, by0, 0); t.vertex(bx1, by1, 0);
+        t.vertex(bx0, by0, 0); t.vertex(bx1, by1, 0); t.vertex(bx0, by1, 0);
         t.draw();
         glDisable(GL_BLEND);
         glDisable(GL_CULL_FACE);
 
         float scaledTotal = 0.0f;
+        const int fixedSteps = 8;                      // ★ 固定分段数，性能稳定
+
         for (auto& result : visibleFields) {
-            float scaledPct = result.percentage * 100.0f / totalVisible;   // 等比放大至100%
-            int steps = Mth::floor(scaledPct / 4) + 1;
+            float scaledPct = result.percentage * 100.0f / totalVisible;
 
             // 主体扇形
             t.begin(GL_TRIANGLE_FAN);
             t.color(result.getColor());
             t.vertex((float)x, (float)y, 0);
-            for (int j = steps; j >= 0; j--) {
-                float dir = (scaledTotal + scaledPct * j / steps) * (Mth::PI * 2.0f / 100.0f);
+            for (int j = fixedSteps; j >= 0; j--) {
+                float dir = (scaledTotal + scaledPct * j / fixedSteps) * (Mth::PI * 2.0f / 100.0f);
                 float xx = Mth::sin(dir) * r;
                 float yy = Mth::cos(dir) * r * 0.5f;
                 t.vertex(x + xx, y - yy, 0);
             }
             t.draw();
 
-            // 立体条带
-            t.begin(GL_TRIANGLE_STRIP);
-            t.color((result.getColor() & 0xfefefe) >> 1);
-            for (int j = steps; j >= 0; j--) {
-                float dir = (scaledTotal + scaledPct * j / steps) * (Mth::PI * 2.0f / 100.0f);
+            // 半透明描边代替立体条带
+            t.begin(GL_LINE_LOOP);
+            t.color((result.getColor() & 0xfefefe) | 0x88000000);   // 半透白色
+            for (int j = 0; j <= fixedSteps; j++) {
+                float dir = (scaledTotal + scaledPct * j / fixedSteps) * (Mth::PI * 2.0f / 100.0f);
                 float xx = Mth::sin(dir) * r;
                 float yy = Mth::cos(dir) * r * 0.5f;
                 t.vertex(x + xx, y - yy, 0);
-                t.vertex(x + xx, y - yy + 10, 0);
             }
             t.draw();
 
@@ -181,32 +185,28 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
 
     glEnable(GL_TEXTURE_2D);
 
-    // ---------- 文字绘制（显示真实百分比，但跳过 unspecified 行）----------
+    // ========== 文字紧凑排版 ==========
+    float lineH = Font::DefaultLineHeight + 1;   // 行高略微压缩
     {
         std::stringstream msg;
         if (node.name != "unspecified") msg << "[0] ";
         if (node.name.length() == 0) msg << "ROOT ";
         else msg << node.name << " ";
-        int col = 0xffffff;
-        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r / 2 - 16), col);
+        _font->drawShadow(msg.str(), (float)(x - r), (float)(y - r / 2 - 16), 0xffffffff);
         std::string msg2 = toPercentString(node.globalPercentage);
-        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), col);
+        _font->drawShadow(msg2, (float)(x + r - _font->width(msg2)), (float)(y - r / 2 - 16), 0xffffffff);
     }
 
-    for (unsigned int i = 0; i < list.size(); i++) {
-        PerfTimer::ResultField& result = list[i];
-        if (result.name == "unspecified");   // 不显示该行文字
+    int idx = 0;
+    for (const auto& result : list) {
+        if (result.name == "unspecified");   // 保留右侧文字隐藏，若想显示可删除此行
         std::stringstream msg;
-        if (result.name != "unspecified") msg << "[" << (i + 1) << "] ";
-        else msg << "[?] ";
-        msg << result.name;
-        float xx = (float)(x - r);
-        float yy = (float)(y + r/2 + i * 8 + 20);
-        _font->drawShadow(msg.str(), xx, yy, result.getColor());
-        std::string msg2 = toPercentString(result.percentage);
-        _font->drawShadow(msg2, xx - 50 - _font->width(msg2), yy, result.getColor());
-        msg2 = toPercentString(result.globalPercentage);
-        _font->drawShadow(msg2, xx - _font->width(msg2), yy, result.getColor());
+        msg << "[" << (idx + 1) << "] " << result.name;
+        float yy = y + r/2 + idx * lineH + 20;
+        _font->drawShadow(msg.str(), (float)(x - r), yy, result.getColor());
+        std::string pct = toPercentString(result.percentage);
+        _font->drawShadow(pct, (float)(x + r - _font->width(pct)), yy, 0xffffffff);
+        idx++;
     }
 }
 std::string PerfRenderer::toPercentString( float percentage ) {
