@@ -18,33 +18,31 @@ PerfRenderer::PerfRenderer( Minecraft* mc, Font* font )
 		frameTimes.push_back(0);
 		tickTimes.push_back(0);
 	}
+	PerfTimer::enabled = false;
 }
 
 void PerfRenderer::debugFpsMeterKeyPress(int key) {
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
+    list.erase(list.begin());   // 移除当前节点
+
     if (key == 0) {
-        // 在根节点，0键用于开关饼图
         if (_debugPath == "root") {
             m_pieVisible = !m_pieVisible;
+            PerfTimer::enabled = m_pieVisible;   // ★ 饼图可见时才记录性能数据
             return;
         }
-        // 非根节点，0键用于向上导航
-        PerfTimer::ResultField node = list[0];
-        if (node.name.length() > 0) {
-            int pos = _debugPath.rfind(".");
-            if (pos != std::string::npos) {
-                _debugPath = _debugPath.substr(0, pos);
-            } else {
-                _debugPath = "root";   // 已经在第一层，回到根
-            }
+        // 非根节点时，0键返回上级
+        if (_debugPath.rfind(".") != std::string::npos) {
+            _debugPath = _debugPath.substr(0, _debugPath.rfind("."));
+        } else {
+            _debugPath = "root";
         }
     } else if (key >= 1 && key <= 9) {
-        // 进入子项
         int index = key - 1;
         if (index < (int)list.size() && list[index].name != "unspecified") {
-            if (_debugPath.length() > 0) _debugPath += ".";
+            if (!_debugPath.empty()) _debugPath += ".";
             _debugPath += list[index].name;
         }
     }
