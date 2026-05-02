@@ -60,16 +60,13 @@ void PerfRenderer::debugFpsMeterKeyPress(int key) {
 }
 
 void PerfRenderer::renderFpsMeter(float tickTime) {
-	if (!m_pieVisible && PerfTimer::enabled) {
-        PerfTimer::enabled = false;   // 防止状态不一致
-	}
     std::vector<PerfTimer::ResultField> list = PerfTimer::getLog(_debugPath);
     if (list.empty()) return;
 
     PerfTimer::ResultField node = list[0];
     list.erase(list.begin());
 
-    // ★ 如果饼图隐藏，立即返回，不做任何绘制，避免污染GL状态
+    // ★ 饼图隐藏时完全不绘制，且不污染 GL 状态
     if (!m_pieVisible) return;
 
     // --- 以下原有代码不变 (波形图、饼图、文字) ---
