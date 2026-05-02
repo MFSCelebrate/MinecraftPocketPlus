@@ -3,9 +3,10 @@
 
 #include <map>
 #include <vector>
+#include <mutex>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 4   // 密集记录，留给后台线程实时数据
+#define PERF_TIMER_SKIP_FRAMES 4
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
@@ -37,10 +38,8 @@ public:
         float percentage;
         float globalPercentage;
         std::string name;
-
         ResultField(const std::string& name, float percentage, float globalPercentage)
             : name(name), percentage(percentage), globalPercentage(globalPercentage) {}
-
         bool operator<(const ResultField& rf) const {
             if (percentage != rf.percentage) return percentage > rf.percentage;
             return name > rf.name;
@@ -62,8 +61,9 @@ public:
     static int  s_warmupFrames;
 
 private:
+    static std::mutex            s_mutex;        // ★ 线程安全锁
     static std::vector<std::string> paths;
-    static std::vector<float> startTimes;
+    static std::vector<float>       startTimes;
     static std::string path;
     static TimeMap times;
 };
