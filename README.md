@@ -7,7 +7,7 @@
 ![GitHub release (latest by date)](https://img.shields.io/badge/release-v250503--0315-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-lightgrey)
 ![License](https://img.shields.io/badge/license-Research%20Only-red)
-![Status](https://img.shields.io/badge/status-Stable-brightgreen)
+![Status](https://img.shields.io/badge/status-Untable-brightgreen)
 
 > [!WARNING]
 > 该版本有时候会不定时闪退，这并非您的手机问题   
