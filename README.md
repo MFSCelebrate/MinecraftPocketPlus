@@ -1,146 +1,141 @@
-# NoiseFarlands Reference
+# MCReference_NoiseFarlands
 
-**基于 Minecraft 0.6.1 alpha 的无限世界改造项目，专为研究距离现象与边境之地设计**
+> **基于 Minecraft PE 0.6.1 alpha 泄露源码改造的边境之地（Far Lands）研究专用 Mod**
+> 
+> 🏔️ 将有限的 MCPE 0.6.1 世界彻底改造为**真正的、丝般顺滑的、高精度的无限世界**
 
-> **开发状态：🛠️ 持续完善中**  
-> 本项目正处于活跃开发阶段，已完成地形生成无限化、实体 Double 精度、噪声系统对齐 Wiki 等关键技术重构。实体渲染问题现已被彻底修复，整体已具备在极远坐标下探索边境之地的能力。
+![GitHub release (latest by date)](https://img.shields.io/badge/release-v250503--0315-blue)
+![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-lightgrey)
+![License](https://img.shields.io/badge/license-Research%20Only-red)
+![Status](https://img.shields.io/badge/status-Stable-brightgreen)
 
 > [!WARNING]
 > 该版本有时候会不定时闪退，这并非您的手机问题   
-> 您的分支版本为 Development 开发版，切换为稳定版请跳转其他分支或从 Release 下载稳定版  
-> 开发版本可能会有测试中的功能和不稳定性，除非你想技术开发或提前体验，否则不应使用这些版本!
+> 您的分支版本为 Stable 稳定版，切换为开发版请跳转其他分支或从 Actions 下载稳定版  
 
-## 🧭 背景
+---
 
-本项目源于对 Minecraft 携带版 0.6.1 alpha 的一次源码泄露。泄露的 0.6.1 alpha 是 v0.6.2 alpha 的未发布开发测试版本，其有限的世界边界掩盖了许多随距离增加而出现的异常现象——例如著名的“边境之地”和“距离现象”。
+## 📖 项目简介
 
-NoiseFarlands Reference 的目标是：**打破 0.6.1 的有限世界枷锁，创造出一个真正的、丝般顺滑的、高精度的无限世界，以便在其中深入研究距离效应对地形生成、实体行为及渲染管线的影响。** 它既是一个技术实验平台，也是一个边境之地爱好者的终极探索工具。
+**NoiseFarlands（未重置版）** 是一个深度改造的 Minecraft Pocket Edition 客户端，基于 2013 年泄露的 **v0.6.2 alpha 未发布开发测试版** 源码构建。
 
-## 🎯 项目技术概览
+项目核心目标：
+- ✅ **无限世界**：完全移除原版的有限世界边界，实现真正的无限地形生成
+- ✅ **双精度化（Double Precision）**：实体坐标、玩家位置、相机系统全面升级为 `double` 类型，保障远距离精度
+- ✅ **边境之地探索**：支持世界偏移、缩放、64-bit 噪声、Double 噪声等选项，便于研究距离现象
+- ✅ **高性能**：经过数十次剖析迭代，帧率稳定 90-125 FPS，峰值破 120
 
-- **🌌 无限世界动态框架**  
-  `ChunkCache` 使用 `unordered_map` 动态管理区块，`RandomLevelSource` 坐标升级为 `int64_t`。世界不再有硬性边界。
+---
 
-- **🧨 实体与玩家 Double 化**  
-  `Entity`、`Player`、`LocalPlayer` 的坐标、速度、heightOffset 均已改为 `double`；网络包 (`MovePlayerPacket`) 和 NBT 同步也已适配。
+## 🎯 适用场景
 
-- **🗺️ 伪 MCA 多区域存档**  
-  基于 EOF 追加扇区的 `RegionFile`，`ExternalFileLevelStorage` 管理多区域文件，支持世界无限扩张与保存。
+| ✅ 适合 | ❌ 不适合 |
+|--------|----------|
+| 边境之地/遥远之地地形研究 | 常规生存游戏 |
+| 噪声生成算法实验 | 多人联机娱乐 |
+| MCPE 早期版本考古 | Bug 较少的稳定体验 |
+| 渲染管线性能剖析 | 原版特性体验 |
 
-- **📐 偏移与缩放系统**  
-  GUI 设置项 `world_offset` 和 `world_scale` 允许实时调整地形偏移量与比例，`RandomLevelSource` 读取并应用这些参数。
+---
 
-- **🎨 渲染管线部分 Double 化**  
-  视锥体裁剪、相机参数、RenderList 等均已改用 `double`，仅在 `glTranslatef` 等 GL 调用处转为 `float`。
+## 📦 分支策略
 
-- **🌄 地形噪声系统全面升级**  
-  噪声生成器已按 Wiki 对齐重命名为 Low、High、Selector、Sand、Gravel、Scale、Depth、Forest 等，并通过 `PerlinNoise` / `ImprovedNoise` 实现 double 精度 3D 噪声采样，支持64位边境之地。
+| 分支类型 | 说明 |
+|---------|------|
+| **稳定版本（Stable）** | 零影响探索的大 Bug，帧率稳定，适合长时间边境之地探索 |
+| **开发版本（Dev）** | 激进的新功能测试，可能不稳定 |
 
-- **🔩 创造模式全方块注册**  
-  `Inventory::setupDefault()` 中遍历 id 1~255 补全所有方块，且 `TileItem` 已启用 `setStackedByData(true)`，确保不同数据值方块独立堆叠。
-
-- **🖥️ Debug 面板革命**  
-  经过数十次迭代，彻底抛弃滚动面板，改用自适应网格布局，鼠标坐标使用 `Gui::InvGuiScale` 正确转换，所有按钮精准响应；同时内置性能剖析器，可通过数字键切换详细耗时饼图。
-
-- **📋 日志系统**  
-  项目引入了基于分类和级别的 `DebugLog` 系统，可在任意关键代码处通过 `DLOG_C(...)` 快速输出诊断信息。
-
-- **✅ 各种修复及可开关内容**  
-  带 * 的为可开关内容。  
-  GUI 输入框字符重复/删除、天空网格*、世界偏移双重叠加、调试屏幕噪声显示异常、时间不流动（下界反应堆残留永夜模式）等问题均已被解决。
+---
 
 ## 🚀 快速开始
 
-### 环境要求
+### Windows
+1. 下载 Release 中的 `Minecraft.Windows.exe`
+2. 双击运行即可
 
-- **Android NDK**（当前构建目标为 `armeabi-v7a`，部分平台可扩展至 `arm64-v8a`）
-- **Java / Gradle**（用于生成 Android 壳程序）
-- C++14 或更高
+### Android
+1. 下载 Release 中的 `MinecraftPE.apk`
+2. 安装至 Android 设备
+3. 首次启动需给予存储权限
 
-### 获取源码
-
-```bash
-git clone https://github.com/MFSCelebrate/MCReference_NoiseFarlands.git
-cd MCReference_NoiseFarlands
-```
-
-### 编译与运行
-项目使用 Android ndk-build 编译 C++ 部分，再配合 Android Studio 或 Gradle 打包 APK。
-
-```bash
-# 进入 android 目录
-cd android
-
-# 使用 ndk-build 构建本地库
-ndk-build
-
-# 返回项目根目录，使用 Gradle 打包 APK
-./gradlew assembleDebug
-```
-
-> 生成的 APK 位于 build/outputs/apk/ 目录下，可直接在支持 Android 4.0+ 的设备上安装运行。  
-> 同时，你也可以通过 Github Actions 获取最新的 Windows / Android 开发版本
-
-### 启用调试与分析
-
-- 游戏中按下 F3 开启调试 HUD，屏幕左上角将显示 FPS、坐标、噪声值、实体数量等详细信息。
-- 调试 HUD 开启后，数字键 0~9 将用于切换性能剖析页面，可观察 render/tick 等模块耗时。
-- 内置 DebugScreen 面板（默认按键 E）提供了一套触屏/鼠标友好的调试按钮，包括治愈、切换模式、生成生物、清空实体、快进时间等功能。
-- 如需启用完整的性能剖析（显示子模块耗时分解），请在 Android.mk 中加入 -DPROFILER 编译宏并重新编译。
-
-### 📁 项目结构概览
-
-```
-src/
-├── client/                     # 客户端渲染、输入、界面
-│   ├── gui/                    # 界面（含 DebugScreen）
-│   ├── renderer/               # 渲染器（LevelRenderer, GameRenderer, Tesselator 等）
-│   └── player/                 # 本地玩家
-├── network/                    # 网络包（MovePlayerPacket 等，已 double 化）
-├── network/packet/             # 各类数据包
-├── world/
-│   ├── entity/                 # 实体（Entity, Mob, Player 等）
-│   ├── level/                  # 世界层面（Level, ChunkCache, RandomLevelSource）
-│   └── level/chunk/            # 区块实现（LevelChunk）
-└── util/                       # 工具类（Mth, DebugLog, PerfTimer）
-```
-
-### 🤝 贡献
-欢迎提交 Issue 和 Pull Request。请遵循以下规范：
-
-- 代码风格保持与现有代码一致。
-- 新功能请先在 Issue 中讨论可行性。
-- 提交信息尽量清晰，包含简要描述和修改动机。
+> **注意**：本项目已取消 Web 和 Linux 平台的构建，但保留了源码备份。
 
 ---
 
-## 📖 深度阅读
+## ⚙️ 核心功能
 
-有关其他提供灵感和建议的列表，请参阅以下链接：
+### 🌍 世界生成
+- **无限世界动态框架**：`ChunkCache` 使用 `unordered_map` 动态管理区块
+- **64-bit / Double 噪声选项**：支持 32-bit、64-bit、Double 三种精度模式
+- **世界缩放与偏移**：通过设置界面实时调整 `world_scale_x/y/z` 和 `world_offset_x/y/z`
+- **海平面调整**：可自定义海平面高度（0-127）
+- **天空网格修复**：可选禁用天空网格现象
 
-- [🔧 主开发者](https://b23.tv/2wM5QWU)
-- [🤔 提供灵感的](https://b23.tv/2Y3BsQY)
-- [🧩 另一个边境之地 Mod 参考](https://b23.tv/oNqY6Hn)
+### 🎨 渲染系统
+- **实体渲染彻底修复**：解决了全局实体列表内存污染问题，采用动态区块查找
+- **LOD 系统**：256 格外不透明、透明、水面层均不渲染
+- **视距滑块**：设置界面支持 0-3 级视距调整
+- **条纹修复**：可选修复远距离渲染时的条纹闪烁问题
+
+### 📊 性能剖析器
+- **饼图实时刷新**：隐藏 `unspecified` 分支，其余等比放大
+- **剖析栈平衡**：修复了 `root.root` 叠层异常
+- **自适应压缩**：超 128 条目时自动剪除微小占比
+- **精度监测**：调试屏幕底部显示当前坐标的 `double`/`float` 精度丢失值
+
+### 🛠️ 调试面板
+- 数字键 `0-9` 专用于剖析器页面切换
+- `Backspace` 键后退导航
+- 全新增补调试热键：Toggle Difficulty、NoPvP、NoPvM、NoMvP、Immutable World、NameTags 等
+- Teleport 传送功能
 
 ---
 
-## ⚙️ 附录：关键技术细节
-**A1. 实体渲染修复最终方案**
+## 📸 性能数据
 
-由于网络包在解析实体数据时存在 double/float 混用导致的越界写入，污染了 Level::entities 等全局容器，使得 getAllEntities() 返回垃圾数据。最终修复方案为：
+经性能剖析器开启后的实际帧数表现：
 
-- 放弃依赖全局实体列表，改为在 LevelRenderer::renderEntities 中每帧通过 level->getEntities(NULL, aabb) 从区块动态查找附近实体。
-- 将 EntityRenderDispatcher 的相机偏移永久设为玩家世界坐标插值（不再受 OPTIONS_STRIPE_REPAIR 影响）。
-- 移除所有临时安全列表和静态数组，保持架构简洁。
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/713ec506-0937-4c7a-96fc-8b2c9d59301b" width="80%" alt="性能截图" />
+</p>
 
-**A2. 噪声增强与 Double 采样**
-
-噪声采样坐标均使用 double 计算，但最终传入噪声函数时仍为 float（受原始噪声实现限制）。通过将世界坐标与偏移、缩放运算保持在 double 域，有效避免了缩放偏移浮点数不够导致的“看不到边缘之地”现象。
-
-**A3. 调试屏幕与性能剖析**
-
-PerfRenderer 是内置的性能剖析器，可在调试 HUD 打开时通过 0~9 数字键深入查看不同模块的耗时。要看到子模块分解，需使用 PROFILER 宏编译，并在代码中适当位置插入 TIMER_PUSH("子模块名")。
+> 图示显示开启调试屏幕且高性能剖析器全速运行状态下的游戏帧率，画面稳定运行在 110~120 FPS。
 
 ---
 
-勿在浮沙筑高台，此项目与你一同走向世界的尽头。
+## 📝 参考源码
+
+| 来源 | 说明 |
+|------|------|
+| 4chan 泄露原生 MCPE 0.6.1 源码 | 基础引擎 |
+| Kolyah35 的 MCPE 0.6.1 Plus | 二改增强 |
+| "念" 大佬的边境之地 Mod | Y 轴突破参考 |
+| Java 版各大边境之地 Mod | 算法参考 |
+
+---
+
+## 🤝 致谢
+
+- **Mojang AB** — 创造了 Minecraft
+- **4J Studios** — 负责了早期携带版的移植开发
+- **Kolyah35** — 0.6.1 Plus 版本作者
+- **"念" (Nian)** — 边境之地 Mod 先驱
+- 所有在边境之地研究路上探索的社区成员
+
+---
+
+## ⚠️ 免责声明
+
+- 本项目**仅供技术研究与学习**，不得用于任何商业用途
+- 源码版权归 Mojang AB / 4J Studios 所有
+- 使用者需自行承担使用风险，开发者不对任何数据丢失或设备损坏负责
+- **不适合生存模式！**
+
+---
+
+## 🔗 相关链接
+
+- [GitHub 仓库](https://github.com/MFSCelebrate/MCReference_NoiseFarlands)
+- [BiliBili 频道](https://b23.tv/pEkoJ0V)
+
+---
