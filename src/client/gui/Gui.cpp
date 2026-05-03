@@ -852,9 +852,10 @@ void Gui::renderDebugInfo() {
     double noiseVals[8] = {0.0};
     double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
     if (rls) {
-        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
-        double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
-        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+        // 正确的噪声输入坐标
+double sampleWorldX = px * (double)worldScaleX + terrainOffsetX;
+double sampleWorldY = py * (double)worldScaleY + terrainOffsetY;
+double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
 
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
@@ -884,9 +885,10 @@ void Gui::renderDebugInfo() {
     // ===================== 噪声计算（Float 精度） =====================
     float noiseValsF[8] = {0.0f};
     if (rls) {
-        double sampleWorldX = (px + terrainOffsetX) * worldScaleX;
-        double sampleWorldY = (py + terrainOffsetY) * worldScaleY;
-        double sampleWorldZ = (pz + terrainOffsetZ) * worldScaleZ;
+        // 正确的噪声输入坐标
+double sampleWorldX = px * (double)worldScaleX + terrainOffsetX;
+double sampleWorldY = py * (double)worldScaleY + terrainOffsetY;
+double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
 
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
