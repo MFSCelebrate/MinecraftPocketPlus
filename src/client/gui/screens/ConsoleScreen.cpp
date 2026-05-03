@@ -8,6 +8,8 @@
 #include "../../../network/ServerSideNetworkHandler.h"
 #include "../../../network/packet/ChatPacket.h"
 #include "../../../platform/log.h"
+// ConsoleScreen.cpp 开头部分加入
+#include "../../renderer/LevelRenderer.h"
 
 #include <sstream>
 #include <cstdlib>
