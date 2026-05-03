@@ -70,6 +70,8 @@ public:
 	virtual void openTextEdit( TileEntity* tileEntity );
 	virtual float getWalkingSpeedModifier();
 private:
+    CThread* m_skinThread;
+    CThread* m_capeThread;
 	void calculateFlight(float xa, float ya, float za);
 	bool isSolidTile(int x, int y, int z);
 	void updateArmorTypeHash();
