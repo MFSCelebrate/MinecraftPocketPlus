@@ -121,6 +121,7 @@ public:
 	void optionUpdated(OptionId option, bool value);
 	void optionUpdated(OptionId option, float value);
 	void optionUpdated(OptionId option, int value);
+    bool noclip = false;   // 供 /noclip 命令使用
 #ifdef __APPLE__
     bool _isSuperFast;
     bool isSuperFast() { return _isSuperFast; }
