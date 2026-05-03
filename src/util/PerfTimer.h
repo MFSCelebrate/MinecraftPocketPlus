@@ -5,7 +5,7 @@
 #include <vector>
 #include "StringUtils.h"
 
-#define PERF_TIMER_SKIP_FRAMES 6       // 最佳平衡点
+#define PERF_TIMER_SKIP_FRAMES 1       // 最佳平衡点
 
 #ifdef PROFILER
     #define TIMER_PUSH(x) do { \
