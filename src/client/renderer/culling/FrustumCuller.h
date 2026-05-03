@@ -7,24 +7,28 @@
 class FrustumCuller: public Culler {
 private:
     FrustumData frustum;
+    float xOff, yOff, zOff;   // ★ 恢复偏移成员
 
 public:
     FrustumCuller() {
         frustum = Frustum::getFrustum();
     }
 
-    // 保留接口兼容，但实际不再需要偏移
     void prepare(float xOff, float yOff, float zOff) {
-        // Frustum 平面在计算时已包含相机平移，此处为空即可。
+        this->xOff = xOff;   // ★ 记录相机位置
+        this->yOff = yOff;
+        this->zOff = zOff;
     }
 
-    // 以下三个函数直接使用世界坐标，不减去任何偏移
     bool cubeFullyInFrustum(float x0, float y0, float z0, float x1, float y1, float z1) {
-        return frustum.cubeFullyInFrustum(x0, y0, z0, x1, y1, z1);
+        // ★ 世界坐标减去相机位置，转换到观察空间
+        return frustum.cubeFullyInFrustum(x0 - xOff, y0 - yOff, z0 - zOff,
+                                          x1 - xOff, y1 - yOff, z1 - zOff);
     }
 
     bool cubeInFrustum(float x0, float y0, float z0, float x1, float y1, float z1) {
-        return frustum.cubeInFrustum(x0, y0, z0, x1, y1, z1);
+        return frustum.cubeInFrustum(x0 - xOff, y0 - yOff, z0 - zOff,
+                                     x1 - xOff, y1 - yOff, z1 - zOff);
     }
 
     bool isVisible(const AABB& bb) {
