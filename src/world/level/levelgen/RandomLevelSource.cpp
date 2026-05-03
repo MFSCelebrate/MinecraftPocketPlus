@@ -283,25 +283,25 @@ unsigned char* blocks = chunk->getBlockData();
     // ...（原有生成树、矿石等代码保持不变）
     
 	// //@todo: hide those chunks if they are aren't visible
-//    if (random.nextInt(4) == 0) {
-//        int x = xo + random.nextInt(16) + 8;
-//        int y = random.nextInt(128);
-//        int z = zo + random.nextInt(16) + 8;
-//        LakeFeature feature(Tile::calmWater->id);
-//		feature.place(level, &random, x, y, z);
-//        LOGI("Adding underground lake @ (%d,%d,%d)\n", x, y, z);
-//    }
+    if (random.nextInt(4) == 0) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(128);
+        int z = zo + random.nextInt(16) + 8;
+        LakeFeature feature(Tile::calmWater->id);
+		feature.place(level, &random, x, y, z);
+        LOGI("Adding underground lake @ (%d,%d,%d)\n", x, y, z);
+    }
 
 	////@todo: hide those chunks if they are aren't visible
- //   if (random.nextInt(8) == 0) {
- //       int x = xo + random.nextInt(16) + 8;
- //       int y = random.nextInt(random.nextInt(120) + 8);
- //       int z = zo + random.nextInt(16) + 8;
- //       if (y < 64 || random.nextInt(10) == 0) {
-	//		LakeFeature feature(Tile::calmLava->id);
-	//		feature.place(level, &random, x, y, z);
-	//	}
- //   }
+    if (random.nextInt(8) == 0) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(random.nextInt(120) + 8);
+        int z = zo + random.nextInt(16) + 8;
+        if (y < 64 || random.nextInt(10) == 0) {
+			LakeFeature feature(Tile::calmLava->id);
+			feature.place(level, &random, x, y, z);
+		}
+    }
 
 	static float totalTime = 0;
 	const float st = getTimeS();
@@ -418,6 +418,18 @@ unsigned char* blocks = chunk->getBlockData();
 			delete tree;
 		}
     }
+
+    int grassCount = 1;
+	for (int i = 0; i < grassCount; i++) {
+		int x = xo + random.nextInt(16) + 8;
+		int y = random.nextInt(Level::genDepth);
+		int z = zo + random.nextInt(16) + 8;
+		Feature* grassFeature = biome->getGrassFeature(&random);
+		if (grassFeature) {
+			grassFeature->place(level, &random, x, y, z);
+			delete grassFeature;
+		}
+	}
 
     for (int i = 0; i < 2; i++) {
         int x = xo + random.nextInt(16) + 8;
