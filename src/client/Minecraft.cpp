@@ -502,6 +502,10 @@ void Minecraft::update() {
 		PerfTimer::enabled = false;
 	}
 #endif
+	// 如果开启了 noclip，强制天空保持最亮，避免时间流逝导致重新变暗
+if (noclip && level) {
+    level->skyDarken = 0;
+}
 	//LOGI("Exit Update\n");
 }
 
