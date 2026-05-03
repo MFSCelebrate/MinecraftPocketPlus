@@ -20,3 +20,4 @@ protected:
     void addFeature(Level* level, int x, int z, int xOffs, int zOffs,
                     unsigned char* blocks, int blocksSize) override;
 };
+#endif
