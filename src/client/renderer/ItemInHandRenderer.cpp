@@ -382,7 +382,7 @@ void ItemInHandRenderer::renderScreenEffect( float a )
 		renderFire(a);
 	}
 
-	if (mc->player->isInWall()) // Inside a tile
+	if (mc->player->isInWall() && !mc->noclip) // Inside a tile, but skip if noclip
 	{
 		int x = Mth::floor(mc->player->x);
 		int y = Mth::floor(mc->player->y);
