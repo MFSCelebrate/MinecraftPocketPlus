@@ -263,6 +263,12 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         !level->hasChunk(xt-1, zt) || !level->hasChunk(xt, zt)) {
         return;
     }
+
+    // 拿到当前区块的方块数组
+LevelChunk* chunk = level->getChunk(xt, zt);
+if (!chunk) return;
+unsigned char* blocks = chunk->getBlockData();
+	
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
