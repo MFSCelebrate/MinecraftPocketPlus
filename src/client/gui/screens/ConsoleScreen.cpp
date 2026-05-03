@@ -123,6 +123,8 @@ std::string ConsoleScreen::processCommand(const std::string& raw)
     Level* level = minecraft->level;
     if (!level) return "No level loaded.";
 
+    
+
     // -----------------------------------------------------------------------
     // /time ...
     // -----------------------------------------------------------------------
@@ -190,6 +192,65 @@ std::string ConsoleScreen::processCommand(const std::string& raw)
 
         return "Unknown sub-command. Usage: /time <add|set|query> ...";
     }
+     else if (args[0] == "help") {
+    return "Available commands:\n"
+           "/time add <value>\n"
+           "/time set <value|day|night|noon|midnight>\n"
+           "/time query <daytime|gametime|day>\n"
+           "/noclip <true|false> - Toggle spectator-like mode\n"
+           "/help - Show this help";
+} else if (args[0] == "noclip") {
+    if (args.size() < 2) return "Usage: /noclip <true|false>";
+    if (!level) return "No level loaded.";
+
+    bool enable;
+    if (args[1] == "true")        enable = true;
+    else if (args[1] == "false")  enable = false;
+    else                          return "Usage: /noclip <true|false>";
+
+    Player* player = minecraft->player;
+    if (!player) return "No local player.";
+
+    static bool savedFlying = false;
+    static bool savedInvul = false;
+    static bool savedTick = true;
+    static long savedTime = 0;
+
+    if (enable) {
+        // 保存当前状态
+        savedFlying = player->abilities.flying;
+        savedInvul  = player->abilities.invulnerable;
+        savedTick   = level->adventureSettings.doTickTime;
+        savedTime   = level->getTime();
+
+        // 启用穿墙旁观者模式
+        player->abilities.flying       = true;
+        player->abilities.invulnerable = true;
+        player->noPhysics              = true;
+        minecraft->noclip              = true;
+        level->adventureSettings.doTickTime = false;   // 停止时间流逝
+        level->setTime(6000);                          // 设为中午
+        level->skyDarken = 0;                          // 强制最亮
+    } else {
+        // 恢复之前的状态
+        player->abilities.flying       = savedFlying;
+        player->abilities.invulnerable = savedInvul;
+        player->noPhysics              = false;
+        minecraft->noclip              = false;
+        level->adventureSettings.doTickTime = savedTick;
+        level->setTime(savedTime);
+        level->updateSkyBrightness();
+    }
+
+    // 立即刷新区块渲染，避免残留黑暗或闪烁
+    if (minecraft->levelRenderer) {
+        minecraft->levelRenderer->allChanged();
+    }
+
+    std::ostringstream out;
+    out << "Noclip mode " << (enable ? "enabled" : "disabled");
+    return out.str();
+}
 
     return std::string("Unknown command: /") + args[0];
 }
