@@ -517,6 +517,15 @@ unsigned char* blocks = chunk->getBlockData();
             }
         }
 
+caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 峡谷生成
+    CanyonFeature canyonFeature;
+    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 地牢生成
+    DungeonFeature dungeonFeature;
+    dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
 
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
@@ -549,15 +558,6 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
         // 原有内容
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
-
-    // ★ 基础地形骨骼：洞穴、峡谷、地牢
-    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
-
-    CanyonFeature canyonFeature;
-    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
-
-    DungeonFeature dungeonFeature;
-    dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
 
     levelChunk->recalcHeightmap();
 
