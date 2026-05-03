@@ -232,9 +232,12 @@ Minecraft::~Minecraft()
 	delete _perfRenderer;
 	delete _commandServer;
 
-	MobFactory::clearStaticTestMobs();
+	MobFactory::clearStaticTestMobs(0, NULL);
 #ifndef STANDALONE_SERVER
 	EntityRenderDispatcher::destroy();
+#endif
+#ifndef STANDALONE_SERVER
+    ItemRenderer::teardown_static();
 #endif
 }
 
