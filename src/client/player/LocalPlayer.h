@@ -10,6 +10,7 @@
 class Minecraft;
 class Stat;
 class CompoundTag;
+class CThread;   // <-- 添加这一行
 
 class LocalPlayer: public Player
 {
