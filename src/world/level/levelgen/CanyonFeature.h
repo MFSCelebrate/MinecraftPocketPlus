@@ -1,19 +1,16 @@
 #ifndef NET_MINECRAFT_WORLD_LEVEL_LEVELGEN__CanyonFeature_H__
 #define NET_MINECRAFT_WORLD_LEVEL_LEVELGEN__CanyonFeature_H__
 
-#if 0
-
-//package net.minecraft.world.level.levelgen;
-
 #include "LargeFeature.h"
 
 class CanyonFeature: public LargeFeature {
+protected:
+    void addTunnel(int xOffs, int zOffs, unsigned char* blocks, float xCave, float yCave, float zCave,
+                   float thickness, float yRot, float xRot, int step, int dist, float yScale);
 
-	/*protected*/
-	void addTunnel(int xOffs, int zOffs, unsigned char* blocks, float xCave, float yCave, float zCave, float thickness, float yRot, float xRot, int step, int dist, float yScale);
-    /*protected*/
-	void addFeature(Level level, int x, int z, int xOffs, int zOffs, char* blocks);
+    // ★ 修正后的签名，匹配 LargeFeature 纯虚函数
+    virtual void addFeature(Level* level, int x, int z, int xOffs, int zOffs,
+                            unsigned char* blocks, int blocksSize) override;
 };
 
 #endif
-#endif /*NET_MINECRAFT_WORLD_LEVEL_LEVELGEN__CanyonFeature_H__*/
