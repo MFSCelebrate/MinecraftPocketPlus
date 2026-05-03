@@ -572,6 +572,10 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
 {
     _renderChunks.clear();
     int count = 0;
+
+    // 提前获取玩家指针，用于 LOD 距离判断
+    Mob* player = mc->cameraTargetPlayer;
+
     for (int i = from; i < to; i++) {
         if (layer == 0) {
             totalChunks++;
@@ -583,7 +587,7 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
 
         if (!sortedChunks[i]->empty[layer] && sortedChunks[i]->visible && sortedChunks[i]->occlusion_visible) {
             // ★ LOD：距离玩家超过 128 格时，只绘制不透明固体层 (layer 0)
-            if (layer != 0) {
+            if (layer != 0 && player) {
                 float dSqr = sortedChunks[i]->distanceToSqr(player);
                 if (dSqr > 128.0f * 128.0f) continue;   // 跳过透明层 (layer 1) 和水面 (layer 2)
             }
@@ -596,10 +600,13 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
         }
     }
 
-    Mob* player = mc->cameraTargetPlayer;
-    float xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
-    float yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
-    float zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
+    // 计算相机偏移（若无玩家则默认为0）
+    float xOff = 0.0f, yOff = 0.0f, zOff = 0.0f;
+    if (player) {
+        xOff = (float)(player->xOld + (player->x - player->xOld) * alpha);
+        yOff = (float)(player->yOld + (player->y - player->yOld) * alpha);
+        zOff = (float)(player->zOld + (player->z - player->zOld) * alpha);
+    }
 
     renderList.clear();
     renderList.init(xOff, yOff, zOff);
