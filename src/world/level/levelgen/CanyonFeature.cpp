@@ -1,4 +1,4 @@
-#if 0
+#if 1
 
 #include "CanyonFeature.h"
 
@@ -138,21 +138,24 @@ void CanyonFeature::addTunnel( int xOffs, int zOffs, unsigned char* blocks, floa
 	}
 }
 
-void CanyonFeature::addFeature( Level level, int x, int z, int xOffs, int zOffs, char* blocks )
-{
-	if (random.nextInt(15) != 0) return;
+// 原 addFeature 签名
+// void CanyonFeature::addFeature( Level level, int x, int z, int xOffs, int zOffs, char* blocks )
 
-	float xCave = x * 16 + random.nextInt(16);
-	float yCave = random.nextInt(random.nextInt(120) + 8);
-	float zCave = z * 16 + random.nextInt(16);
+// 新签名
+void CanyonFeature::addFeature( Level* level, int x, int z, int xOffs, int zOffs,
+                                unsigned char* blocks, int /* blocksSize */ ) {
+    if (random.nextInt(15) != 0) return;
 
-	float yRot = random.nextFloat() * Mth::PI * 2;
-	float xRot = ((random.nextFloat() - 0.5f) * 2) / 8;
-	float thickness = (random.nextFloat() * 2 + random.nextFloat()) + 1;
+    float xCave = x * 16 + random.nextInt(16);
+    float yCave = random.nextInt(random.nextInt(120) + 8);
+    float zCave = z * 16 + random.nextInt(16);
 
-	addTunnel(xOffs, zOffs, blocks, xCave, yCave, zCave, thickness, yRot, xRot, 0, 0, 5.0);
+    float yRot = random.nextFloat() * Mth::PI * 2;
+    float xRot = ((random.nextFloat() - 0.5f) * 2) / 8;
+    float thickness = (random.nextFloat() * 2 + random.nextFloat()) + 1;
+
+    addTunnel(xOffs, zOffs, blocks, xCave, yCave, zCave, thickness, yRot, xRot, 0, 0, 5.0);
 }
-
     /*    //private
 	void addCaves(Level level, int xOffs, int zOffs, byte[] blocks) {
         int r = radius;
