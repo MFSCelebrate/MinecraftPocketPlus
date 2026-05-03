@@ -355,7 +355,9 @@ LocalPlayer::LocalPlayer(Minecraft* minecraft, Level* level, const std::string& 
 	armorTypeHash(0),
 	sprinting(false),
 	sprintDoubleTapTimer(0),
-	prevForwardHeld(false)
+	prevForwardHeld(false),
+    m_skinThread(nullptr),
+    m_capeThread(nullptr)
 {
 	this->dimension = dimension;
 	_init();
@@ -368,13 +370,21 @@ LocalPlayer::LocalPlayer(Minecraft* minecraft, Level* level, const std::string& 
 		printf("test \n");
 		// Fetch user skin and cape from Mojang servers in the background (avoids blocking the main thread)
 		// TODO: Fix this memory leak
-		new CThread(fetchSkinForPlayer, this);
-		new CThread(fetchCapeForPlayer, this);
+		// 原代码：
+// new CThread(fetchSkinForPlayer, this);
+// new CThread(fetchCapeForPlayer, this);
+
+// 新代码：
+m_skinThread = new CThread(fetchSkinForPlayer, this);
+m_capeThread = new CThread(fetchCapeForPlayer, this);
 	}
 #endif
 }
 
 LocalPlayer::~LocalPlayer() {
+    delete m_skinThread;   // CThread 析构应安全处理正在运行的线程
+    delete m_capeThread;
+    // 原有 delete input 等...
 	//delete input;
 	//input = NULL;
 }
