@@ -1,4 +1,4 @@
-#if 0
+#if 1
 
 #include "DungeonFeature.h"
 
@@ -144,33 +144,29 @@ void DungeonFeature::addTunnel( int xOffs, int zOffs, unsigned char* blocks, flo
 	}
 }
 
-void DungeonFeature::addFeature( Level level, int x, int z, int xOffs, int zOffs, unsigned char* blocks )
-{
-	int caves = random.nextInt(random.nextInt(random.nextInt(40) + 1) + 1);
-	if (random.nextInt(15) != 0) caves = 0;
+void DungeonFeature::addFeature( Level* level, int x, int z, int xOffs, int zOffs,
+                                 unsigned char* blocks, int /* blocksSize */ ) {
+    int caves = random.nextInt(random.nextInt(random.nextInt(40) + 1) + 1);
+    if (random.nextInt(15) != 0) caves = 0;
 
-	for (int cave = 0; cave < caves; cave++) {
-		float xCave = x * 16 + random.nextInt(16);
-		//                    float yCave = (random.nextInt(random.nextInt(120) + 8) + random.nextInt(128)) / 2;
-		float yCave = random.nextInt(random.nextInt(120) + 8);
-		//float yCave = random.nextInt(128);
-		float zCave = z * 16 + random.nextInt(16);
+    for (int cave = 0; cave < caves; cave++) {
+        float xCave = x * 16 + random.nextInt(16);
+        float yCave = random.nextInt(random.nextInt(120) + 8);
+        float zCave = z * 16 + random.nextInt(16);
 
-		int tunnels = 1;
-		if (random.nextInt(4) == 0) {
-			addRoom(xOffs, zOffs, blocks, xCave, yCave, zCave);
-			tunnels += random.nextInt(4);
-		}
+        int tunnels = 1;
+        if (random.nextInt(4) == 0) {
+            addRoom(xOffs, zOffs, blocks, xCave, yCave, zCave);
+            tunnels += random.nextInt(4);
+        }
 
-		for (int i = 0; i < tunnels; i++) {
-
-			float yRot = random.nextFloat() * Mth::PI * 2;
-			float xRot = ((random.nextFloat() - 0.5f) * 2) / 8;
-			float thickness = random.nextFloat() * 2 + random.nextFloat();
-
-			addTunnel(xOffs, zOffs, blocks, xCave, yCave, zCave, thickness, yRot, xRot, 0, 0, 1.0);
-		}
-	}
+        for (int i = 0; i < tunnels; i++) {
+            float yRot = random.nextFloat() * Mth::PI * 2;
+            float xRot = ((random.nextFloat() - 0.5f) * 2) / 8;
+            float thickness = random.nextFloat() * 2 + random.nextFloat();
+            addTunnel(xOffs, zOffs, blocks, xCave, yCave, zCave, thickness, yRot, xRot, 0, 0, 1.0);
+        }
+    }
 }
 
 #endif
