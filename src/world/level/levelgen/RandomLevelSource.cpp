@@ -11,6 +11,8 @@
 #include "../tile/HeavyTile.h"
 #include "../../../util/Random.h"
 #include "../../../client/Minecraft.h"
+#include "CanyonFeature.h"
+#include "DungeonFeature.h"
 #include <cmath>
 
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
@@ -496,9 +498,21 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
             }
         }
 
+        // 洞穴（原本应该就在这里）
+    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 峡谷生成
+    CanyonFeature canyonFeature;
+    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 地牢生成
+    DungeonFeature dungeonFeature;
+    dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
 }
+
 
 LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
     return getChunk(x, z);
@@ -526,7 +540,6 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
 
-    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
     levelChunk->recalcHeightmap();
 
     return levelChunk;
