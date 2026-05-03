@@ -805,9 +805,9 @@ void Gui::renderDebugInfo() {
     posTranslator.to(px, py, pz);
 
     // 计算显示用的“偏移后世界坐标”
-    double pxo = (px + terrainOffsetX) * worldScaleX;
-    double pyo = (py + terrainOffsetY) * worldScaleY;
-    double pzo = (pz + terrainOffsetZ) * worldScaleZ;
+    double pxo = px * (double)worldScaleX + terrainOffsetX;
+    double pyo = py * (double)worldScaleY + terrainOffsetY;
+    double pzo = pz * (double)worldScaleZ + terrainOffsetZ;
 
     int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
     int cx = bx >> 4, cz = bz >> 4;
