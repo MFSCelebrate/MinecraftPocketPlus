@@ -586,10 +586,10 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
         }
 
         if (!sortedChunks[i]->empty[layer] && sortedChunks[i]->visible && sortedChunks[i]->occlusion_visible) {
-            // ★ LOD：距离玩家超过 128 格时，只绘制不透明固体层 (layer 0)
+            // ★ LOD：距离玩家超过 160 格时，只绘制不透明固体层 (layer 0)
             if (layer != 0 && player) {
                 float dSqr = sortedChunks[i]->distanceToSqr(player);
-                if (dSqr > 128.0f * 128.0f) continue;   // 跳过透明层 (layer 1) 和水面 (layer 2)
+                if (dSqr > 160.0f * 160.0f) continue;   // 跳过透明层 (layer 1) 和水面 (layer 2)
             }
 
             int list = sortedChunks[i]->getList(layer);
