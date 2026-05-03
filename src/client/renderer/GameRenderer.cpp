@@ -260,39 +260,15 @@ double zOff = cameraEntity->zo + (cameraEntity->z - cameraEntity->zo) * a;
         }
 
 		TIMER_POP_PUSH("clear");
-glViewport(0, 0, mc->width, mc->height);
-setupClearColor(a);
-glClear(GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, mc->width, mc->height);
+		setupClearColor(a);
 
-// ★ 画背景矩形，必须放在 setupFog 之前
-glMatrixMode(GL_PROJECTION);
-glPushMatrix();
-glLoadIdentity();
-glOrthof(0, mc->width, mc->height, 0, -1, 1);
-glMatrixMode(GL_MODELVIEW);
-glPushMatrix();
-glLoadIdentity();
-glDisable(GL_DEPTH_TEST);
-glDepthMask(false);
-glDisable(GL_CULL_FACE);
-Tesselator& t = Tesselator::instance;
-t.begin();
-t.color(fr, fg, fb, 1.0f);
-t.vertex(0, 0, 0);
-t.vertex(mc->width, 0, 0);
-t.vertex(mc->width, mc->height, 0);
-t.vertex(0, mc->height, 0);
-t.draw();
-glDepthMask(true);
-glEnable(GL_DEPTH_TEST);
-glMatrixMode(GL_PROJECTION);
-glPopMatrix();
-glMatrixMode(GL_MODELVIEW);
-glPopMatrix();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable2(GL_CULL_FACE);
+
 		TIMER_POP_PUSH("camera");
         setupCamera(a, i);
-		//saveMatrices();
+		saveMatrices();
 
 		if (useScreenScissor) {
 			glEnable2(GL_SCISSOR_TEST);
