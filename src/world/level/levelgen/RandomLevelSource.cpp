@@ -183,9 +183,10 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     // 直接使用世界坐标缩放，不再添加偏移（偏移已在传入前叠加）
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
-    perlinNoise2.getRegion(sandBuffer, (float)xf, (float)zf, 0, 16, 16, 1, sx, sz, 1.0f);
-    perlinNoise2.getRegion(gravelBuffer, (float)xf, 109.01340f, (float)zf, 16, 1, 16, sx, 1.0f, sz);
-    perlinNoise3.getRegion(depthBuffer, (float)xf, (float)zf, 0, 16, 16, 1, sx * 2.0f, sz * 2.0f, sz * 2.0f);
+    // ✅ 修正：y 坐标固定为常量，z 坐标用 zf，ySize = 1
+perlinNoise2.getRegion(sandBuffer, (float)xf, 0.0f, (float)zf, 16, 1, 16, sx, 1.0f, sz);
+perlinNoise2.getRegion(gravelBuffer, (float)xf, 109.01340f, (float)zf, 16, 1, 16, sx, 1.0f, sz);  // 砾石本没错，但顺手规范化
+perlinNoise3.getRegion(depthBuffer, (float)xf, 0.0f, (float)zf, 16, 1, 16, sx*2.0f, 1.0f, sz*2.0f);
 
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
