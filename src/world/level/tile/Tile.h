@@ -205,7 +205,7 @@ public:
 	static Tile* fenceGate;
     static Tile* pumpkin;
     static Tile* hellRock;
-    static Tile* hellSand;
+   /// static Tile* hellSand;
     static Tile* lightGem;
 	static Tile* portalTile;
     static Tile* litPumpkin;
