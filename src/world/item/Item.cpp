@@ -96,7 +96,7 @@ Item* Item::porkChop_raw = NULL;
 Item* Item::porkChop_cooked = NULL;
 Item* Item::painting = NULL;
 
-//Item* Item::apple_gold = NULL;
+Item* Item::apple_gold = NULL;
 
 Item* Item::sign = NULL;
 Item* Item::door_wood = NULL;
@@ -128,8 +128,8 @@ Item* Item::compass = NULL;
 //Item* Item::fishingRod = NULL;
 Item* Item::clock = NULL;
 Item* Item::yellowDust = NULL;
-//Item* Item::fish_raw = NULL;
-//Item* Item::fish_cooked = NULL;
+Item* Item::fish_raw = NULL;
+Item* Item::fish_cooked = NULL;
 
 Item* Item::melon = NULL;
 Item* Item::seeds_melon = NULL;
