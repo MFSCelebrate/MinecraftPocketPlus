@@ -264,6 +264,10 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         !level->hasChunk(xt-1, zt) || !level->hasChunk(xt, zt)) {
         return;
     }
+
+	LevelChunk* chunk = level->getChunk(xt, zt);
+if (!chunk) return;
+unsigned char* blocks = chunk->getBlockData();
 	
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
@@ -531,11 +535,6 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
-
-	// 拿到当前区块的方块数组
-LevelChunk* chunk = level->getChunk(xt, zt);
-if (!chunk) return;
-unsigned char* blocks = chunk->getBlockData();
 
     // ★ 世界坐标改用 double，偏移仅在此叠加一次
     double worldBlockX = xOffs * 16.0 + m_worldOffsetX;
