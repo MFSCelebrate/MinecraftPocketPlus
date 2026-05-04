@@ -181,41 +181,15 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
 	int i = getAtlasPos(item);
 
 	if (i < 0) {
-    // 图集中没有，尝试用自带的 icon 直接绘制
-    const int icon = item->getIcon();
-    if (icon >= 0) {
-        // 确定该用的纹理
-        if (item->id < 256)
-            textures->loadAndBindTexture("terrain.png");
-        else
-            textures->loadAndBindTexture("gui/items.png");
-
-        float u0 = ((icon % 16) * 16 + 0) / 256.0f;
-        float u1 = ((icon % 16) * 16 + 16) / 256.0f;
-        float v0 = ((icon / 16) * 16 + 0) / 256.0f;
-        float v1 = ((icon / 16) * 16 + 16) / 256.0f;
-
-        Tesselator& t = Tesselator::instance;
-        t.begin();
-        t.colorABGR(item->count > 0 ? 0xffffffff : 0x60ffffff);
-        t.vertexUV(x, y + h, 0.0f, u0, v1);
-t.vertexUV(x + w, y + h, 0.0f, u1, v1);
-t.vertexUV(x + w, y, 0.0f, u1, v0);
-t.vertexUV(x, y, 0.0f, u0, v0);
-        t.draw();
+    Tesselator& t = Tesselator::instance;
+    if (!t.isOverridden()) {
+        // 非批处理模式：直接绘制
+        renderGuiItemCorrect(font, textures, item, int(x), int(y));
     } else {
-        // 真的没有图标，才标红
-        Tesselator& t = Tesselator::instance;
-        if (!t.isOverridden())
-            renderGuiItemCorrect(font, textures, item, (int)x, (int)y);
-        else {
-            t.endOverrideAndDraw();
-            glDisable2(GL_TEXTURE_2D);
-            fillRect(t, x, y, w, h, 0xff0000);
-            glEnable2(GL_TEXTURE_2D);
-            renderGuiItemCorrect(font, textures, item, (int)x, (int)y);
-            t.beginOverride();
-        }
+        // 批处理模式：暂停批处理，绘制物品，再恢复批处理
+        t.endOverrideAndDraw();                          // 结束当前批次
+        renderGuiItemCorrect(font, textures, item, int(x), int(y)); // 独立绘制物品
+        t.beginOverride();                               // 重新开始批次
     }
     return;
 	}
