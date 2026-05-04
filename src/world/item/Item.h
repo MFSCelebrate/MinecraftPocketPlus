@@ -148,7 +148,7 @@ public:
     static Item* porkChop_cooked;
     static Item* painting;
 
-    static Item* apple_gold;
+   // static Item* apple_gold;
 
     static Item* sign;
     static Item* door_wood;
@@ -180,8 +180,8 @@ public:
     static Item* fishingRod;
     static Item* clock;
     static Item* yellowDust;
-    static Item* fish_raw;
-    static Item* fish_cooked;
+   // static Item* fish_raw;
+  //  static Item* fish_cooked;
 
 	static Item* melon;
 	static Item* seeds_melon;
