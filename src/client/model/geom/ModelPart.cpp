@@ -203,7 +203,7 @@ void ModelPart::compile( float scale )
 void ModelPart::draw()
 {
 #ifdef OPENGL_ES
-	Tesselator::instance.drawVBO(vboId, cubes.size() * 2 * 3 * 6);
+	drawArrayVT_NoState(vboId, cubes.size() * 2 * 3 * 6, 24);
 #else
 	glCallList(list);
 #endif
