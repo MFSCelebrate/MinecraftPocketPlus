@@ -264,11 +264,6 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         !level->hasChunk(xt-1, zt) || !level->hasChunk(xt, zt)) {
         return;
     }
-
-    // 拿到当前区块的方块数组
-LevelChunk* chunk = level->getChunk(xt, zt);
-if (!chunk) return;
-unsigned char* blocks = chunk->getBlockData();
 	
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
@@ -516,17 +511,6 @@ unsigned char* blocks = chunk->getBlockData();
                 }
             }
         }
-
-caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
-
-    // 峡谷生成
-    CanyonFeature canyonFeature;
-    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
-
-    // 地牢生成
-    DungeonFeature dungeonFeature;
-    dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
-
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
 }
@@ -548,6 +532,11 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)xOffs, (int)zOffs);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
+	// 拿到当前区块的方块数组
+LevelChunk* chunk = level->getChunk(xt, zt);
+if (!chunk) return;
+unsigned char* blocks = chunk->getBlockData();
+
     // ★ 世界坐标改用 double，偏移仅在此叠加一次
     double worldBlockX = xOffs * 16.0 + m_worldOffsetX;
     double worldBlockZ = zOffs * 16.0 + m_worldOffsetZ;
@@ -558,6 +547,16 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
         // 原有内容
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
+
+	caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 峡谷生成
+    CanyonFeature canyonFeature;
+    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+
+    // 地牢生成
+    DungeonFeature dungeonFeature;
+    dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
 
     levelChunk->recalcHeightmap();
 
