@@ -266,23 +266,7 @@ for (int id = 1; id < 256; ++id) {
         addItem(new ItemInstance(id, 1, 0));
     }
 }
-	} else {
-#if defined(WIN32)
-		// Survival
-		// addItem(new ItemInstance(Item::ironIngot, 64));
-		// addItem(new ItemInstance(Item::ironIngot, 34));
-		// addItem(new ItemInstance(Tile::stonecutterBench));
-		// addItem(new ItemInstance(Tile::workBench));
-		// addItem(new ItemInstance(Tile::furnace));
-		// addItem(new ItemInstance(Tile::wood, 54));
-		// addItem(new ItemInstance(Item::stick, 14));
-		// addItem(new ItemInstance(Item::coal, 31));
-		// addItem(new ItemInstance(Tile::sand, 6));
-		// addItem(new ItemInstance(Item::dye_powder, 23, DyePowderItem::PURPLE));
-#endif
-	}
-#endif
-    // ====================== 补全所有已注册的物品（id 256 ~ 511） ======================
+		// ====================== 补全所有已注册的物品（id 256 ~ 511） ======================
 for (int id = 256; id < 512; ++id) {
     Item* item = Item::items[id];
     if (!item) continue;
@@ -299,6 +283,22 @@ for (int id = 256; id < 512; ++id) {
 
     addItem(new ItemInstance(item, 1));
 }
+	} else {
+#if defined(WIN32)
+		// Survival
+		// addItem(new ItemInstance(Item::ironIngot, 64));
+		// addItem(new ItemInstance(Item::ironIngot, 34));
+		// addItem(new ItemInstance(Tile::stonecutterBench));
+		// addItem(new ItemInstance(Tile::workBench));
+		// addItem(new ItemInstance(Tile::furnace));
+		// addItem(new ItemInstance(Tile::wood, 54));
+		// addItem(new ItemInstance(Item::stick, 14));
+		// addItem(new ItemInstance(Item::coal, 31));
+		// addItem(new ItemInstance(Tile::sand, 6));
+		// addItem(new ItemInstance(Item::dye_powder, 23, DyePowderItem::PURPLE));
+#endif
+	}
+#endif
 	for (unsigned int i = 0; i < items.size(); ++i) {
 		ItemInstance* item = items[i];
 
