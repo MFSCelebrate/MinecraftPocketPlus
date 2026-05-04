@@ -90,9 +90,13 @@ public:
     static Item* shovel_emerald;
     static Item* pickAxe_emerald;
     static Item* hatchet_emerald;
+    
 
     static Item* stick;
     static Item* bowl;
+    static Item* fish_raw;
+    static Item* fish_cooked;
+    static Item* apple_gold;
     static Item* mushroomStew;
 
     static Item* sword_gold;
