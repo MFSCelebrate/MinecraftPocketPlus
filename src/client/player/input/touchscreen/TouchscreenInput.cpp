@@ -162,12 +162,20 @@ void TouchscreenInput_TestFps::onConfigChanged(const Config& c) {
 	xx = BaseX + 2 * Bw; yy = BaseY + Bh;
 	_model.addArea(AREA_DPAD_E, aRight = new RectangleArea(xx, yy, xx+Bw, yy+Bh));
 
-    float maxPixels = _minecraft->pixelCalc.millimetersToPixels(10);
+   /* float maxPixels = _minecraft->pixelCalc.millimetersToPixels(10);
     // float btnSize = Mth::Min(18 * Gui::GuiScale, maxPixels);
 	float btnSize = pc.millimetersToPixels(18 * Gui::GuiScale);
 	_model.addArea(AREA_PAUSE, aPause = new RectangleArea(w - 4 - btnSize, 4, w - 4, 4 + btnSize));
 	_model.addArea(AREA_CHAT,  aChat  = new RectangleArea(w - 8 - btnSize * 2, 4, w - 8 - btnSize, 4 + btnSize));
+*/
+	float maxPixels = _minecraft->pixelCalc.millimetersToPixels(10);
+float btnSize = pc.millimetersToPixels(18 * Gui::GuiScale);
+const float spacing = 8.0f; // 两个按钮之间的间距
+const float totalWidth = btnSize * 2 + spacing;
+const float baseX = (w - totalWidth) / 2.0f; // 居中起始 X
 
+_model.addArea(AREA_CHAT, aChat = new RectangleArea(baseX, 4, baseX + btnSize, 4 + btnSize));
+_model.addArea(AREA_PAUSE, aPause = new RectangleArea(baseX + btnSize + spacing, 4, baseX + btnSize + spacing + btnSize, 4 + btnSize));
 	//rebuild();
 }
 
