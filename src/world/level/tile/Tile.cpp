@@ -233,7 +233,7 @@ void Tile::initTiles() {
 	fence		= (new FenceTile(85, 4))->init()->setDestroyTime(2.0f)->setExplodeable(5)->setSoundType(SOUND_WOOD)->setCategory(ItemCategory::Structures)->setDescriptionId("fence");
 
 	netherrack = (new Tile(87, 7 + 6 * 16, Material::stone))->init()->setDestroyTime(0.4f)->setSoundType(SOUND_STONE)->setDescriptionId("hellrock");
-	//hellSand = (new HellSandTile(88, 8 + 6 * 16, Material::sand))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_SAND)->setDescriptionId("hellsand");
+	hellSand = (new HellSandTile(88, 8 + 6 * 16, Material::sand))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_SAND)->setDescriptionId("hellsand");
 
 	lightGem	= (new LightGemTile(89, 9 + 16 * 6, Material::glass))->init()->setDestroyTime(0.3f)->setCategory(ItemCategory::Structures)->setSoundType(SOUND_GLASS)->setLightEmission(1.0f)->setDescriptionId("lightgem");
 	invisible_bedrock = (new InvisibleTile(95, 0, Material::stone))->init()->setDestroyTime(-1)->setExplodeable(6000000);//->setSoundType(SOUND_SILENT);
