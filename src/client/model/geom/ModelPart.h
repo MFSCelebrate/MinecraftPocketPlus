@@ -2,6 +2,7 @@
 #define NET_MINECRAFT_CLIENT_MODEL_GEOM__ModelPart_H__
 
 #include "../../renderer/gles.h"
+#include "../../renderer/RenderChunk.h"
 
 class Model;
 class Cube;
