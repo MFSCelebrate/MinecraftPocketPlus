@@ -362,12 +362,12 @@ Recipes::Recipes()
 
 		definition('#', Item::stick, 'X', Tile::cloth));
 
-	//addShapedRecipe(ItemInstance(Item::apple_gold, 1), //
-	//	"###", //
-	//	"#X#", //
-	//	"###", //
+	addShapedRecipe(ItemInstance(Item::apple_gold, 1), //
+		"###", //
+		"#X#", //
+		"###", //
 
-	//	definition('#', Tile::goldBlock, 'X', Item::apple));
+		definition('#', Tile::goldBlock, 'X', Item::apple));
 
 	//addShapedRecipe(ItemInstance(Tile::lever, 1), //
 	//	"X", //
