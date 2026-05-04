@@ -282,7 +282,23 @@ for (int id = 1; id < 256; ++id) {
 #endif
 	}
 #endif
+    // ====================== 补全所有已注册的物品（id 256 ~ 511） ======================
+for (int id = 256; id < 512; ++id) {
+    Item* item = Item::items[id];
+    if (!item) continue;
 
+    // 跳过已经在前面选择条或背包中的物品
+    bool already = false;
+    for (int j = 0; j < (int)items.size(); ++j) {
+        if (items[j] && items[j]->id == id) {
+            already = true;
+            break;
+        }
+    }
+    if (already) continue;
+
+    addItem(new ItemInstance(item, 1));
+}
 	for (unsigned int i = 0; i < items.size(); ++i) {
 		ItemInstance* item = items[i];
 
