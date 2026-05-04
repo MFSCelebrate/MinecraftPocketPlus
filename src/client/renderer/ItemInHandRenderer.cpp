@@ -481,10 +481,6 @@ void ItemInHandRenderer::renderWater( float a )
 	glDisable2(GL_BLEND);
 }
 
-void ItemInHandRenderer::itemUsed() {
-    height = 0;
-}
-
 void ItemInHandRenderer::renderFire( float a )
 {
 	Tesselator& t = Tesselator::instance;
