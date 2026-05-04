@@ -126,6 +126,7 @@ Tile* Tile::stairs_brick= NULL;
 Tile* Tile::door_wood   = NULL;
 Tile* Tile::door_iron   = NULL;
 Tile* Tile::cactus      = NULL;
+Tile* Tile::hellSand    = NULL;
 
 Tile* Tile::melon       = NULL;
 Tile* Tile::melonStem   = NULL;
