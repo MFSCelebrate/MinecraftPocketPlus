@@ -198,10 +198,10 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
         Tesselator& t = Tesselator::instance;
         t.begin();
         t.colorABGR(item->count > 0 ? 0xffffffff : 0x60ffffff);
-        t.vertexUV(x, y + h, blitOffset, u0, v1);
-        t.vertexUV(x + w, y + h, blitOffset, u1, v1);
-        t.vertexUV(x + w, y, blitOffset, u1, v0);
-        t.vertexUV(x, y, blitOffset, u0, v0);
+        t.vertexUV(x, y + h, 0.0f, u0, v1);
+t.vertexUV(x + w, y + h, 0.0f, u1, v1);
+t.vertexUV(x + w, y, 0.0f, u1, v0);
+t.vertexUV(x, y, 0.0f, u0, v0);
         t.draw();
     } else {
         // 真的没有图标，才标红
