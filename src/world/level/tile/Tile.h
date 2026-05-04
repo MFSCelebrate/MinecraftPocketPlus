@@ -224,6 +224,7 @@ public:
 	static Tile* stairs_stoneBrickSmooth;
 	static Tile* netherBrick;
 	static Tile* netherrack;
+    static Tile* hellSand;
 	static Tile* stairs_netherBricks;
 	static Tile* stairs_sandStone;
 	static Tile* quartzBlock;
