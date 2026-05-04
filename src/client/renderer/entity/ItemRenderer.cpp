@@ -181,21 +181,43 @@ void ItemRenderer::renderGuiItem(Font* font, Textures* textures, const ItemInsta
 	int i = getAtlasPos(item);
 
 	if (i < 0) {
-		Tesselator& t = Tesselator::instance;
-		if (!t.isOverridden())
-			renderGuiItemCorrect(font, textures, item, int(x), int(y));
-		else {
-			// @huge @attn @todo @fix:	This is just guess-works..
-			//							it we're batching for saving the
-			//							buffer, this will fail miserably
-			t.endOverrideAndDraw();
-			glDisable2(GL_TEXTURE_2D);
-			fillRect(t, x, y, w, h, 0xff0000);
-			glEnable2(GL_TEXTURE_2D);
-			renderGuiItemCorrect(font, textures, item, int(x), int(y));
-			t.beginOverride();
-		}
-		return;
+    // 图集中没有，尝试用自带的 icon 直接绘制
+    const int icon = item->getIcon();
+    if (icon >= 0) {
+        // 确定该用的纹理
+        if (item->id < 256)
+            textures->loadAndBindTexture("terrain.png");
+        else
+            textures->loadAndBindTexture("gui/items.png");
+
+        float u0 = ((icon % 16) * 16 + 0) / 256.0f;
+        float u1 = ((icon % 16) * 16 + 16) / 256.0f;
+        float v0 = ((icon / 16) * 16 + 0) / 256.0f;
+        float v1 = ((icon / 16) * 16 + 16) / 256.0f;
+
+        Tesselator& t = Tesselator::instance;
+        t.begin();
+        t.colorABGR(item->count > 0 ? 0xffffffff : 0x60ffffff);
+        t.vertexUV(x, y + h, blitOffset, u0, v1);
+        t.vertexUV(x + w, y + h, blitOffset, u1, v1);
+        t.vertexUV(x + w, y, blitOffset, u1, v0);
+        t.vertexUV(x, y, blitOffset, u0, v0);
+        t.draw();
+    } else {
+        // 真的没有图标，才标红
+        Tesselator& t = Tesselator::instance;
+        if (!t.isOverridden())
+            renderGuiItemCorrect(font, textures, item, (int)x, (int)y);
+        else {
+            t.endOverrideAndDraw();
+            glDisable2(GL_TEXTURE_2D);
+            fillRect(t, x, y, w, h, 0xff0000);
+            glEnable2(GL_TEXTURE_2D);
+            renderGuiItemCorrect(font, textures, item, (int)x, (int)y);
+            t.beginOverride();
+        }
+    }
+    return;
 	}
 
 	textures->loadAndBindTexture("gui/gui_blocks.png");
