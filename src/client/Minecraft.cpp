@@ -930,8 +930,12 @@ void Minecraft::tickInput() {
 void Minecraft::handleBuildAction(BuildActionIntention* action) {
 #ifndef STANDALONE_SERVER
 	if (action->isRemove()) {
-		if (missTime > 0) return;
-		player->swing();
+    // 触屏长按时，即使上一帧未命中，也允许开始挖掘
+    if (useTouchscreen() && action->isFirstRemove()) {
+        missTime = 0;
+    }
+    if (missTime > 0) return;
+    player->swing();
 	}
 	if(player->isUsingItem())
 		return;
