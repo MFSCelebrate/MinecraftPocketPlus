@@ -253,7 +253,7 @@ void Inventory::setupDefault() {
 		addItem(new ItemInstance(Item::bow));
 		addItem(new ItemInstance(Item::sign));
 		// 补全所有尚未添加的方块（包括水、岩浆、火、隐形基岩等“黑名单”方块）
-for (int id = 1; id < 1024; ++id) {
+for (int id = 1; id < 256; ++id) {
     if (!Tile::tiles[id]) continue;          // 只处理有效方块
     bool already = false;
     for (size_t i = 0; i < items.size(); ++i) {
