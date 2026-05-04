@@ -123,18 +123,17 @@ Dimension* Dimension::getNew( int id )
 // DimensionFactory
 //
 #include "../storage/LevelData.h"
-Dimension* DimensionFactory::createDefaultDimension(LevelData* data )
-{
-	int dimensionId = Dimension::NORMAL;
-
-	switch(data->getGameType()) {
-	case GameType::Survival: dimensionId = Dimension::NORMAL_DAYCYCLE;
-		break;
-	case GameType::Creative:
-	default:
-		dimensionId = Dimension::NORMAL;
-		break;
-	}
-
-	return Dimension::getNew(dimensionId);
+Dimension* DimensionFactory::createDefaultDimension(LevelData* data) {
+    int dimensionId = Dimension::NORMAL;
+    switch(data->getGameType()) {
+        case GameType::Survival:
+            dimensionId = Dimension::NORMAL_DAYCYCLE;
+            break;
+        case GameType::Creative:
+        default:
+            // 原版创造模式用 Dimension::NORMAL，这里改为 DAYCYCLE，让时间正常流逝
+            dimensionId = Dimension::NORMAL_DAYCYCLE;
+            break;
+    }
+    return Dimension::getNew(dimensionId);
 }
