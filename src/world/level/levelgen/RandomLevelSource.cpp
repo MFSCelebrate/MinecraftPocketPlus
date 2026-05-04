@@ -516,15 +516,29 @@ unsigned char* blocks = chunk->getBlockData();
             }
         }
 
-	caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+	    // 洞穴（保留原来的 apply，洞穴系统一直比较稳定）
+    caveFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
 
-    // 峡谷生成
-    CanyonFeature canyonFeature;
-    canyonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+    // 峡谷生成 --- 改成按次数随机位置生成，不再一次性扫周边
+    int canyonAttempts = 1 + random.nextInt(2);   // 每区块尝试 1~2 次
+    for (int i = 0; i < canyonAttempts; ++i) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(random.nextInt(120) + 8);
+        int z = zo + random.nextInt(16) + 8;
+        CanyonFeature canyon;
+        // 手动调用其内部 addFeature，而不是 apply
+        canyon.addFeature(level, x >> 4, z >> 4, xo >> 4, zo >> 4, blocks, LevelChunk::ChunkBlockCount);
+    }
 
-    // 地牢生成
-    //DungeonFeature dungeonFeature;
-    //dungeonFeature.apply(this, level, (int)worldBlockX, (int)worldBlockZ, blocks, LevelChunk::ChunkBlockCount);
+    // 地牢生成 --- 改成限量随机位置生成
+    int dungeonAttempts = 1 + random.nextInt(2);   // 每区块尝试 1~2 次
+    for (int i = 0; i < dungeonAttempts; ++i) {
+        int x = xo + random.nextInt(16) + 8;
+        int y = random.nextInt(random.nextInt(random.nextInt(112) + 8) + 8);
+        int z = zo + random.nextInt(16) + 8;
+        DungeonFeature dungeon;
+        dungeon.addFeature(level, x >> 4, z >> 4, xo >> 4, zo >> 4, blocks, LevelChunk::ChunkBlockCount);
+    }
 
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
