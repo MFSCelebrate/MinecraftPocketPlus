@@ -6,11 +6,13 @@
 class HellSandTile : public Tile {
     typedef Tile super;
 public:
-    HellSandTile(int id, int tex) : Tile(id, tex, Material::sand) {
-        friction = 0.8f; // 比普通方块略滑
+    // ★ 三个参数：id + 纹理 + 材质
+    HellSandTile(int id, int tex, const Material* material)
+        : Tile(id, tex, material) {
+        friction = 0.8f;
     }
 
-    // 后续可在此添加 entityInside 下沉逻辑
+    // 后续可添加 entityInside 下沉逻辑
 };
 
 #endif
