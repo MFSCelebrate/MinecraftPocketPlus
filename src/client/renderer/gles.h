@@ -11,7 +11,10 @@
 
 // Other systems might run it, if they #define OPENGL_ES
 // #if defined(OPENGL_ES) // || defined(ANDROID)
-	#define USE_VBO
+	#ifndef USE_VBO
+    #define USE_VBO
+    #endif
+
 	#define GL_QUADS 0x0007
     #if defined(__APPLE__)
         #import <OpenGLES/ES1/gl.height>
