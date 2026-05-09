@@ -805,9 +805,9 @@ void Gui::renderDebugInfo() {
     posTranslator.to(px, py, pz);
 
     // 计算显示用的“偏移后世界坐标”
-    double pxo = px * (double)worldScaleX + terrainOffsetX;
-    double pyo = py * (double)worldScaleY + terrainOffsetY;
-    double pzo = pz * (double)worldScaleZ + terrainOffsetZ;
+    double pxo = px * (double)worldScaleX + terrainOffsetX * worldScaleX;
+double pyo = py * (double)worldScaleY + terrainOffsetY * worldScaleY;
+double pzo = pz * (double)worldScaleZ + terrainOffsetZ * worldScaleZ;
 
     int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
     int cx = bx >> 4, cz = bz >> 4;
@@ -852,10 +852,10 @@ void Gui::renderDebugInfo() {
     double noiseVals[8] = {0.0};
     double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
     if (rls) {
-        // 正确的噪声输入坐标
-double sampleWorldX = px * (double)worldScaleX + terrainOffsetX;
-double sampleWorldY = py * (double)worldScaleY + terrainOffsetY;
-double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
+        // 噪声输入
+double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
+double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
+double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
 
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
@@ -885,10 +885,11 @@ double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
     // ===================== 噪声计算（Float 精度） =====================
     float noiseValsF[8] = {0.0f};
     if (rls) {
-        // 正确的噪声输入坐标
-double sampleWorldX = px * (double)worldScaleX + terrainOffsetX;
-double sampleWorldY = py * (double)worldScaleY + terrainOffsetY;
-double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
+        
+// 噪声输入
+double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
+double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
+double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
 
         const double s = 684.412;
         const double scale_large_XZ = s / 80.0;
