@@ -626,9 +626,12 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
     return count;
 }
 
-void LevelRenderer::renderSameAsLast( int layer, float alpha )
-{
-	renderList.render();
+void LevelRenderer::renderSameAsLast(int layer, float alpha) {
+    #ifdef USE_VBO
+    renderList.renderMerged(layer);    // 优先尝试合并绘制
+    #else
+    renderList.render();
+    #endif
 }
 
 void LevelRenderer::tick()
