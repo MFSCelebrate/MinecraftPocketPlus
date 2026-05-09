@@ -143,6 +143,17 @@ int glhUnProjectf(	float winx, float winy, float winz,
 	#define glGetProcAddress(a) (void*(0))
 #endif
 
+#ifndef GL_OES_mapbuffer
+#define GL_OES_mapbuffer 1
+#define GL_WRITE_ONLY_OES 0x88B9
+#define GL_BUFFER_ACCESS_OES 0x88BB
+#define GL_BUFFER_MAPPED_OES 0x88BC
+#define GL_BUFFER_MAP_POINTER_OES 0x88BD
+#endif
+
+#define glMapBufferOES  glMapBuffer
+#define glUnmapBufferOES glUnmapBuffer
+
 
 
 #endif /*NET_MINECRAFT_CLIENT_RENDERER__gles_H__ */
