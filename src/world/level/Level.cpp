@@ -1594,12 +1594,15 @@ void Level::updateLight(const LightLayer& layer, int64_t x0, int y0, int64_t z0,
 }
 
 bool Level::updateSkyBrightness() {
+    if (!adventureSettings.doTickTime) {
+        return false; // 时间冻结时不更新天空亮度
+    }
     int newDark = this->getSkyDarken(1);
     if (newDark != skyDarken) {
         skyDarken = newDark;
-		return true;
+        return true;
     }
-	return false;
+    return false;
 }
 
 void Level::setSpawnSettings(bool spawnEnemies, bool spawnFriendlies) {
