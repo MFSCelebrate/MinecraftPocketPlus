@@ -1,6 +1,9 @@
 #ifndef NET_MINECRAFT_CLIENT_RENDERER__RenderList_H__
 #define NET_MINECRAFT_CLIENT_RENDERER__RenderList_H__
 
+#include "gles.h"
+#include <cstring>   // for strstr
+
 class RenderChunk;
 
 class RenderList
