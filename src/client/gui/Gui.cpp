@@ -917,7 +917,7 @@ double sampleWorldZ = pz * (double)worldScaleZ + terrainOffsetZ;
 
     // ===================== 构建显示行 (25 行，替换第18行为精度) =====================
     static char ln[27][1024];
-    sprintf(ln[0], "Minecraft NoiseFarlands Reference [InternalEnv]");
+    sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
