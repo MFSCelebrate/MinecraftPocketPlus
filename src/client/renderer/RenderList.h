@@ -27,6 +27,12 @@ public:
     bool inited;
     bool rendered;
 
+// 新增合并渲染相关
+    bool supportsMerge;            // 是否支持 glMapBuffer
+    GLuint mergedVBO;             // 超大一维 VBO 句柄
+    int mergedCapacity;           // 当前 VBO 字节容量
+    void renderMerged(int layer); // 合并绘制方法
+    void initMerged();            // 初始化检查扩展
 private:
     int bufferLimit;
     bool m_useRelativeTranslation;
