@@ -69,21 +69,26 @@ void PerfRenderer::renderFpsMeter( float tickTime ) {
     Tesselator& t = Tesselator::instance;
 
     int hh1 = (int) (usPer60Fps / 200);
-    float count = (float)frameTimes.size();
-    t.begin(GL_TRIANGLES);
-    t.color(0x20000000);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(0, (float)_mc->height, 0);
-    t.vertex(count, (float)_mc->height, 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
+float count = (float)frameTimes.size();
 
-    t.color(0x20200000);
-    t.vertex(0, (float)(_mc->height - hh1 * 2), 0);
-    t.vertex(0, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1), 0);
-    t.vertex(count, (float)(_mc->height - hh1 * 2), 0);
-    t.draw();
+// 第一个矩形（高度 hh1，从 h-hh1 到 h）
+t.begin(GL_TRIANGLE_STRIP);
+t.color(0x20000000);
+t.vertex(0,               (float)_mc->height, 0);
+t.vertex(0,               (float)(_mc->height - hh1), 0);
+t.vertex(count,           (float)_mc->height, 0);
+t.vertex(count,           (float)(_mc->height - hh1), 0);
+t.draw();
 
+// 第二个矩形（高度 2*hh1，从 h-2*hh1 到 h-hh1）
+t.begin(GL_TRIANGLE_STRIP);
+t.color(0x20200000);
+t.vertex(0,               (float)(_mc->height - hh1), 0);
+t.vertex(0,               (float)(_mc->height - hh1 * 2), 0);
+t.vertex(count,           (float)(_mc->height - hh1), 0);
+t.vertex(count,           (float)(_mc->height - hh1 * 2), 0);
+t.draw();
+    
     float totalTime = 0;
     for (unsigned int i = 0; i < frameTimes.size(); i++) totalTime += frameTimes[i];
     int hh = (int) (totalTime / 200 / frameTimes.size());
