@@ -219,29 +219,23 @@ std::string ConsoleScreen::processCommand(const std::string& raw)
     static long savedTime = 0;
 
     if (enable) {
-        // 保存当前状态
-        savedFlying = player->abilities.flying;
-        savedInvul  = player->abilities.invulnerable;
-        savedTick   = level->adventureSettings.doTickTime;
-        savedTime   = level->getTime();
-
-        // 启用穿墙旁观者模式
-        player->abilities.flying       = true;
-        player->abilities.invulnerable = true;
-        player->noPhysics              = true;
-        minecraft->noclip              = true;
-        level->adventureSettings.doTickTime = false;   // 停止时间流逝
-        level->setTime(6000);                          // 设为中午
-        level->skyDarken = 0;                          // 强制最亮
-    } else {
-        // 恢复之前的状态
-        player->abilities.flying       = savedFlying;
-        player->abilities.invulnerable = savedInvul;
-        player->noPhysics              = false;
-        minecraft->noclip              = false;
-        level->adventureSettings.doTickTime = savedTick;
-        level->setTime(savedTime);
-        level->updateSkyBrightness();
+    // … 保存状态 …
+    player->abilities.flying = true;
+    player->abilities.invulnerable = true;
+    player->noPhysics = true;
+    minecraft->noclip = true;
+    level->adventureSettings.doTickTime = false;   // 停止时间
+    level->setTime(6000);                         // 正午
+    // 不再需要 level->skyDarken = 0 和 updateSkyBrightness()
+} else {
+    // 恢复
+    player->abilities.flying = savedFlying;
+    player->abilities.invulnerable = savedInvul;
+    player->noPhysics = false;
+    minecraft->noclip = false;
+    level->adventureSettings.doTickTime = savedTick;
+    level->setTime(savedTime);
+    level->updateSkyBrightness();                 // 恢复正常时间亮度
     }
 
     // 立即刷新区块渲染，避免残留黑暗或闪烁
