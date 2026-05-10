@@ -4,6 +4,8 @@
 #include "../Screen.h"
 #include "../components/Button.h"
 #include "../components/ImageButton.h"
+// 文件顶部加上
+#include "client/renderer/Textures.h"
 
 class StartMenuScreen: public Screen
 {
@@ -22,6 +24,7 @@ public:
 	bool handleBackEvent(bool isDown);
 	bool isInGameScreen();
 private:
+    TextureId m_titleBackgroundTexture;
 
 	Button bHost;
 	Button bJoin;
