@@ -5,6 +5,8 @@
 #include "../../components/LargeImageButton.h"
 #include "../../components/ImageButton.h"
 #include "../../components/TextBox.h"
+#include "client/renderer/Textures.h"
+
 
 namespace Touch {
 
@@ -23,7 +25,10 @@ public:
 	virtual void mouseClicked(int x, int y, int buttonNum);
 	bool handleBackEvent(bool isDown);
 	bool isInGameScreen();
+
+// 在类的 private 区域加
 private:
+    TextureId m_backgroundTexture;
 	
 	LargeImageButton bHost;
 	LargeImageButton bJoin;
