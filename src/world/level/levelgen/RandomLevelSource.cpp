@@ -86,6 +86,16 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         }
         m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
     }
+	// RandomLevelSource.cpp 构造函数结尾
+if (level) {
+    BiomeSource* biomeSource = level->getBiomeSource();
+    if (biomeSource) {
+        biomeSource->setWorldTransform(
+            m_worldOffsetX, m_worldOffsetZ,
+            m_worldScaleX, m_worldScaleZ
+        );
+    }
+}
 }
 
 RandomLevelSource::~RandomLevelSource() {
@@ -253,12 +263,18 @@ perlinNoise3.getRegion(depthBuffer, (float)xf, 0.0f, (float)zf, 16, 1, 16, sx*2.
     }
 }
 
-// 修改：xt, zt 仍是区块坐标 int64_t（不变），内部世界坐标升级为 double
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
+    // 计算原始的区块世界坐标
     double worldBlockX = xt * 16.0 + m_worldOffsetX;
     double worldBlockZ = zt * 16.0 + m_worldOffsetZ;
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
+    
+    // 【新增】计算变换后的参考坐标，用于群系查询和地物放置
+    double transformedXo = (xo + m_worldOffsetX) * m_worldScaleX;
+    double transformedZo = (zo + m_worldOffsetZ) * m_worldScaleZ;
+    
+    // ... 后续代码
 
     if (!level->hasChunk(xt-1, zt-1) || !level->hasChunk(xt, zt-1) ||
         !level->hasChunk(xt-1, zt) || !level->hasChunk(xt, zt)) {
@@ -272,7 +288,11 @@ unsigned char* blocks = chunk->getBlockData();
     level->isGeneratingTerrain = true;
     HeavyTile::instaFall = true;
 
-    Biome* biome = level->getBiomeSource()->getBiome(xo + 16, zo + 16);
+    // 获取变换后的群系
+Biome* biome = level->getBiomeSource()->getBiome(
+    (int)(transformedXo + 16 * m_worldScaleX), 
+    (int)(transformedZo + 16 * m_worldScaleZ)
+);
     random.setSeed(level->getSeed());
     int xScale = random.nextInt() / 2 * 2 + 1;
     int zScale = random.nextInt() / 2 * 2 + 1;
