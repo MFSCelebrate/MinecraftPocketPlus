@@ -11,6 +11,7 @@
 #include "../components/OptionsItem.h"
 #include "../Gui.h"
 #include "platform/input/Keyboard.h"
+#include "../../../client/renderer/Tesselator.h"   // <--- 新增，避免 Tesselator 不完整类型
 #include <cmath>
 #include <algorithm>
 
@@ -95,25 +96,25 @@ void OptionsScreen::setupPositions() {
 	applyScrollLimits();
 }
 
-void OptionsScreen::render(int xm, int ym, float a) {
-    // === 绘制自定义背景图（自适应全屏） ===
+void OptionsScreen::render(int xm, int ym, float a)
+{
+    // === 绘制自定义背景（或回退默认） ===
     if (Textures::isTextureIdValid(m_backgroundTexture)) {
         minecraft->textures->bind(m_backgroundTexture);
         glColor4f(1, 1, 1, 1);
         Tesselator& t = Tesselator::instance;
         t.begin();
-        // 直接铺满整个 GUI 坐标区域（0,0）->（width, height）
         t.vertexUV(0,            (float)height, 0, 0, 1);
         t.vertexUV((float)width, (float)height, 0, 1, 1);
         t.vertexUV((float)width, 0,             0, 1, 0);
         t.vertexUV(0,            0,             0, 0, 0);
         t.draw();
     } else {
-        renderBackground(); // 图片丢了就回退默认背景
+        Screen::renderBackground();   // 图片载入失败就用原版背景
     }
 
-    // 后面原有的滚动区域和控件渲染保持不变
-    // ...
+    // ---- 后面所有滚动区域和控件渲染保持不变 ----
+    // ... 原来 render 函数里的代码 ...
 
 	// 临时隐藏 textBoxes，避免基类重复渲染
 	std::vector<TextBox*> savedTextBoxes;
