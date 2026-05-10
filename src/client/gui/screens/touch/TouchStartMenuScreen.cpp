@@ -55,6 +55,7 @@ StartMenuScreen::~StartMenuScreen()
 
 void StartMenuScreen::init()
 {
+	m_backgroundTexture = minecraft->textures->loadTexture("gui/TitleBG.png");
 	buttons.push_back(&bHost);
 	buttons.push_back(&bJoin);
 	buttons.push_back(&bOptions);
@@ -97,7 +98,7 @@ void StartMenuScreen::init()
             version = versionString + " (Demo)";
         #endif
 	#else
-		version = versionString;
+		version = "v0.6.2 alpha";  // 随便写
 	#endif
     
     #ifdef APPLE_DEMO_PROMOTION
@@ -164,7 +165,19 @@ bool StartMenuScreen::isInGameScreen() { return false; }
 
 void StartMenuScreen::render( int xm, int ym, float a )
 {
-	renderBackground();
+	if (Textures::isTextureIdValid(m_backgroundTexture)) {
+        minecraft->textures->bind(m_backgroundTexture);
+        glColor4f(1, 1, 1, 1);
+        Tesselator& t = Tesselator::instance;
+        t.begin();
+        t.vertexUV(0,            (float)height, 0, 0, 1);
+        t.vertexUV((float)width, (float)height, 0, 1, 1);
+        t.vertexUV((float)width, 0,             0, 1, 0);
+        t.vertexUV(0,            0,             0, 0, 0);
+        t.draw();
+    } else {
+        renderBackground();
+    }
 
 	// Show current username in the top-left corner
 	drawString(font, username, 2, 2, 0xffffffff);
@@ -202,7 +215,7 @@ void StartMenuScreen::render( int xm, int ym, float a )
 		glColor4f2(1, 1, 1, 1);
 		if (Textures::isTextureIdValid(minecraft->textures->loadAndBindTexture("gui/logo/github.png")))
 			blit(2, height - 10, 0, 0, 8, 8, 256, 256);
-		drawString(font, "Kolyah35/minecraft-pe-0.6.1", 12, height - 10, 0xffcccccc);
+		drawString(font, "MFSCelebrate/BiliBiliMobile or Github", 12, height - 10, 0xffcccccc);
 		//patch->draw(t, 0, 20);
 	}
 	Screen::render(xm, ym, a);
@@ -212,11 +225,11 @@ void StartMenuScreen::render( int xm, int ym, float a )
 
 void StartMenuScreen::mouseClicked(int x, int y, int buttonNum) {
 	const int logoX = 2;
-	const int logoW = 8 + 2 + font->width("Kolyah35/minecraft-pe-0.6.1");
+	const int logoW = 8 + 2 + font->width("MFSCelebrate/BiliBiliMobile or Github");
 	const int logoY = height - 10;
 	const int logoH = 10;
 	if (x >= logoX && x <= logoX + logoW && y >= logoY && y <= logoY + logoH)
-		minecraft->platform()->openURL("https://gitea.sffempire.ru/Kolyah35/minecraft-pe-0.6.1");
+		minecraft->platform()->openURL("https://github.com/MFSCelebrate/MCReference_NoiseFarlands");
 	else
 		Screen::mouseClicked(x, y, buttonNum);
 }
