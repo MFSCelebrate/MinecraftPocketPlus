@@ -18,7 +18,8 @@
 OptionsScreen::OptionsScreen()
 	: btnClose(NULL), bHeader(NULL), btnCredits(NULL), selectedCategory(0),
 	  scrollOffset(0.0f), maxScrollOffset(0.0f), scrollVelocity(0.0f),
-	  lastMouseY(0.0f), isDragging(false), isScrollbarVisible(false)
+	  lastMouseY(0.0f), isDragging(false), isScrollbarVisible(false),
+m_backgroundTexture(Textures::InvalidId)   // <--- 加上这行
 { }
 
 OptionsScreen::~OptionsScreen() {
