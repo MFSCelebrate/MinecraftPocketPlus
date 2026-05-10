@@ -44,6 +44,12 @@ public:
 	virtual float* getTemperatureBlock(/*float* temperatures, */ int x, int z, int w, int h);
     //virtual float* getDownfallBlock(/*float* downfalls, */int x, int z, int w, int h);
 	virtual Biome** getBiomeBlock(int x, int z, int w, int h);
+void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
+        m_offsetX = offsetX;
+        m_offsetZ = offsetZ;
+        m_scaleX = scaleX;
+        m_scaleZ = scaleZ;
+	}
 
 private:
 	virtual Biome** getBiomeBlock(Biome** biomes, int x, int z, int w, int h);
@@ -52,13 +58,6 @@ private:
 	PerlinSimplexNoise* temperatureMap;
 	PerlinSimplexNoise* downfallMap;
 	PerlinSimplexNoise* noiseMap;
-
-    void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
-        m_offsetX = offsetX;
-        m_offsetZ = offsetZ;
-        m_scaleX = scaleX;
-        m_scaleZ = scaleZ;
-	}
 
 	Random rndTemperature;
 	Random rndDownfall;
