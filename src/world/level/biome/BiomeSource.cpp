@@ -81,21 +81,20 @@ Biome** BiomeSource::getBiomeBlock( int x, int z, int w, int h )
     return biomes;
 }
 
-Biome** BiomeSource::getBiomeBlock( Biome** biomes__, int x, int z, int w, int h )
-{
-	//for (int i = 0; i < w*h; ++i) biomes__[i] = Biome::tundra;
-	//const int size = w * h;
-	//if (lenBiomes < size) {
-	//	//printf("changing to size: %d (was %d). %d, %d (%d, %d)\n", size, lenBiomes, x, z, w, h);
-	//	if (biomes) delete[] biomes;
-	//	biomes = new Biome*[size];
-	//	lenBiomes = size;
-	//}
-
-	temperatures = temperatureMap->getRegion(temperatures, x, z, w, w, tempScale, tempScale, 0.25f);
-	downfalls = downfallMap->getRegion(downfalls, x, z, w, w, downfallScale, downfallScale, 0.3333f);
-	noises = noiseMap->getRegion(noises, x, z, w, w, noiseScale, noiseScale, 0.588f);
-
+// BiomeSource.cpp getBiomeBlock 函数开头
+Biome** BiomeSource::getBiomeBlock(Biome** biomes__, int x, int z, int w, int h) {
+    // 关键：对输入坐标应用世界变换
+    double tx = (x + m_offsetX) * m_scaleX;
+    double tz = (z + m_offsetZ) * m_scaleZ;
+    
+    // 采样时使用变换后的坐标
+    temperatures = temperatureMap->getRegion(temperatures, (float)tx, (float)z, 
+        w, w, tempScale, tempScale, 0.25f);
+    downfalls = downfallMap->getRegion(downfalls, (float)tx, (float)z, 
+        w, w, downfallScale, downfallScale, 0.3333f);
+    noises = noiseMap->getRegion(noises, (float)tx, (float)z, 
+        w, w, noiseScale, noiseScale, 0.588f);
+    // 后续逻辑不变...
 	int pp = 0;
 	for (int yy = 0; yy < w; yy++) {
 		for (int xx = 0; xx < h; xx++) {
