@@ -29,6 +29,7 @@ OptionsScreen::~OptionsScreen() {
 }
 
 void OptionsScreen::init() {
+	m_backgroundTexture = minecraft->textures->loadTexture("gui/setting_background.png");
 	bHeader = new Touch::THeader(0, "Options");
 	btnClose = new ImageButton(1, "");
 	ImageDef def;
@@ -95,7 +96,24 @@ void OptionsScreen::setupPositions() {
 }
 
 void OptionsScreen::render(int xm, int ym, float a) {
-	renderBackground();
+    // === 绘制自定义背景图（自适应全屏） ===
+    if (Textures::isTextureIdValid(m_backgroundTexture)) {
+        minecraft->textures->bind(m_backgroundTexture);
+        glColor4f(1, 1, 1, 1);
+        Tesselator& t = Tesselator::instance;
+        t.begin();
+        // 直接铺满整个 GUI 坐标区域（0,0）->（width, height）
+        t.vertexUV(0,            (float)height, 0, 0, 1);
+        t.vertexUV((float)width, (float)height, 0, 1, 1);
+        t.vertexUV((float)width, 0,             0, 1, 0);
+        t.vertexUV(0,            0,             0, 0, 0);
+        t.draw();
+    } else {
+        renderBackground(); // 图片丢了就回退默认背景
+    }
+
+    // 后面原有的滚动区域和控件渲染保持不变
+    // ...
 
 	// 临时隐藏 textBoxes，避免基类重复渲染
 	std::vector<TextBox*> savedTextBoxes;
