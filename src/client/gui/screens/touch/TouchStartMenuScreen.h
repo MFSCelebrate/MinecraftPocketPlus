@@ -28,7 +28,7 @@ public:
 
 // 在类的 private 区域加
 private:
-    TextureId m_backgroundTexture;
+    
 	
 	LargeImageButton bHost;
 	LargeImageButton bJoin;
