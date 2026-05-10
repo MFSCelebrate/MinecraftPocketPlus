@@ -4,6 +4,7 @@
 #include "../Screen.h"
 #include "../components/Button.h"
 #include "../components/OptionsGroup.h"
+#include "client/renderer/Textures.h"   // <--- 新增，提供 TextureId 和 Textures 完整声明
 
 class ImageButton;
 class OptionsPane;
