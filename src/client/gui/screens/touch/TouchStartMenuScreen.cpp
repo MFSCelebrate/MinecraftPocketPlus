@@ -30,7 +30,8 @@ StartMenuScreen::StartMenuScreen()
 :	bHost(    2, "Start Game"),
 	bJoin(    3, "Join Game"),
 	bOptions( 4, "Options"),
-	bQuit(    5, "")
+	bQuit(    5, ""),
+    m_backgroundTexture(Textures::InvalidId)   // <--- 加上这行
 {
 	ImageDef def;
 	bJoin.width = 75;
