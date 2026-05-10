@@ -29,8 +29,9 @@ void OptionsGroup::setupPositions() {
 void OptionsGroup::render( Minecraft* minecraft, int xm, int ym ) {
 	float padX = 10.0f;
 	float padY = 5.0f;
-	
-	minecraft->font->draw(label, (float)x + padX, (float)y + padY, 0xffffffff, false);
+
+// 改为黑色
+minecraft->font->draw(label, (float)x + padX, (float)y + padY, 0xff000000, false);
 
 	super::render(minecraft, xm, ym);
 }
