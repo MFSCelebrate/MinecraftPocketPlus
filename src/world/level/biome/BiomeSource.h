@@ -23,6 +23,11 @@ public:
     float* downfalls; 
     float* noises;
 
+    double m_offsetX = 0.0;
+    double m_offsetZ = 0.0;
+    float m_scaleX = 1.0f;
+    float m_scaleZ = 1.0f;
+
 	int lenTemperatures;
 	int lenDownfalls;
 	int lenNoises;
@@ -47,6 +52,13 @@ private:
 	PerlinSimplexNoise* temperatureMap;
 	PerlinSimplexNoise* downfallMap;
 	PerlinSimplexNoise* noiseMap;
+
+    void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
+        m_offsetX = offsetX;
+        m_offsetZ = offsetZ;
+        m_scaleX = scaleX;
+        m_scaleZ = scaleZ;
+	}
 
 	Random rndTemperature;
 	Random rndDownfall;
