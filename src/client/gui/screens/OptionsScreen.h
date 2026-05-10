@@ -34,7 +34,9 @@ public:
 	virtual void tick() override;
 	virtual void lostFocus() override;
 
+// 在类定义里加个成员，避免每帧重复加载
 private:
+    TextureId m_backgroundTexture;
 	Touch::THeader* bHeader;
 	ImageButton* btnClose;
 	Button* btnCredits;
