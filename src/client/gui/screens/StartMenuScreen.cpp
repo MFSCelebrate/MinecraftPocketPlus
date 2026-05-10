@@ -36,6 +36,7 @@ StartMenuScreen::~StartMenuScreen()
 
 void StartMenuScreen::init()
 {
+	m_titleBackgroundTexture = minecraft->textures->loadTexture("gui/TitleBG.png");
 	bJoin.active = bHost.active = bOptions.active = true;
 
 	if (minecraft->options.getStringValue(OPTIONS_USERNAME).empty()) {
@@ -87,7 +88,7 @@ void StartMenuScreen::init()
 		#ifdef RPI
 			version = "v0.1.1 alpha";//(MCPE " + versionString + " compatible)";
 		#else
-			version = versionString;
+			version = "v0.6.2 alpha";  // 随便写
 		#endif
 	#endif
 }
@@ -139,12 +140,27 @@ void StartMenuScreen::buttonClicked(Button* button) {
 
 bool StartMenuScreen::isInGameScreen() { return false; }
 
-void StartMenuScreen::render( int xm, int ym, float a )
+void StartMenuScreen::render(int xm, int ym, float a)
 {
-	renderBackground();
+    // === 绘制自定义背景 ===
+    if (Textures::isTextureIdValid(m_titleBackgroundTexture)) {
+        minecraft->textures->bind(m_titleBackgroundTexture);
+        glColor4f(1, 1, 1, 1);
+        Tesselator& t = Tesselator::instance;
+        t.begin();
+        t.vertexUV(0,            (float)height, 0, 0, 1);
+        t.vertexUV((float)width, (float)height, 0, 1, 1);
+        t.vertexUV((float)width, 0,             0, 1, 0);
+        t.vertexUV(0,            0,             0, 0, 0);
+        t.draw();
+    } else {
+        Screen::renderBackground();   // 没图就回退默认
+    }
 
+    // 后面原有的标题、按钮、版权信息渲染保持不变
+    // ..
 	// Show current username in the top-left corner
-	drawString(font, username, 2, 2, 0xffffffff);
+	drawString(font, username, 2, 2, 0xff000000);
 
 #if defined(RPI)
 	TextureId id = minecraft->textures->loadTexture("gui/pi_title.png");
@@ -179,8 +195,8 @@ void StartMenuScreen::render( int xm, int ym, float a )
 		blit(0, height - 12, 0, 0, 43, 12, 256, 72+72);
 #endif
 
-	drawString(font, version, width - font->width(version) - 2, height - 10, 0xffcccccc);//0x666666);
-	drawString(font, copyright, 2, height - 20, 0xffffff);
+	drawString(font, version, width - font->width(version) - 2, height - 10, 0xff000000);//0x666666);
+	drawString(font, copyright, 2, height - 20, 0xff000000);
 	glEnable2(GL_BLEND);
 	glBlendFunc2(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glColor4f2(1, 1, 1, 1);
@@ -192,7 +208,7 @@ void StartMenuScreen::render( int xm, int ym, float a )
 			Gui::drawColoredString(font, txt, 12, height - 10, 255);
 			// underline link
 			float y0 = height - 10 + font->lineHeight - 1;
-			this->fill(12, (int)y0, 12 + (int)wtxt, (int)(y0 + 1), 0xffffffff);
+			this->fill(12, (int)y0, 12 + (int)wtxt, (int)(y0 + 1), 0xff000000);
     }
 
 	
