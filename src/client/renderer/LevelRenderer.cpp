@@ -86,7 +86,6 @@ cullCacheValid(false), cullSkipTimer(0),
 	LOGI("numBuffers: %d\n", numListsOrBuffers);
 	//for (int i = 0; i < numListsOrBuffers; ++i) printf("bufId %d: %d\t", i, chunkBuffers[i]);
 
-	glGenBuffers2(1, &skyBuffer);
 	generateSky();
 #else
 	int maxChunksWidth = 1024 / CHUNK_SIZE;
@@ -104,7 +103,6 @@ LevelRenderer::~LevelRenderer()
 
 #ifdef OPENGL_ES
 	glDeleteBuffers(numListsOrBuffers, chunkBuffers);
-	glDeleteBuffers(1, &skyBuffer);
 	delete[] chunkBuffers;
 #else
 	glDeleteLists(numListsOrBuffers, chunkLists);
