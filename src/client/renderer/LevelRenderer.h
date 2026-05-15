@@ -3,6 +3,7 @@
 
 #include "../../world/level/LevelListener.h"
 #include "../../world/phys/Vec3.h"
+#include "../renderer/RenderChunk.h"
 #include "RenderList.h"
 #include "gles.h"
 #include <vector>
