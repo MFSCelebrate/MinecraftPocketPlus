@@ -772,7 +772,7 @@ void Gui::renderDebugInfo() {
 
     // 获取世界偏移 (double) 和缩放 (float)
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
-    double worldScaleX = 1.0f, worldScaleY = 1.0f, worldScaleZ = 1.0f;
+    double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
     RandomLevelSource* rls = nullptr;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -809,8 +809,8 @@ void Gui::renderDebugInfo() {
 double pyo = py * (double)worldScaleY + terrainOffsetY * worldScaleY;
 double pzo = pz * (double)worldScaleZ + terrainOffsetZ * worldScaleZ;
 
-    int bx = (int)floor(px), by = (int)floor(py), bz = (int)floor(pz);
-    int cx = bx >> 4, cz = bz >> 4;
+    int64_t bx = (int64_t)floor64(px), by = (int64_t)floor64(py), bz = (int64_t)floor64(pz);
+    int64_t cx = bx >> 4, cz = bz >> 4;
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
