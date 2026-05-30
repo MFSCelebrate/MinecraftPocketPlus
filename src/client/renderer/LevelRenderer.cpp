@@ -746,7 +746,7 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
         for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
              Chunk* chunk = _renderChunks[i];
              double targetX = (double)chunk->x - xOff2;
-             double targetY = -yOff2;
+             double targetY = 0;
              double targetZ = (double)chunk->z - zOff2;
              glPushMatrix2();
              glTranslatef2((float)targetX, (float)targetY, (float)targetZ);
