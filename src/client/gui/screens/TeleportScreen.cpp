@@ -5,6 +5,9 @@
 #include "../../../platform/input/Keyboard.h"
 #include "../../../world/level/Level.h"
 #include <sstream>
+#include <sstream>
+#include <string>
+#include <cstdlib>   // 如果需要 std::stod
 
 TeleportScreen::TeleportScreen(Minecraft* minecraft)
     : minecraft(minecraft), textBox(nullptr) {}
@@ -52,22 +55,55 @@ void TeleportScreen::teleport() {
     std::string input = textBox->text;
     if (input.empty()) return;
 
+    // 按空格分割
     std::stringstream ss(input);
-    double x, y, z;
-    if (ss >> x >> y >> z) {
-        LocalPlayer* player = minecraft->player;
-        Level* level = minecraft->level;
-        if (player && level) {
-            // 获取世界出生点偏移（显示坐标转世界坐标）
-            Pos spawnPos = level->getSharedSpawnPos();
-            double worldX = x + spawnPos.x;
-            double worldY = y + spawnPos.y;
-            double worldZ = z + spawnPos.z;
-            player->setPos(worldX, worldY, worldZ);
-            // 强制同步旧位置，避免插值错误
-            player->xOld = player->x;
-            player->yOld = player->y;
-            player->zOld = player->z;
-        }
+    std::vector<std::string> parts;
+    std::string part;
+    while (ss >> part) {
+        parts.push_back(part);
     }
+    if (parts.size() < 3) return;  // 至少需要 X Y Z
+
+    LocalPlayer* player = minecraft->player;
+    if (!player) return;
+
+    double x = player->x;
+    double y = player->y;
+    double z = player->z;
+
+    // 解析 X
+    if (parts[0][0] == '~') {
+        double off = 0.0;
+        if (parts[0].length() > 1)
+            off = std::stod(parts[0].substr(1));
+        x += off;
+    } else {
+        x = std::stod(parts[0]);
+    }
+
+    // 解析 Y
+    if (parts[1][0] == '~') {
+        double off = 0.0;
+        if (parts[1].length() > 1)
+            off = std::stod(parts[1].substr(1));
+        y += off;
+    } else {
+        y = std::stod(parts[1]);
+    }
+
+    // 解析 Z
+    if (parts[2][0] == '~') {
+        double off = 0.0;
+        if (parts[2].length() > 1)
+            off = std::stod(parts[2].substr(1));
+        z += off;
+    } else {
+        z = std::stod(parts[2]);
+    }
+
+    // 传送玩家
+    player->setPos(x, y, z);
+    player->xOld = player->x;
+    player->yOld = player->y;
+    player->zOld = player->z;
 }
