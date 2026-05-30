@@ -78,7 +78,6 @@ public:
 	{
 		_area.deleteMe = false;
 		setSensitivity(sensitivity);
-		//((ITurnInput*)this)->onConfigChanged(createConfig(minecraft));
 		onConfigChanged(createConfig(minecraft));
 
 		_lastBuildDownTime = _startTurnTime = getTimeS();
@@ -88,10 +87,13 @@ public:
 		_sensitivity = sensitivity;
 	}
 
-void excludeArea(IArea* area) { _area.exclude(area); }
+	// 供外部排除按钮区域
+	void addExcludeArea(IArea* area) {
+		_area.exclude(area);
+	}
 
 	virtual void onConfigChanged(const Config& c) {
-		if (false && _options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA)) {
+		if (false && _options->isJoyTouchArea) {
 			int touchWidth = c.width - (int)inventoryArea._x1;
 			if (touchWidth > (int)c.minecraft->pixelCalc.millimetersToPixels(60))
 				touchWidth = (int)c.minecraft->pixelCalc.millimetersToPixels(60);
@@ -113,10 +115,10 @@ void excludeArea(IArea* area) { _area.exclude(area); }
 			screenArea = RectangleArea(0, 0, (float)c.width, (float)c.height);
 			// Expand the move area a bit
             const float border = 10;
-			const float widen = (moveArea._x1-moveArea._x0) * 0.05f + border; // ~5% wider
+			const float widen = (moveArea._x1-moveArea._x0) * 0.05f + border;
 			moveArea._x0 -= widen;
 			moveArea._x1 += widen;
-			const float heighten = (moveArea._y1-moveArea._y0) * 0.05f + border; // ~5% taller
+			const float heighten = (moveArea._y1-moveArea._y0) * 0.05f + border;
 			moveArea._y0 -= heighten;
 			moveArea._y1 += heighten;
             
@@ -125,17 +127,13 @@ void excludeArea(IArea* area) { _area.exclude(area); }
             pauseArea._y0 -= border;
             pauseArea._y1 += border;
 
-			//LOGI("move: %f, %f, %f, %f\n", moveArea._x0, moveArea._y0, moveArea._x1, moveArea._y1);
-
 			_area.clear();
 			_area.include(&screenArea);
 			_area.exclude(&moveArea);
 			_area.exclude(&inventoryArea);
 #ifdef __APPLE__
             _area.exclude(&pauseArea);
-#endif /*__APPLE__*/
-			//LOGI("Movearea: %f %f %f% f\n", moveArea._x0, moveArea._x1, moveArea._y0, moveArea._y1);
-
+#endif
 			_model.clear();
 			_model.addArea(AREA_TURN, &_area);
 		}
@@ -152,72 +150,100 @@ void excludeArea(IArea* area) { _area.exclude(area); }
 	//
 	// Implementation for the ITurnInput part
 	//
-	TurnDelta getTurnDelta() override {
-    float dx = 0, dy = 0;
-    float cx = 0, cy = 0;
-    bool isActive = false;
-    bool isInMovement = false;
+	TurnDelta getTurnDelta() {
+		float dx = 0, dy = 0;
+		const float now = getTimeS();
 
-    const int* pointerIds;
-    int pointerCount = Multitouch::getActivePointerIds(&pointerIds);
-    for (int i = 0; i < pointerCount; ++i) {
-        int p = pointerIds[i];
-        int x = Multitouch::getX(p);
-        int y = Multitouch::getY(p);
-        int areaId = _model.getPointerId(x, y, p);
-        if (areaId == AREA_TURN) {
-            isActive = true;
-            cx = (float)x * 0.5f;
-            cy = (float)y * -0.5f;
-            break;
+		float cx = 0;
+		float cy = 0;
+		bool isActive = false;
+
+		const int* pointerIds;
+		bool wasFirstMovement = false;
+		int pointerCount = Multitouch::getActivePointerIds(&pointerIds);
+		for (int i = 0; i < pointerCount; ++i) {
+			int p = pointerIds[i];
+			int x = Multitouch::getX(p);
+			int y = Multitouch::getY(p);
+			int areaId = _model.getPointerId(x, y, p);
+
+			if (areaId == AREA_TURN) {
+				isActive = true;
+				cx = (float)x * 0.5f;
+				cy = (float)y * -0.5f;
+				wasFirstMovement = Multitouch::wasFirstMovement(p);
+				break;
+			}
+		}
+		if (isActive && !wasActive) {
+			_startTurnTime = now;
+			_totalMoveDelta = 0;
+			bool isInMovement = _lastPlayer? getSpeedSquared(_lastPlayer) > 0.01f : false;
+			state = State_Deciding;
+			_canDestroy = !isInMovement;
+			_forceCanUse = false;
+			if (!_canDestroy && (_lastPlayer && _lastPlayer->canUseCarriedItemWhileMoving())) {
+				_forceCanUse = true;
+				_canDestroy = true;
+			}
+			_sentFirstRemove = false;
+		} else if (wasActive && !isActive) {
+			_sentFirstRemove = false;
+			state = State_None;
+		}
+
+		if (MODE_DELTA == mode && (wasActive || isActive)) {
+			const float DeadZone = 0;
+
+			if (!wasActive) {
+				cxO = cx;
+				cyO = cy;
+			}
+			if (isActive) {
+				dx = _sensitivity * linearTransform(cx - cxO, DeadZone);
+				dy = _sensitivity * linearTransform(cy - cyO, DeadZone);
+				
+				float moveDelta = ( Mth::abs(dx) + Mth::abs(dy) );
+
+				if (moveDelta > _maxMovement) {
+					dx = 0;
+					dy = 0;
+					moveDelta = 0;
+				}
+				_totalMoveDelta += moveDelta;
+
+				// 状态机：先判断移动是否超过阈值，再判断长按时间
+				if (state == State_Deciding) {
+					const float since = now - _startTurnTime;
+					if (_totalMoveDelta > MaxBuildMovement) {
+						state = State_Turn;
+					} else if (since >= (RemovalMilliseconds / 1000.0f)) {
+						// 长按不移动 → 破坏
+						state = State_Destroy;
+						_canDestroy = true;
+					}
+				}
+
+				if (wasFirstMovement) {
+					dx = dy = 0;
+				}
+
+				cxO = cx;
+				cyO = cy;
+			}
+		} else {
+            state = State_None;
         }
-    }
 
-    // 修复：使用 moveArea 而不是 _moveArea
-    if (moveArea.isInside(cx, cy)) {
-        isInMovement = true;
-    }
+		updateFeedbackProgressAlpha(now);
 
-    const float now = getTimeS();
-    const float DeadZone = 0;
-
-    if (MODE_DELTA == mode && (wasActive || isActive)) {
-        if (!wasActive) {
-            cxO = cx;
-            cyO = cy;
-            _startTurnTime = now;
-        }
-        if (isActive) {
-            dx = _sensitivity * linearTransform(cx - cxO, DeadZone);
-            dy = _sensitivity * linearTransform(cy - cyO, DeadZone);
-            float moveDelta = (Mth::abs(dx) + Mth::abs(dy));
-            if (moveDelta > _maxMovement) {
-                dx = 0; dy = 0; moveDelta = 0;
-            }
-            _totalMoveDelta += moveDelta;
-
-            if (!_forceCanUse && (_totalMoveDelta > 5.0f || isInMovement) && state != State_Destroy) {
-                state = State_Turn;
-            } else {
-                if (state != State_Destroy) state = State_Deciding;
-                _canDestroy = true;
-            }
-        }
-        cxO = cx;
-        cyO = cy;
-    } else {
-        state = State_None;
-    }
-
-    updateFeedbackProgressAlpha(now);
-    wasActive = isActive;
-    return TurnDelta(dx, -dy);
+		wasActive = isActive;
+		return TurnDelta(dx, -dy);
 	}
 
 	void updateFeedbackProgressAlpha(float now) {
 		const float MinAlphaValue = -0.05f;
 		if (_canDestroy) {
-			// Hack to test out fading in feedback circle
 			const float since = now - _startTurnTime;
 			if (state == State_Deciding) {
 				const float wantedAlpha = since / (0.001f*RemovalMilliseconds);
@@ -228,13 +254,10 @@ void excludeArea(IArea* area) { _area.exclude(area); }
 				} else if (state == State_Turn || state == State_None) {
 					_holder->alpha = calcNewAlpha(_holder->alpha, 0);
 				}
-
 			}
 		} else {
 			_holder->alpha = MinAlphaValue;
 		}
-		//LOGI("state: %d, canDestroy: %d %d\n", state, _canDestroy, _forceCanUse);
-		//LOGI("alpha: %f\n", _holder->alpha);
 	}
 
 	bool isInsideArea(float x, float y) {
@@ -252,63 +275,61 @@ void excludeArea(IArea* area) { _area.exclude(area); }
 	}
 
 	void render(float alpha) {
-		if (_options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA)) {
+		if (_options->isJoyTouchArea) {
 			fill(	(int) (Gui::InvGuiScale * joyTouchArea._x0),
 					(int) (Gui::InvGuiScale * joyTouchArea._y0),
 					(int) (Gui::InvGuiScale * joyTouchArea._x1),
-					(int) (Gui::InvGuiScale * joyTouchArea._y1), 0x40000000);//0x20ffffff);
+					(int) (Gui::InvGuiScale * joyTouchArea._y1), 0x40000000);
 		}
 	}
 
 	//
 	// Implementation for the IBuildInput part
 	//
-	virtual bool tickBuild(Player* player, BuildActionIntention* bai) override {
-    _lastPlayer = player;
+	virtual bool tickBuild(Player* player, BuildActionIntention* bai) {
+		_lastPlayer = player;
 
-    if (state == State_Destroy) {
-        if (!_sentFirstRemove) {
-            *bai = BuildActionIntention((_forceCanUse ? 0 : BuildActionIntention::BAI_FIRSTREMOVE) | BuildActionIntention::BAI_INTERACT);
-            _sentFirstRemove = true;
-        } else {
-            *bai = BuildActionIntention((_forceCanUse ? 0 : BuildActionIntention::BAI_REMOVE) | BuildActionIntention::BAI_INTERACT);
-        }
-        // 持续破坏时重置移动累积，避免因移动而中断破坏
-        _totalMoveDelta = 0;
-        return true;
-    }
+		if (state == State_Destroy) {
+			if (!_sentFirstRemove) {
+				*bai = BuildActionIntention((_forceCanUse?0:BuildActionIntention::BAI_FIRSTREMOVE) | BuildActionIntention::BAI_INTERACT);
+				_sentFirstRemove = true;
+			} else {
+				*bai = BuildActionIntention((_forceCanUse?0:BuildActionIntention::BAI_REMOVE) | BuildActionIntention::BAI_INTERACT);
+			}
+			return true;
+		}
 
-    Multitouch::rewind();
-    const float now = getTimeS();
-    allowPicking = false;
-    bool handled = false;
+		Multitouch::rewind();
+		const float now = getTimeS();
+		allowPicking = false;
+		bool handled = false;
 
-    while (Multitouch::next()) {
-        MouseAction& m = Multitouch::getEvent();
-        if (m.action == MouseAction::ACTION_MOVE) continue;
+		while (Multitouch::next()) {
+			MouseAction& m = Multitouch::getEvent();
+			if (m.action == MouseAction::ACTION_MOVE) continue;
 
-        int areaId = _model.getPointerId(m.x, m.y, m.pointerId);
-        if (areaId != AREA_TURN) continue;
+			int areaId = _model.getPointerId(m.x, m.y, m.pointerId);
+			if (areaId != AREA_TURN) continue;
 
-        allowPicking = true;
+			allowPicking = true;
 
-        const float since = now - _lastBuildDownTime;
-        if (m.data == MouseAction::DATA_UP) {
-            if (state == State_Deciding && since < 0.25f) {
-                // 短按：建造/攻击
-                *bai = BuildActionIntention(BuildActionIntention::BAI_BUILD | BuildActionIntention::BAI_ATTACK);
-                handled = true;
-            }
-            state = State_None;
-        } else if (m.data == MouseAction::DATA_DOWN) {
-            _lastBuildDownTime = now;
-            _buildMovement = 0;
-            state = State_Deciding;
-            // 重置移动累积，避免误判
-            _totalMoveDelta = 0;
-        }
-    }
-    return handled;
+			if (m.data == MouseAction::DATA_UP && !handled) {
+				// 抬起手指：如果移动距离很小，则放置方块
+				if (_totalMoveDelta <= MaxBuildMovement) {
+					*bai = BuildActionIntention(BuildActionIntention::BAI_BUILD | BuildActionIntention::BAI_ATTACK);
+					handled = true;
+				}
+				// 重置状态，为下次交互准备
+				state = State_None;
+				_sentFirstRemove = false;
+				_canDestroy = false;
+			} else if (m.data == MouseAction::DATA_DOWN) {
+				_lastBuildDownTime = now;
+				_buildMovement = 0;
+				state = State_Deciding;
+			}
+		}
+		return handled;
 	}
 
 	bool allowPicking;
@@ -355,18 +376,15 @@ private:
 	static const int State_Destroy = 3;
 	static const int State_Build = 4; // Will never happen
 
-	static const int MaxBuildMovement = 20;
-	static const int RemovalMilliseconds = 400;
+	// 优化后的参数：原版手感
+	static const int MaxBuildMovement = 6;
+	static const int RemovalMilliseconds = 300;
 
 	static const int AREA_TURN = 100;
 	Options* _options;
 };
 
 class Minecraft;
-
-#if defined(_MSC_VER)
-	#pragma warning( disable : 4355 ) // 'this' pointer in initialization list which is perfectly legal
-#endif
 
 class TouchInputHolder: public IInputHolder
 {
@@ -382,35 +400,31 @@ public:
 	}
 
 	virtual void onConfigChanged(const Config& c) override {
-    _move.onConfigChanged(c);
-    _turnBuild.moveArea = _move.getRectangleArea();
-    _turnBuild.pauseArea = _move.getPauseRectangleArea();
-    _turnBuild.inventoryArea = _mc->gui.getRectangleArea( _mc->options.getBooleanValue(OPTIONS_IS_LEFT_HANDED)? 1 : -1 );
-    _turnBuild.setSensitivity(c.options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA)? 1.8f : 1.0f);
+		_move.onConfigChanged(c);
+		_turnBuild.moveArea = _move.getRectangleArea();
+#ifdef __APPLE__
+		_turnBuild.pauseArea = _move.getPauseRectangleArea();
+#endif
+		_turnBuild.inventoryArea = _mc->gui.getRectangleArea( _mc->options.isLeftHanded ? 1 : -1 );
 
-    // 构建跳跃/飞行组合区域，用于从 _turnBuild 中排除
-    RectangleArea* jumpArea = new RectangleArea(
-        _move.aJump->_x0, _move.aJump->_y0,
-        _move.aJump->_x1, _move.aJump->_y1);
-    if (_move.aFlyUp) {
-        jumpArea->_x0 = Mth::Min(jumpArea->_x0, _move.aFlyUp->_x0);
-        jumpArea->_y0 = Mth::Min(jumpArea->_y0, _move.aFlyUp->_y0);
-        jumpArea->_x1 = Mth::Max(jumpArea->_x1, _move.aFlyUp->_x1);
-        jumpArea->_y1 = Mth::Max(jumpArea->_y1, _move.aFlyUp->_y1);
-    }
-    if (_move.aFlyDown) {
-        jumpArea->_x0 = Mth::Min(jumpArea->_x0, _move.aFlyDown->_x0);
-        jumpArea->_y0 = Mth::Min(jumpArea->_y0, _move.aFlyDown->_y0);
-        jumpArea->_x1 = Mth::Max(jumpArea->_x1, _move.aFlyDown->_x1);
-        jumpArea->_y1 = Mth::Max(jumpArea->_y1, _move.aFlyDown->_y1);
-    }
-    _turnBuild.excludeArea(jumpArea);
+		// 更新按钮排除区域（防止穿透放置/破坏）
+		_jumpExclude = _move.getJumpRectangleArea();
+		_flyUpExclude = _move.getFlyUpRectangleArea();
+		_flyDownExclude = _move.getFlyDownRectangleArea();
+		_chatExclude = _move.getChatRectangleArea();
+		_pauseExclude = _move.getPauseRectangleArea();
 
-    // 确保飞行按钮区域不被排除
-    ((ITurnInput*)&_turnBuild)->onConfigChanged(c);
+		_turnBuild.addExcludeArea(&_jumpExclude);
+		_turnBuild.addExcludeArea(&_flyUpExclude);
+		_turnBuild.addExcludeArea(&_flyDownExclude);
+		_turnBuild.addExcludeArea(&_chatExclude);
+		_turnBuild.addExcludeArea(&_pauseExclude);
+
+		_turnBuild.setSensitivity(c.options->isJoyTouchArea ? 1.8f : 1.0f);
+		((ITurnInput*)&_turnBuild)->onConfigChanged(c);
 	}
 
-	virtual bool allowPicking() {
+	virtual bool allowPicking() override {
 		const int* pointerIds;
 		int pointerCount = Multitouch::getActivePointerIds(&pointerIds);
 		for (int i = 0; i < pointerCount; ++i) {
@@ -424,26 +438,30 @@ public:
 				return true;
 			}
 		}
-
 		return false;
-		// return _turnBuild.allowPicking;
 	}
 
-	virtual void render(float alpha) {
+	virtual void render(float alpha) override {
 		_turnBuild.render(alpha);
 	}
 
-	virtual IMoveInput*		getMoveInput()  { return &_move; }
-	virtual ITurnInput*		getTurnInput()  { return &_turnBuild; }
-	virtual IBuildInput*	getBuildInput() { return &_turnBuild; }
+	virtual IMoveInput*		getMoveInput()  override { return &_move; }
+	virtual ITurnInput*		getTurnInput()  override { return &_turnBuild; }
+	virtual IBuildInput*	getBuildInput() override { return &_turnBuild; }
 
 private:
 	TouchscreenInput_TestFps _move;
 	UnifiedTurnBuild _turnBuild;
-
 	Minecraft* _mc;
 
-	static const int MovementLimit = 200; // per update
+	// 存储排除区域的副本，保证指针生命周期
+	RectangleArea _jumpExclude;
+	RectangleArea _flyUpExclude;
+	RectangleArea _flyDownExclude;
+	RectangleArea _chatExclude;
+	RectangleArea _pauseExclude;
+
+	static const int MovementLimit = 200;
 };
 
 #endif /*NET_MINECRAFT_CLIENT_PLAYER_INPUT_TOUCHSCREEN_TouchInputHolder_H__*/
