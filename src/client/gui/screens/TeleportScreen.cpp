@@ -9,6 +9,7 @@
 #include <string>
 #include <cstdlib>   // 如果需要 std::stod
 
+
 TeleportScreen::TeleportScreen(Minecraft* minecraft)
     : minecraft(minecraft), textBox(nullptr) {}
 
@@ -71,35 +72,27 @@ void TeleportScreen::teleport() {
     double y = player->y;
     double z = player->z;
 
-    // 解析 X
-    if (parts[0][0] == '~') {
-        double off = 0.0;
-        if (parts[0].length() > 1)
-            off = std::stod(parts[0].substr(1));
-        x += off;
-    } else {
-        x = std::stod(parts[0]);
-    }
+    // 辅助 lambda：解析单个坐标，支持 '~' 前缀
+    auto parseCoord = [](const std::string& s, double current) -> double {
+        if (s.empty()) return current;
+        if (s[0] == '~') {
+            if (s.length() == 1) return current;          // 单独的 "~"
+            const char* numStr = s.c_str() + 1;           // 跳过 '~'
+            char* endptr;
+            double offset = strtod(numStr, &endptr);
+            if (endptr == numStr) offset = 0.0;            // 无效数字当作 0
+            return current + offset;
+        } else {
+            char* endptr;
+            double absolute = strtod(s.c_str(), &endptr);
+            if (endptr == s.c_str()) return current;      // 解析失败，保持原值
+            return absolute;
+        }
+    };
 
-    // 解析 Y
-    if (parts[1][0] == '~') {
-        double off = 0.0;
-        if (parts[1].length() > 1)
-            off = std::stod(parts[1].substr(1));
-        y += off;
-    } else {
-        y = std::stod(parts[1]);
-    }
-
-    // 解析 Z
-    if (parts[2][0] == '~') {
-        double off = 0.0;
-        if (parts[2].length() > 1)
-            off = std::stod(parts[2].substr(1));
-        z += off;
-    } else {
-        z = std::stod(parts[2]);
-    }
+    x = parseCoord(parts[0], x);
+    y = parseCoord(parts[1], y);
+    z = parseCoord(parts[2], z);
 
     // 传送玩家
     player->setPos(x, y, z);
