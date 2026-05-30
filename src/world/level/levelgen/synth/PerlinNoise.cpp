@@ -29,30 +29,6 @@ PerlinNoise::PerlinNoise( Random* random, int levels )
 	init(levels);
 }
 
-double PerlinNoise::getValue( double x, double y ) const {
-	double value = 0;
-	double pow = 1;
-
-	for (int i = 0; i < levels; i++) {
-		value += noiseLevels[i]->getValue(x * pow, y * pow) / pow;
-		pow /= 2;
-	}
-
-	return value;
-}
-
-double PerlinNoise::getValue( double x, double y, double z ) const {
-	double value = 0;
-	double pow = 1;
-
-	for (int i = 0; i < levels; i++) {
-		value += noiseLevels[i]->getValue(x * pow, y * pow, z * pow) / pow;
-		pow /= 2;
-	}
-
-	return value;
-}
-
 double PerlinNoise::getValue(double x, double y, double z) const {
     double value = 0;
     double pow = 1;
