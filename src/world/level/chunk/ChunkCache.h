@@ -28,14 +28,14 @@ public:
     }
 
     ~ChunkCache() {
-        delete source;
-        delete emptyChunk;
-        for (auto& pair : chunks) {
-            if (pair.second) {
-                pair.second->deleteBlockData();
-                delete pair.second;
-            }
+    delete source;
+    // 遍历所有缓存的区块，但只删除非 emptyChunk 的
+    for (auto& pair : chunks) {
+        if (pair.second && pair.second != emptyChunk) {
+            pair.second->deleteBlockData();
+            delete pair.second;
         }
+    }
     }
 
     bool fits(int64_t x, int64_t z) { return true; }
