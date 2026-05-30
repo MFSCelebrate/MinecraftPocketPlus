@@ -1252,7 +1252,9 @@ void LevelRenderer::renderSky(float a){
     // ========== 日出/日落光晕 ==========
     renderSunriseSunset(a);
 
-    // ========== 太阳 / 月亮 / 星星 ==========
+    // ==================== renderSky 中的星星部分 ====================
+
+    // ========== 太阳 / 月亮 ==========
     glEnable(GL_TEXTURE_2D);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glPushMatrix();
@@ -1264,33 +1266,37 @@ void LevelRenderer::renderSky(float a){
     renderSun(a);
     renderMoon(a);
 
-    // 🧊 惰性初始化 —— 首次渲染星星，此时 GL 上下文保证就绪
+    // 🧊 惰性初始化星星
     ensureStarsGenerated();
 
     float starBr = level->getStarBrightness(a) * rainStrength;
     
-    // 🧊 第一遍：带纹理的星星（在上层天空上叠加）
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(false);
-    if(starBr > 0.0f){
+    if(starBr > 0.0f && m_starsChunk.vertexCount > 0){
+        
+        // ========== 第一遍：加法混合，让亮星在天空中叠加辉光 ==========
+        // 🧊 必须禁用纹理！星星 VBO 没有 UV 数据，用纹理采样会取到月亮的黑边
+        glDisable(GL_TEXTURE_2D);
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(false);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE);  // 加法混合：星越亮，叠加越强
+        
         glColor4f(starBr, starBr, starBr, starBr);
-        // ✅ 无需 guard —— ensureStarsGenerated() 已保证 VBO 有效
         drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
+        
+        // ========== 第二遍：标准 alpha 混合，让星星在半透明天空上可见 ==========
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glColor4f(starBr, starBr, starBr, starBr * 0.7f);
+        drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
+        
+        glDepthMask(true);
+        glEnable(GL_DEPTH_TEST);
     }
-    glDepthMask(true);
 
-    // 🧊 第二遍：纯色星星（Beta 1.7.3 经典双层渲染）
-    glDisable(GL_TEXTURE_2D);
-    if(starBr > 0.0f){
-        glColor4f(starBr, starBr, starBr, starBr);
-        drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
-    }
-    
     glColor4f(1, 1, 1, 1);
     glDisable(GL_BLEND);
     glEnable(GL_ALPHA_TEST);
     glEnable(GL_FOG);
-	glEnable(GL_DEPTH_TEST);  // 🧊 必须恢复！天空渲染时禁用了深度测试
+    glEnable(GL_DEPTH_TEST);
     glPopMatrix();
 
     // ========== 下层天空穹顶（地平线以下） ==========
