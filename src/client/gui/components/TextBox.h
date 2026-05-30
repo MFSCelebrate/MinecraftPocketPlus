@@ -29,10 +29,12 @@ public:
 	virtual void keyPressed(Minecraft* minecraft, int key);
 	virtual void charPressed(Minecraft* minecraft, char c);
 	virtual void tick(Minecraft* minecraft);
+
 	
 public:
 	std::string hint;
 	std::string text;
+    bool _justTypedDigit;   // 记录刚输入了数字，用于过滤误映射的退格
 	int id;
 
 	int blinkTicks;
