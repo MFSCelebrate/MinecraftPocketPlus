@@ -809,8 +809,10 @@ void Gui::renderDebugInfo() {
 double pyo = py * (double)worldScaleY + terrainOffsetY * worldScaleY;
 double pzo = pz * (double)worldScaleZ + terrainOffsetZ * worldScaleZ;
 
-    int64_t bx = (int64_t)floor64(px), by = (int64_t)floor64(py), bz = (int64_t)floor64(pz);
-    int64_t cx = bx >> 4, cz = bz >> 4;
+    // ✅ 新代码
+int64_t bx = Mth::floor64(px), by = Mth::floor64(py), bz = Mth::floor64(pz);
+int64_t cx = bx >> 4, cz = bz >> 4;
+// ...
 
     // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
@@ -981,7 +983,10 @@ double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
 
     ln[19][0] = '\0';
     sprintf(ln[20], "--- Other Information ---");
-    sprintf(ln[21], "Block: %d %d %d   Chunk: %d %d", bx, by, bz, cx, cz);
+    sprintf(ln[21], "Block: %lld %lld %lld   Chunk: %lld %lld", 
+        (long long)bx, (long long)by, (long long)bz, 
+        (long long)cx, (long long)cz);
+
     sprintf(ln[22], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
             facing, axis, p->yRot, p->xRot, biomeName);
     sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
