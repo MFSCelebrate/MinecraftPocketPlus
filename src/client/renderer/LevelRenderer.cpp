@@ -699,34 +699,73 @@ int LevelRenderer::renderChunks(int from, int to, int layer, float alpha)
     bool stripeFix = mc->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
 
     if (stripeFix) {
-    for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
-        Chunk* chunk = _renderChunks[i];
+        // ========== 动态原点重置（2^24 = 16,777,216 间隔）==========
+        const int64_t ORIGIN_STEP = 1LL << 24; // 16,777,216
+        // 计算相机所在的原点区块（向下取整到 ORIGIN_STEP 的倍数）
+        int64_t originX = ((int64_t)xOff / ORIGIN_STEP) * ORIGIN_STEP;
+        int64_t originZ = ((int64_t)zOff / ORIGIN_STEP) * ORIGIN_STEP;
+        // 相机相对于原点的偏移（小范围，<= ORIGIN_STEP）
+        double camRelX = xOff - (double)originX;
+        double camRelZ = zOff - (double)originZ;
 
-        // 使用 double 计算绝对平移量，避免累积误差
-        double targetX = (double)chunk->x - xOff;
-        double targetY = -yOff;
-        double targetZ = (double)chunk->z - zOff;
+        for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
+            Chunk* chunk = _renderChunks[i];
 
-        glPushMatrix2();
-        glTranslatef2((float)targetX, (float)targetY, (float)targetZ);
+            // 区块相对于原点的偏移（大数减小数，差值也在小范围）
+            double chunkRelX = (double)chunk->x - (double)originX;
+            double chunkRelZ = (double)chunk->z - (double)originZ;
+            // 最终平移量 = 区块相对偏移 - 相机相对偏移，使相机位于原点
+            double targetX = chunkRelX - camRelX;
+            double targetY = -yOff;   // Y 轴范围小，直接取负值即可
+            double targetZ = chunkRelZ - camRelZ;
+
+            // targetX/targetZ 量级 ≤ ORIGIN_STEP + 视距*16，通常小于 2^25，float 能精确表示
+            glPushMatrix2();
+            glTranslatef2((float)targetX, (float)targetY, (float)targetZ);
 
 #ifdef USE_VBO
-        RenderChunk& rc = chunk->getRenderChunk(layer);
-        if (rc.vertexCount > 0) {
-            renderChunkVBO(rc);
-        }
+            RenderChunk& rc = chunk->getRenderChunk(layer);
+            if (rc.vertexCount > 0) {
+                renderChunkVBO(rc);
+            }
 #else
-        int listId = chunk->getList(layer);
-        if (listId >= 0) {
-            glCallList(listId);
-        }
+            int listId = chunk->getList(layer);
+            if (listId >= 0) {
+                glCallList(listId);
+            }
 #endif
 
-        glPopMatrix2();
+            glPopMatrix2();
+        }
+
+        renderSameAsLast(layer, alpha);
+        return count;
     }
 
-    renderSameAsLast(layer, alpha);
-    return count;
+    // ========== 非条纹修复模式（原有逻辑，通常不会启用）==========
+    // 保留原实现，但一般 stripeFix 为 true，所以这里可简略
+	if (!stripeFix) {
+        double xOff2 = player ? (player->xOld + (player->x - player->xOld) * alpha) : 0.0;
+        double yOff2 = player ? (player->yOld + (player->y - player->yOld) * alpha) : 0.0;
+        double zOff2 = player ? (player->zOld + (player->z - player->zOld) * alpha) : 0.0;
+        for (unsigned int i = 0; i < _renderChunks.size(); ++i) {
+             Chunk* chunk = _renderChunks[i];
+             double targetX = (double)chunk->x - xOff2;
+             double targetY = -yOff2;
+             double targetZ = (double)chunk->z - zOff2;
+             glPushMatrix2();
+             glTranslatef2((float)targetX, (float)targetY, (float)targetZ);
+#ifdef USE_VBO
+             RenderChunk& rc = chunk->getRenderChunk(layer);
+             if (rc.vertexCount > 0) renderChunkVBO(rc);
+#else
+             int listId = chunk->getList(layer);
+             if (listId >= 0) glCallList(listId);
+#endif
+             glPopMatrix2();
+        }
+        renderSameAsLast(layer, alpha);
+        return count;
 	}
 }
 
