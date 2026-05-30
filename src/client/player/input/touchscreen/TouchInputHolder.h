@@ -87,38 +87,24 @@ public:
 		_sensitivity = sensitivity;
 	}
 
-	// 供外部排除按钮区域
 	void addExcludeArea(IArea* area) {
 		_area.exclude(area);
 	}
 
-	virtual void onConfigChanged(const Config& c) {
-		if (false && _options->isJoyTouchArea) {
-			int touchWidth = c.width - (int)inventoryArea._x1;
-			if (touchWidth > (int)c.minecraft->pixelCalc.millimetersToPixels(60))
-				touchWidth = (int)c.minecraft->pixelCalc.millimetersToPixels(60);
-
-			int touchHeight = (int)(c.height * 0.4f);
-			if (touchHeight > (int)c.minecraft->pixelCalc.millimetersToPixels(40))
-				touchHeight = (int)c.minecraft->pixelCalc.millimetersToPixels(40);
-
-			joyTouchArea._x0 = (float)(c.width  - touchWidth);
-			joyTouchArea._y0 = (float)(c.height - touchHeight);
-			joyTouchArea._x1 = (float)c.width;
-			joyTouchArea._y1 = (float)c.height;
-
-			_area.clear();
-			_area.include (&joyTouchArea);
-			_model.clear();
-			_model.addArea(AREA_TURN, &_area);
+	virtual void onConfigChanged(const Config& c) override {
+		// 注意：原版代码中是通过 Options::isJoyTouchArea 访问，但 Options 没有该成员。
+		// 改为调用 getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA)
+		bool isJoyTouchArea = _options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA);
+		if (false && isJoyTouchArea) {  // 原本就是 false && ...，忽略该分支
+			// ... 原 joyTouchArea 逻辑（实际从未执行）
 		} else {
 			screenArea = RectangleArea(0, 0, (float)c.width, (float)c.height);
 			// Expand the move area a bit
             const float border = 10;
-			const float widen = (moveArea._x1-moveArea._x0) * 0.05f + border;
+			const float widen = (moveArea._x1-moveArea._x0) * 0.05f + border; // ~5% wider
 			moveArea._x0 -= widen;
 			moveArea._x1 += widen;
-			const float heighten = (moveArea._y1-moveArea._y0) * 0.05f + border;
+			const float heighten = (moveArea._y1-moveArea._y0) * 0.05f + border; // ~5% taller
 			moveArea._y0 -= heighten;
 			moveArea._y1 += heighten;
             
@@ -150,7 +136,7 @@ public:
 	//
 	// Implementation for the ITurnInput part
 	//
-	TurnDelta getTurnDelta() {
+	TurnDelta getTurnDelta() override {
 		float dx = 0, dy = 0;
 		const float now = getTimeS();
 
@@ -218,7 +204,6 @@ public:
 					if (_totalMoveDelta > MaxBuildMovement) {
 						state = State_Turn;
 					} else if (since >= (RemovalMilliseconds / 1000.0f)) {
-						// 长按不移动 → 破坏
 						state = State_Destroy;
 						_canDestroy = true;
 					}
@@ -275,7 +260,8 @@ public:
 	}
 
 	void render(float alpha) {
-		if (_options->isJoyTouchArea) {
+		bool isJoyTouchArea = _options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA);
+		if (isJoyTouchArea) {
 			fill(	(int) (Gui::InvGuiScale * joyTouchArea._x0),
 					(int) (Gui::InvGuiScale * joyTouchArea._y0),
 					(int) (Gui::InvGuiScale * joyTouchArea._x1),
@@ -286,7 +272,7 @@ public:
 	//
 	// Implementation for the IBuildInput part
 	//
-	virtual bool tickBuild(Player* player, BuildActionIntention* bai) {
+	virtual bool tickBuild(Player* player, BuildActionIntention* bai) override {
 		_lastPlayer = player;
 
 		if (state == State_Destroy) {
@@ -314,12 +300,10 @@ public:
 			allowPicking = true;
 
 			if (m.data == MouseAction::DATA_UP && !handled) {
-				// 抬起手指：如果移动距离很小，则放置方块
 				if (_totalMoveDelta <= MaxBuildMovement) {
 					*bai = BuildActionIntention(BuildActionIntention::BAI_BUILD | BuildActionIntention::BAI_ATTACK);
 					handled = true;
 				}
-				// 重置状态，为下次交互准备
 				state = State_None;
 				_sentFirstRemove = false;
 				_canDestroy = false;
@@ -392,7 +376,12 @@ public:
 	TouchInputHolder(Minecraft* mc, Options* options)
 	:	_mc(mc),
 		_move(mc, options),
-		_turnBuild(UnifiedTurnBuild::MODE_DELTA, mc->width, mc->height, (float)MovementLimit, 1, this, mc)
+		_turnBuild(UnifiedTurnBuild::MODE_DELTA, mc->width, mc->height, (float)MovementLimit, 1, this, mc),
+		_jumpExclude(0,0,0,0),     // 临时初始化，实际值在 onConfigChanged 中重新赋值
+		_flyUpExclude(0,0,0,0),
+		_flyDownExclude(0,0,0,0),
+		_chatExclude(0,0,0,0),
+		_pauseExclude(0,0,0,0)
 	{
 		onConfigChanged(createConfig(mc));
 	}
@@ -405,9 +394,10 @@ public:
 #ifdef __APPLE__
 		_turnBuild.pauseArea = _move.getPauseRectangleArea();
 #endif
-		_turnBuild.inventoryArea = _mc->gui.getRectangleArea( _mc->options.isLeftHanded ? 1 : -1 );
+		bool isLeftHanded = _mc->options.getBooleanValue(OPTIONS_IS_LEFT_HANDED);
+		_turnBuild.inventoryArea = _mc->gui.getRectangleArea(isLeftHanded ? 1 : -1);
 
-		// 更新按钮排除区域（防止穿透放置/破坏）
+		// 更新排除区域（需重新赋值，因为矩形区域可能因屏幕尺寸变化而改变）
 		_jumpExclude = _move.getJumpRectangleArea();
 		_flyUpExclude = _move.getFlyUpRectangleArea();
 		_flyDownExclude = _move.getFlyDownRectangleArea();
@@ -420,7 +410,8 @@ public:
 		_turnBuild.addExcludeArea(&_chatExclude);
 		_turnBuild.addExcludeArea(&_pauseExclude);
 
-		_turnBuild.setSensitivity(c.options->isJoyTouchArea ? 1.8f : 1.0f);
+		bool isJoyTouchArea = c.options->getBooleanValue(OPTIONS_IS_JOY_TOUCH_AREA);
+		_turnBuild.setSensitivity(isJoyTouchArea ? 1.8f : 1.0f);
 		((ITurnInput*)&_turnBuild)->onConfigChanged(c);
 	}
 
