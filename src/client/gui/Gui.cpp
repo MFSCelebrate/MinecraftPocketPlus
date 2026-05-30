@@ -772,7 +772,7 @@ void Gui::renderDebugInfo() {
 
     // 获取世界偏移 (double) 和缩放 (float)
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
-    float worldScaleX = 1.0f, worldScaleY = 1.0f, worldScaleZ = 1.0f;
+    double worldScaleX = 1.0f, worldScaleY = 1.0f, worldScaleZ = 1.0f;
     RandomLevelSource* rls = nullptr;
     if (lvl && lvl->getChunkSource()) {
         ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
