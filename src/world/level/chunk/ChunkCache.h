@@ -9,7 +9,16 @@
 #include <unordered_map>
 // 在 ChunkCache.h 中，将 emptyChunk 改为 std::shared_ptr<LevelChunk>
 #include <memory>
-std::shared_ptr<LevelChunk> emptyChunk;
+// 在 cpp 文件开头
+EmptyLevelChunk* ChunkCache::s_emptyChunk = nullptr;
+
+EmptyLevelChunk* ChunkCache::getEmptyChunk(Level* level) {
+    if (!s_emptyChunk) {
+        // 注意：这里用 new，只创建一次
+        s_emptyChunk = new EmptyLevelChunk(level, 0, 0);
+    }
+    return s_emptyChunk;
+}
 
 struct pair_hash {
     std::size_t operator()(const std::pair<int64_t, int64_t>& p) const {
@@ -27,19 +36,19 @@ public:
       level(level_), storage(storage_), source(source_)
 {
     isChunkCache = true;
-    emptyChunk = std::make_shared<EmptyLevelChunk>(level_, NULL, 0, 0);
+    emptyChunk = getEmptyChunk(level_);   // 获取静态单例
+    // ... 其他初始化
 }
-
     ~ChunkCache() {
     delete source;
     for (auto& pair : chunks) {
         LevelChunk* p = pair.second;
-        if (p && p != emptyChunk.get()) {
+        if (p && p != emptyChunk) {
             p->deleteBlockData();
             delete p;
         }
     }
-    // emptyChunk 自动释放，无需手动 delete
+    // 注意：不要 delete emptyChunk，它是静态单例，会在程序结束时由静态析构处理（或者不处理也行）
     }
 
     bool fits(int64_t x, int64_t z) { return true; }
@@ -222,7 +231,9 @@ public:
     int64_t xLast;
     int64_t zLast;
 private:
-    LevelChunk* emptyChunk;
+    static EmptyLevelChunk* getEmptyChunk(Level* level);   // 静态工厂
+    static EmptyLevelChunk* s_emptyChunk;                 // 静态单例
+    LevelChunk* emptyChunk;                               // 改为普通指针，但指向静态单例
     ChunkSource* source;
     ChunkStorage* storage;
     std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, pair_hash> chunks;
