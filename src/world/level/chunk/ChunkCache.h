@@ -9,17 +9,7 @@
 #include <unordered_map>
 // 在 ChunkCache.h 中，将 emptyChunk 改为 std::shared_ptr<LevelChunk>
 #include <memory>
-// 在 cpp 文件开头
-EmptyLevelChunk* ChunkCache::s_emptyChunk = nullptr;
-
-EmptyLevelChunk* ChunkCache::getEmptyChunk(Level* level) {
-    if (!s_emptyChunk) {
-        // 注意：这里用 new，只创建一次
-        s_emptyChunk = new EmptyLevelChunk(level, 0, 0);
-    }
-    return s_emptyChunk;
-}
-
+// 在 cpp 
 struct pair_hash {
     std::size_t operator()(const std::pair<int64_t, int64_t>& p) const {
         return std::hash<int64_t>()(p.first) ^ (std::hash<int64_t>()(p.second) << 1);
@@ -32,23 +22,24 @@ public:
     ChunkSource* getSource() const { return source; }
 
     ChunkCache(Level* level_, ChunkStorage* storage_, ChunkSource* source_)
-    : xLast(-999999999), zLast(-999999999), last(nullptr),
-      level(level_), storage(storage_), source(source_)
-{
-    isChunkCache = true;
-    emptyChunk = getEmptyChunk(level_);   // 获取静态单例
-    // ... 其他初始化
-}
-    ~ChunkCache() {
-    delete source;
-    for (auto& pair : chunks) {
-        LevelChunk* p = pair.second;
-        if (p && p != emptyChunk) {
-            p->deleteBlockData();
-            delete p;
-        }
+        : xLast(-999999999), zLast(-999999999), last(NULL),
+          level(level_), storage(storage_), source(source_)
+    {
+        isChunkCache = true;
+        emptyChunk = getEmptyChunk(level_);   // 静态单例
+        // ... 其余初始化代码不变
     }
-    // 注意：不要 delete emptyChunk，它是静态单例，会在程序结束时由静态析构处理（或者不处理也行）
+
+    ~ChunkCache() {
+        delete source;
+        for (auto& pair : chunks) {
+            LevelChunk* p = pair.second;
+            if (p && p != emptyChunk) {
+                p->deleteBlockData();
+                delete p;
+            }
+        }
+        // emptyChunk 是静态单例，不删除
     }
 
     bool fits(int64_t x, int64_t z) { return true; }
@@ -231,9 +222,16 @@ public:
     int64_t xLast;
     int64_t zLast;
 private:
-    static EmptyLevelChunk* getEmptyChunk(Level* level);   // 静态工厂
-    static EmptyLevelChunk* s_emptyChunk;                 // 静态单例
-    LevelChunk* emptyChunk;                               // 改为普通指针，但指向静态单例
+    static EmptyLevelChunk* getEmptyChunk(Level* level) {
+        static EmptyLevelChunk* s_empty = nullptr;
+        if (!s_empty) {
+            // 只创建一次，注意参数：EmptyLevelChunk(Level* level, int x, int z)
+            s_empty = new EmptyLevelChunk(level, 0, 0);
+        }
+        return s_empty;
+    }
+
+    LevelChunk* emptyChunk;   // 普通指针，指向静态单例
     ChunkSource* source;
     ChunkStorage* storage;
     std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, pair_hash> chunks;
