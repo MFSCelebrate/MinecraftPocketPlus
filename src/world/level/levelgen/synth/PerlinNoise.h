@@ -14,11 +14,10 @@ public:
     ~PerlinNoise();
 
     // 实现 Synth 纯虚函数
-    virtual double getValue(double x, double y) override;
-
-    // 3D 噪声查询（const 版本，供内部使用）
-    double getValue(double x, double y, double z) const;
-
+    virtual double getValue(double x, double y) override;               // 非 const
+double getValue(double x, double y, double z);                      // 非 const（可选）
+double getValue(double x, double y) const;                          // const 版本
+double getValue(double x, double y, double z) const;                // const 版本
     // 批量生成区域（double 缓冲区）
     double* getRegion(double* buffer, double x, double y, double z,
                       int xSize, int ySize, int zSize,
