@@ -36,6 +36,7 @@ public:
             delete pair.second;
         }
     }
+    delete emptyChunk;  // 最后单独删除 emptyChunk
     }
 
     bool fits(int64_t x, int64_t z) { return true; }
