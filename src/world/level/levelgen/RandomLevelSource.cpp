@@ -41,9 +41,9 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
       m_worldOffsetX(0.0),
       m_worldOffsetY(0.0),
       m_worldOffsetZ(0.0),
-      m_worldScaleX(1.0f),
-      m_worldScaleY(1.0f),
-      m_worldScaleZ(1.0f),
+      m_worldScaleX(1.0),
+      m_worldScaleY(1.0),
+      m_worldScaleZ(1.0),
       m_disableSkygrid(false)
 {
     for (int i = 0; i < 32; ++i)
@@ -57,16 +57,13 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         std::string scaleYStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
         std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
         if (!scaleXStr.empty()) {
-            m_worldScaleX = (float)atof(scaleXStr.c_str());
-            if (m_worldScaleX <= 0.0f) m_worldScaleX = 0.001f;
+            m_worldScaleX = atof(scaleXStr.c_str());
         }
         if (!scaleYStr.empty()) {
-            m_worldScaleY = (float)atof(scaleYStr.c_str());
-            if (m_worldScaleY <= 0.0f) m_worldScaleY = 0.001f;
+            m_worldScaleY = atof(scaleYStr.c_str());
         }
         if (!scaleZStr.empty()) {
-            m_worldScaleZ = (float)atof(scaleZStr.c_str());
-            if (m_worldScaleZ <= 0.0f) m_worldScaleZ = 0.001f;
+            m_worldScaleZ = atof(scaleZStr.c_str());
         }
 
         std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
