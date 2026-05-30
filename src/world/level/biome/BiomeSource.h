@@ -23,8 +23,8 @@ public:
 
     double m_offsetX = 0.0;
     double m_offsetZ = 0.0;
-    float  m_scaleX = 1.0f;
-    float  m_scaleZ = 1.0f;
+    double  m_scaleX = 1.0f;
+    double  m_scaleZ = 1.0f;
 
     int lenTemperatures;
     int lenDownfalls;
@@ -36,7 +36,7 @@ public:
 
     // 获取一块区域内的生物群系（2D）
     virtual Biome** getBiomeBlock(int x, int z, int w, int h);
-    void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
+    void setWorldTransform(double offsetX, double offsetZ, double scaleX, double scaleZ) {
         m_offsetX = offsetX;
         m_offsetZ = offsetZ;
         m_scaleX = scaleX;
