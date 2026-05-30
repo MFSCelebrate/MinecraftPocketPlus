@@ -174,7 +174,10 @@ void Screen::keyPressed(int eventKey) {
             break;
         }
     }
-    
+    if (hasFocusedTextBox && (eventKey == Keyboard::KEY_RETURN || (eventKey >= '0' && eventKey <= '9'))) {
+        return;   // 让文本框自行处理回车和数字
+	}
+	
     // 如果有焦点文本框，并且按的是数字键，则直接返回，不触发屏幕关闭/按钮点击
     if (hasFocusedTextBox && eventKey >= '0' && eventKey <= '9') {
         return;
