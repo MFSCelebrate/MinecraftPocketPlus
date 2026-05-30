@@ -43,6 +43,12 @@ public:
     RectangleArea* aJump;
 RectangleArea* aFlyUp;      // 右侧飞行上升按钮
     RectangleArea* aFlyDown;    // 右侧飞行下降按钮
+    // 在 TouchscreenInput_TestFps 类的 public 区域添加
+const RectangleArea& getJumpRectangleArea() const { return *aJump; }
+const RectangleArea& getFlyUpRectangleArea() const { return *aFlyUp; }
+const RectangleArea& getFlyDownRectangleArea() const { return *aFlyDown; }
+const RectangleArea& getPauseRectangleArea() const { return *aPause; }
+const RectangleArea& getChatRectangleArea() const { return *aChat; }
 
 private:
     // 原移动按钮区域指针保留（aUp, aDown, aLeft, aRight, aJump, ...）
