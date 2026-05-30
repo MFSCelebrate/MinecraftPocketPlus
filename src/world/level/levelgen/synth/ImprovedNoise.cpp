@@ -111,14 +111,6 @@ double ImprovedNoise::getValue(double x, double y) {
     return static_cast<const ImprovedNoise*>(this)->getValue(x, y);
 }
 
-double ImprovedNoise::getValue( double x, double y ) const {
-    return noise(x, y, 0);
-}
-
-double ImprovedNoise::getValue( double x, double y, double z ) const {
-    return noise(x, y, z);
-}
-
 double ImprovedNoise::getValue(double x, double y) const {
     return getValue(x, y, 0.0);
 }
