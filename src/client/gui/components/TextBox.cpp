@@ -6,21 +6,22 @@
 
 // delegate constructors
 TextBox::TextBox(int id, const std::string& msg)
- : TextBox(id, 0, 0, msg), _justTypedDigit(false)
+    : TextBox(id, 0, 0, msg)
 {
+    _justTypedDigit = false;
 }
 
 TextBox::TextBox(int id, int x, int y, const std::string& msg)
- : TextBox(id, x, y, 24, Font::DefaultLineHeight + 4, msg), _justTypedDigit(false)
+    : TextBox(id, x, y, 24, Font::DefaultLineHeight + 4, msg)
 {
+    _justTypedDigit = false;
 }
 
 TextBox::TextBox(int id, int x, int y, int w, int h, const std::string& msg)
- : GuiElement(true, true, x, y, w, h),
-   id(id), hint(msg), focused(false), blink(false), blinkTicks(0), _justTypedDigit(false)
+    : GuiElement(true, true, x, y, w, h), id(id), hint(msg), focused(false), blink(false), blinkTicks(0)
 {
+    _justTypedDigit = false;
 }
-
 void TextBox::setFocus(Minecraft* minecraft) {
     if (!focused) {
         minecraft->platform()->showKeyboard();
