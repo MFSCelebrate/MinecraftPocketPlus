@@ -60,14 +60,16 @@ void TeleportScreen::teleport() {
     if (parts.size() < 3) return;
 
     LocalPlayer* player = minecraft->player;
-    if (!player) return;
+    Level* level = minecraft->level;
+    if (!player || !level) return;
+
+    Pos spawnPos = level->getSharedSpawnPos();
 
     double x = player->x;
     double y = player->y;
     double z = player->z;
 
-    // 解析单个坐标，支持 ~ 前缀
-    auto parseCoord = [](const std::string& s, double current) -> double {
+    auto parseCoord = [&](const std::string& s, double current, double spawnBase) -> double {
         if (s.empty()) return current;
         if (s[0] == '~') {
             if (s.length() == 1) return current;
@@ -80,20 +82,16 @@ void TeleportScreen::teleport() {
             char* endptr;
             double absolute = strtod(s.c_str(), &endptr);
             if (endptr == s.c_str()) return current;
-            return absolute;
+            return absolute + spawnBase;
         }
     };
 
-    x = parseCoord(parts[0], x);
-    y = parseCoord(parts[1], y);
-    z = parseCoord(parts[2], z);
+    x = parseCoord(parts[0], x, (double)spawnPos.x);
+    y = parseCoord(parts[1], y, (double)spawnPos.y);
+    z = parseCoord(parts[2], z, (double)spawnPos.z);
 
-    // 强制精确传送：临时禁用物理碰撞
-    bool oldNoPhysics = player->noPhysics;
-    player->noPhysics = true;
     player->setPos(x, y, z);
     player->xOld = player->x;
     player->yOld = player->y;
     player->zOld = player->z;
-    player->noPhysics = oldNoPhysics;
 }
