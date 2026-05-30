@@ -205,7 +205,7 @@ Java_com_mojang_minecraftpe_GLRenderer_nativeUpdate(JNIEnv* env) {
 // Keyboard events
 //
 // helper to convert Android keycodes to our internal Keyboard constants
-// ===== 修复 androidKeyToInternal —— 数字键正确映射 =====
+// ===== main_android_java.cpp: androidKeyToInternal 修正版 =====
 static int androidKeyToInternal(int androidKey){
     // 🧊 数字键 0-9：AKEYCODE_0=7 到 AKEYCODE_9=16
     // 映射到 ASCII '0'~'9' (48~57)，彻底避开 ASCII 控制字符区 (0~31)
@@ -214,20 +214,17 @@ static int androidKeyToInternal(int androidKey){
     }
     
     switch(androidKey){
-        case AKEYCODE_DEL:          return Keyboard::KEY_BACKSPACE; // 67
+        case AKEYCODE_DEL:          return Keyboard::KEY_BACKSPACE; // 67→8
         case AKEYCODE_ENTER:
-        case AKEYCODE_NUMPAD_ENTER: return Keyboard::KEY_RETURN;    // 66
+        case AKEYCODE_NUMPAD_ENTER: return Keyboard::KEY_RETURN;    // 66→13
         case AKEYCODE_SPACE:        return Keyboard::KEY_SPACE;     // 62
         case AKEYCODE_TAB:          return Keyboard::KEY_TAB;       // 61
         case AKEYCODE_ESCAPE:       return Keyboard::KEY_ESCAPE;    // 111
-        case AKEYCODE_DPAD_UP:      return Keyboard::KEY_UP;        // 19
-        case AKEYCODE_DPAD_DOWN:    return Keyboard::KEY_DOWN;      // 20
-        case AKEYCODE_DPAD_LEFT:    return Keyboard::KEY_LEFT;      // 21
-        case AKEYCODE_DPAD_RIGHT:   return Keyboard::KEY_RIGHT;     // 22
         default:
-            // 其他未知键码，映射到安全区 (256+)，避免与控制字符冲突
+            // 其他未知键码如果在控制字符区 (0~31)，偏移到 256+
+            // 避免被下游 TextBox/Screen 误认为 BACKSPACE(8)/RETURN(13) 等
             if(androidKey >= 0 && androidKey <= 31){
-                return 256 + androidKey;  // 偏移到安全范围
+                return 256 + androidKey;
             }
             return androidKey;
     }
