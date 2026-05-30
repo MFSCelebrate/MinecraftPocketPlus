@@ -165,8 +165,23 @@ bool Screen::closeOnPlayerHurt() {
     return false;
 }
 
-void Screen::keyPressed( int eventKey )
-{
+void Screen::keyPressed(int eventKey) {
+    // 检查是否有任何 TextBox 拥有焦点
+    bool hasFocusedTextBox = false;
+    for (std::vector<TextBox*>::iterator it = textBoxes.begin(); it != textBoxes.end(); ++it) {
+        if ((*it)->focused) {
+            hasFocusedTextBox = true;
+            break;
+        }
+    }
+    
+    // 如果有焦点文本框，并且按的是数字键，则直接返回，不触发屏幕关闭/按钮点击
+    if (hasFocusedTextBox && eventKey >= '0' && eventKey <= '9') {
+        return;
+    }
+    
+    // 原有逻辑（例如 ESC 关闭屏幕、按钮导航等）
+    // ...
 	if (eventKey == Keyboard::KEY_ESCAPE) {
 		minecraft->setScreen(NULL);
 		//minecraft->grabMouse();
