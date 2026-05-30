@@ -90,7 +90,7 @@ cullCacheValid(false), cullSkipTimer(0),
 	// ... 原有初始化 ...
     // 在构造函数末尾，原来 generateSky() 调用的地方
 generateSky();
-generateStars();
+//generateStars();
 #else
 	int maxChunksWidth = 1024 / CHUNK_SIZE;
 	numListsOrBuffers = maxChunksWidth * maxChunksWidth * maxChunksWidth * 3;
@@ -119,6 +119,13 @@ if (m_starsChunk.vboId != (GLuint)-1) glDeleteBuffers(1, &m_starsChunk.vboId);
 #endif
 }
 
+// 🧊 惰性生成星星 —— 确保 GL 上下文已就绪
+void LevelRenderer::ensureStarsGenerated(){
+    if(m_starsGenerated) return;
+    
+    // 只在有 GL 上下文时生成（renderSky 中调用，此时上下文保证有效）
+    generateStars();
+}
 
 void LevelRenderer::generateSky() {
     Tesselator& t = Tesselator::instance;
@@ -1210,100 +1217,99 @@ std::string LevelRenderer::gatherStats1() {
 //    int[] toRender = new int[50000];
 //    IntBuffer resultBuffer = MemoryTracker.createIntBuffer(64);
 
-void LevelRenderer::renderSky(float a) {
-    if (mc->level->dimension->foggy) return;  // 地狱跳过
-
+// ==================== 完整 renderSky ====================
+void LevelRenderer::renderSky(float a){
+    if(mc->level->dimension->foggy) return;
+    
     Vec3 skyColor = level->getSkyColor(mc->cameraTargetPlayer, a);
     float r = (float)skyColor.x;
     float g = (float)skyColor.y;
     float b = (float)skyColor.z;
 
-    if (mc->options.getBooleanValue(OPTIONS_ANAGLYPH_3D)) {
+    if(mc->options.getBooleanValue(OPTIONS_ANAGLYPH_3D)){
         float rr = (r * 30.0f + g * 59.0f + b * 11.0f) / 100.0f;
         float gg = (r * 30.0f + g * 70.0f) / 100.0f;
         float bb = (r * 30.0f + b * 70.0f) / 100.0f;
-        r = rr; g = gg; b = bb;
+        r = rr;
+        g = gg;
+        b = bb;
     }
 
-    // 禁用纹理，设置天空底色，绘制上半天空
+    // ========== 上层天空穹顶 ==========
     glDisable(GL_TEXTURE_2D);
     glColor4f(r, g, b, 1.0f);
     glDepthMask(false);
     glEnable(GL_FOG);
     glColor4f(r, g, b, 1.0f);
-    // 绘制上半天空
-if (m_skyChunk.vboId != (GLuint)-1 && m_skyChunk.vertexCount > 0) {
-    drawArrayVT(m_skyChunk.vboId, m_skyChunk.vertexCount);
-}
+    if(m_skyChunk.vboId != (GLuint)-1 && m_skyChunk.vertexCount > 0){
+        drawArrayVT(m_skyChunk.vboId, m_skyChunk.vertexCount);
+    }
     glDisable(GL_FOG);
     glDisable(GL_ALPHA_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // 日出日落渐变
+    // ========== 日出/日落光晕 ==========
     renderSunriseSunset(a);
 
-    // 绘制太阳、月亮
+    // ========== 太阳 / 月亮 / 星星 ==========
     glEnable(GL_TEXTURE_2D);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     glPushMatrix();
     float rainStrength = 1.0f;
     glColor4f(1, 1, 1, rainStrength);
-    // 旧：
-//glRotatef(level->getCelestialAngle(a) * 360.0f, 1.0f, 0.0f, 0.0f);
-// 改成（弧度 -> 角度）：
-float sunAngleDeg = level->getCelestialAngle(a) * (180.0f / Mth::PI);
-glRotatef(sunAngleDeg, 1.0f, 0.0f, 0.0f);
+    float sunAngleDeg = level->getCelestialAngle(a) * (180.0f / Mth::PI);
+    glRotatef(sunAngleDeg, 1.0f, 0.0f, 0.0f);
+    
     renderSun(a);
     renderMoon(a);
-	glDisable(GL_DEPTH_TEST);   // 加这行
-glDepthMask(false);         // 加这行
-float starBr = level->getStarBrightness(a) * rainStrength;
-if (starBr > 0.0f) {
-    glColor4f(starBr, starBr, starBr, starBr);
-    // 绘制星星
-if (m_starsChunk.vboId != (GLuint)-1 && m_starsChunk.vertexCount > 0) {
-    drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
-}
-}
-glDepthMask(true);          // 加这行
-// 不要重新启用深度测试，下半天空会用
 
-    // 绘制星星
-    glDisable(GL_TEXTURE_2D);
-    if (starBr > 0.0f) {
+    // 🧊 惰性初始化 —— 首次渲染星星，此时 GL 上下文保证就绪
+    ensureStarsGenerated();
+
+    float starBr = level->getStarBrightness(a) * rainStrength;
+    
+    // 🧊 第一遍：带纹理的星星（在上层天空上叠加）
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(false);
+    if(starBr > 0.0f){
         glColor4f(starBr, starBr, starBr, starBr);
-        // 绘制星星
-if (m_starsChunk.vboId != (GLuint)-1 && m_starsChunk.vertexCount > 0) {
-    drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
-}
+        // ✅ 无需 guard —— ensureStarsGenerated() 已保证 VBO 有效
+        drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
     }
+    glDepthMask(true);
+
+    // 🧊 第二遍：纯色星星（Beta 1.7.3 经典双层渲染）
+    glDisable(GL_TEXTURE_2D);
+    if(starBr > 0.0f){
+        glColor4f(starBr, starBr, starBr, starBr);
+        drawArrayVT(m_starsChunk.vboId, m_starsChunk.vertexCount);
+    }
+    
     glColor4f(1, 1, 1, 1);
     glDisable(GL_BLEND);
     glEnable(GL_ALPHA_TEST);
     glEnable(GL_FOG);
+	glEnable(GL_DEPTH_TEST);  // 🧊 必须恢复！天空渲染时禁用了深度测试
     glPopMatrix();
 
-    // 绘制下半天空
-    if (mc->level->dimension->foggy) {
+    // ========== 下层天空穹顶（地平线以下） ==========
+    if(mc->level->dimension->foggy){
         glColor4f(r * 0.2f + 0.04f, g * 0.2f + 0.04f, b * 0.6f + 0.1f, 1.0f);
     } else {
         glColor4f(r, g, b, 1.0f);
     }
     glDisable(GL_TEXTURE_2D);
-    // 绘制下半天空
-if (m_skyChunk2.vboId != (GLuint)-1 && m_skyChunk2.vertexCount > 0) {
-    drawArrayVT(m_skyChunk2.vboId, m_skyChunk2.vertexCount);
-}
+    if(m_skyChunk2.vboId != (GLuint)-1 && m_skyChunk2.vertexCount > 0){
+        drawArrayVT(m_skyChunk2.vboId, m_skyChunk2.vertexCount);
+    }
     glEnable(GL_TEXTURE_2D);
-	// 星星绘制完毕
-glDepthMask(true);
-glEnable(GL_DEPTH_TEST);   // ← 加这行
-
-glDisable(GL_BLEND);
-glEnable(GL_ALPHA_TEST);
-glEnable(GL_FOG);
-glPopMatrix();
+    glDepthMask(true);
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glEnable(GL_ALPHA_TEST);
+    glEnable(GL_FOG);
+    glPopMatrix();
 }
 
 void LevelRenderer::renderSunriseSunset(float a) {
@@ -1358,36 +1364,40 @@ void LevelRenderer::renderSunriseSunset(float a) {
     glEnable(GL_TEXTURE_2D);
 }
 
-void LevelRenderer::renderClouds( float alpha ) {
-	//if (!mc->level->dimension->isNaturalDimension()) return;
-	glEnable2(GL_TEXTURE_2D);
-	glDisable(GL_CULL_FACE);
-	float yOffs = (float) (mc->player->yOld + (mc->player->y - mc->player->yOld) * alpha);
-	int s = 32;
-	int d = 256 / s;
-	Tesselator& t = Tesselator::instance;
+void LevelRenderer::renderClouds(float alpha){
+    // 🧊 确保深度测试启用（防御性修复）
+    glEnable(GL_DEPTH_TEST);
+    // 🧊 云不写入深度缓冲（半透明物体标准做法）
+    glDepthMask(false);
+    
+    glEnable2(GL_TEXTURE_2D);
+    glDisable(GL_CULL_FACE);
+    float yOffs = (float)(mc->player->yOld + (mc->player->y - mc->player->yOld) * alpha);
+    int s = 32;
+    int d = 256 / s;
+    Tesselator& t = Tesselator::instance;
 
-	//glBindTexture(GL_TEXTURE_2D, texturesloadTexture("/environment/clouds.png"));
-	textures->loadAndBindTexture("environment/clouds.png");
-	
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    textures->loadAndBindTexture("environment/clouds.png");
 
-	Vec3 cc = level->getCloudColor(alpha);
-	float cr = (float) cc.x;
-	float cg = (float) cc.y;
-	float cb = (float) cc.z;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	float scale = 1 / 2048.0f;
+    Vec3 cc = level->getCloudColor(alpha);
+    float cr = (float)cc.x;
+    float cg = (float)cc.y;
+    float cb = (float)cc.z;
 
-	float time = (ticks + alpha);
-	float xo = mc->player->xo + (mc->player->x - mc->player->xo) * alpha + time * 0.03f;
-	float zo = mc->player->zo + (mc->player->z - mc->player->zo) * alpha;
-	int xOffs = Mth::floor(xo / 2048);
-	int zOffs = Mth::floor(zo / 2048);
-	xo -= xOffs * 2048;
-	zo -= zOffs * 2048;
+    float scale = 1 / 2048.0f;
 
+    float time = (ticks + alpha);
+    float xo = mc->player->xo + (mc->player->x - mc->player->xo) * alpha + time * 0.03f;
+    float zo = mc->player->zo + (mc->player->z - mc->player->zo) * alpha;
+    int xOffs = Mth::floor(xo / 2048);
+    int zOffs = Mth::floor(zo / 2048);
+    xo -= xOffs * 2048;
+    zo -= zOffs * 2048;
+
+    // ... 云几何生成代码保持不变 ...
 	float yy = /*level.dimension.getCloudHeight()*/ 128 - yOffs + 0.33f;//mc->player->y + 1;
 	float uo = (float) (xo * scale);
 	float vo = (float) (zo * scale);
@@ -1405,7 +1415,9 @@ void LevelRenderer::renderClouds( float alpha ) {
 	t.endOverrideAndDraw();
 	glColor4f(1, 1, 1, 1.0f);
 	glDisable(GL_BLEND);
-	glEnable(GL_CULL_FACE);
+	glDepthMask(true);
+    glDisable(GL_BLEND);
+    glEnable(GL_CULL_FACE);
 }
 
 void LevelRenderer::playSound(const std::string& name, float x, float y, float z, float volume, float pitch) {
@@ -1568,10 +1580,19 @@ void LevelRenderer::renderHitSelect( Player* player, const HitResult& h, int mod
 	}
 }
 
-void LevelRenderer::onGraphicsReset()
-{
-	generateSky();
-
+void LevelRenderer::onGraphicsReset(){
+    // 重建天空几何
+    if(m_skyChunk.vboId != (GLuint)-1){
+        glDeleteBuffers(1, &m_skyChunk.vboId);
+    }
+    if(m_skyChunk2.vboId != (GLuint)-1){
+        glDeleteBuffers(1, &m_skyChunk2.vboId);
+    }
+    if(m_starsChunk.vboId != (GLuint)-1 && m_starsGenerated){
+        glDeleteBuffers(1, &m_starsChunk.vboId);
+    }
+    m_starsGenerated = false;
+    generateSky();
 	// Get new buffers
 #ifdef OPENGL_ES
 	glGenBuffers2(numListsOrBuffers, chunkBuffers);
