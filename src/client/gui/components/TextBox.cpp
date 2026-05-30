@@ -55,9 +55,16 @@ void TextBox::charPressed(Minecraft* minecraft, char c)  {
     }
 }
 
-void TextBox::keyPressed(Minecraft* minecraft, int key) {
-    if (focused && key == Keyboard::KEY_BACKSPACE && !text.empty()) {
-        text.pop_back();
+void TextBox::keyPressed(Minecraft*minecraft,intkey){
+    if (focused) {
+        // 数字键直接忽略，字符由 charPressed 负责
+        if ((key >= '0' && key <= '9') ||
+            (key >= Keyboard::KEY_NUMPAD0 && key <= Keyboard::KEY_NUMPAD9)) {
+            return;
+        }
+        if (key == Keyboard::KEY_BACKSPACE && !text.empty()) {
+            text.pop_back();
+        }
     }
 }
 
