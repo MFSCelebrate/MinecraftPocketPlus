@@ -5,60 +5,6 @@
 #include "../../../platform/input/Keyboard.h"
 #include "../../../world/level/Level.h"
 #include <sstream>
-#include <sstream>
-#include <string>
-#include <cstdlib>   // 如果需要 std::stod
-
-
-TeleportScreen::TeleportScreen(Minecraft* minecraft)
-    : minecraft(minecraft), textBox(nullptr) {}
-
-TeleportScreen::~TeleportScreen() {
-    if (textBox) delete textBox;
-}
-
-void TeleportScreen::init() {
-    int boxX = width / 2 - 100;
-    int boxY = height / 2 - 20;
-    textBox = new TextBox(0, boxX, boxY, 200, 20, "");
-}
-
-void TeleportScreen::render(int xm, int ym, float a) {
-    fill(0, 0, width, height, 0x80000000);
-    minecraft->font->draw("Enter coordinates (X Y Z):",
-                          width / 2 - 100, height / 2 - 50, 0xffffff);
-    if (textBox) textBox->render(minecraft, xm, ym);
-}
-
-void TeleportScreen::tick() {
-    if (textBox) textBox->tick(minecraft);
-}
-
-void TeleportScreen::keyPressed(int key) {
-    if (key == Keyboard::KEY_RETURN) {
-        teleport();
-        minecraft->setScreen(nullptr);
-    } else if (textBox) {
-        textBox->keyPressed(minecraft, key);
-    }
-    // 不再拦截 KEY_ESCAPE，由系统处理
-}
-
-void TeleportScreen::charPressed(char inputChar) {
-    if (textBox) textBox->charPressed(minecraft, inputChar);
-}
-
-void TeleportScreen::mouseClicked(int x, int y, int button) {
-    if (textBox) textBox->mouseClicked(minecraft, x, y, button);
-}
-
-#include "TeleportScreen.h"
-#include "../../Minecraft.h"
-#include "../../player/LocalPlayer.h"
-#include "../Font.h"
-#include "../../../platform/input/Keyboard.h"
-#include "../../../world/level/Level.h"
-#include <sstream>
 #include <cstdlib>
 #include <vector>
 
@@ -120,6 +66,7 @@ void TeleportScreen::teleport() {
     double y = player->y;
     double z = player->z;
 
+    // 解析单个坐标，支持 ~ 前缀
     auto parseCoord = [](const std::string& s, double current) -> double {
         if (s.empty()) return current;
         if (s[0] == '~') {
