@@ -274,7 +274,18 @@ int main(void) {
 		printf("EGL error: %d\n", eglGetError());
 	}
 
-	eglMakeCurrent(appContext.display, appContext.surface, appContext.surface, appContext.context);
+	eglMakeCurrent(appContext.display, appContext.surface, 
+               appContext.surface, appContext.context);
+
+// ✅ EGL 路径也需要 glad 来加载桌面 GL 函数
+// 注意：如果用的是 GLES，应该用 gladLoadGLES2
+// 但这里 EGL 上下文可能是 GLES1，检查一下
+#ifndef OPENGL_ES
+if (!gladLoadGL()) {
+    printf("FATAL: gladLoadGL failed!\n");
+}
+#endif
+
 	
 	glInit();
 
