@@ -75,6 +75,8 @@ public:
 void renderSunriseSunset(float a);
 void renderSun(float a);
 void renderMoon(float a);
+// 在 public 区添加
+void ensureStarsGenerated();
 
 private:
     void generateStars();            // 生成星星显示列表
