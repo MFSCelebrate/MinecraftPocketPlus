@@ -7,6 +7,9 @@
 #include "../Level.h"
 #include "../LevelConstants.h"
 #include <unordered_map>
+// 在 ChunkCache.h 中，将 emptyChunk 改为 std::shared_ptr<LevelChunk>
+#include <memory>
+std::shared_ptr<LevelChunk> emptyChunk;
 
 struct pair_hash {
     std::size_t operator()(const std::pair<int64_t, int64_t>& p) const {
@@ -20,23 +23,23 @@ public:
     ChunkSource* getSource() const { return source; }
 
     ChunkCache(Level* level_, ChunkStorage* storage_, ChunkSource* source_)
-    :   xLast(-999999999), zLast(-999999999), last(NULL),
-        level(level_), storage(storage_), source(source_)
-    {
-        isChunkCache = true;
-        emptyChunk = new EmptyLevelChunk(level_, NULL, 0, 0);
-    }
+    : xLast(-999999999), zLast(-999999999), last(nullptr),
+      level(level_), storage(storage_), source(source_)
+{
+    isChunkCache = true;
+    emptyChunk = std::make_shared<EmptyLevelChunk>(level_, NULL, 0, 0);
+}
 
     ~ChunkCache() {
     delete source;
-    // 遍历所有缓存的区块，但只删除非 emptyChunk 的
     for (auto& pair : chunks) {
-        if (pair.second && pair.second != emptyChunk) {
-            pair.second->deleteBlockData();
-            delete pair.second;
+        LevelChunk* p = pair.second;
+        if (p && p != emptyChunk.get()) {
+            p->deleteBlockData();
+            delete p;
         }
     }
-    delete emptyChunk;  // 最后单独删除 emptyChunk
+    // emptyChunk 自动释放，无需手动 delete
     }
 
     bool fits(int64_t x, int64_t z) { return true; }
@@ -67,11 +70,11 @@ public:
         LevelChunk* newChunk = load(x, z);
         bool updateLights = false;
         if (newChunk == NULL) {
-            if (source == NULL) {
-                newChunk = emptyChunk;
-            } else {
-                newChunk = source->getChunk(x, z);
-            }
+        if (source == NULL) {
+            return emptyChunk.get();   // 返回裸指针，但不转移所有权
+        } else {
+            newChunk = source->getChunk(x, z);
+        }
         } else {
             updateLights = true;
         }
