@@ -1,8 +1,6 @@
 #ifndef NET_MINECRAFT_WORLD_LEVEL_BIOME__BiomeSource_H__
 #define NET_MINECRAFT_WORLD_LEVEL_BIOME__BiomeSource_H__
 
-//package net.minecraft.world.level.biome;
-
 #include "../../../util/Random.h"
 #include "../levelgen/synth/PerlinNoise.h"
 
@@ -14,60 +12,53 @@ class ChunkPos;
 class BiomeSource
 {
 protected:
-	BiomeSource();
+    BiomeSource();
 public:
     BiomeSource(Level* level);
-	virtual ~BiomeSource();
+    virtual ~BiomeSource();
 
-    float* temperatures;
-    float* downfalls; 
-    float* noises;
+    double* temperatures;
+    double* downfalls;
+    double* noises;
 
     double m_offsetX = 0.0;
     double m_offsetZ = 0.0;
-    float m_scaleX = 1.0f;
-    float m_scaleZ = 1.0f;
+    float  m_scaleX = 1.0f;
+    float  m_scaleZ = 1.0f;
 
-	int lenTemperatures;
-	int lenDownfalls;
-	int lenNoises;
-	int lenBiomes;
+    int lenTemperatures;
+    int lenDownfalls;
+    int lenNoises;
+    int lenBiomes;
 
     virtual Biome* getBiome(const ChunkPos& chunk);
     virtual Biome* getBiome(int x, int z);
 
-    //virtual float getTemperature(int x, int z);
-
-	// Note: The arrays returned here are temporary in the meaning that their
-	//       contents might change in the future. If you need to SAVE the
-	//       values, do a shallow copy to an array of your own.
-	virtual float* getTemperatureBlock(/*float* temperatures, */ int x, int z, int w, int h);
-    //virtual float* getDownfallBlock(/*float* downfalls, */int x, int z, int w, int h);
-	virtual Biome** getBiomeBlock(int x, int z, int w, int h);
-void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
+    // 获取一块区域内的生物群系（2D）
+    virtual Biome** getBiomeBlock(int x, int z, int w, int h);
+    void setWorldTransform(double offsetX, double offsetZ, float scaleX, float scaleZ) {
         m_offsetX = offsetX;
         m_offsetZ = offsetZ;
         m_scaleX = scaleX;
         m_scaleZ = scaleZ;
-	}
+    }
 
 private:
-	virtual Biome** getBiomeBlock(Biome** biomes, int x, int z, int w, int h);
+    virtual Biome** getBiomeBlock(Biome** biomes, int x, int z, int w, int h);
 
-	Biome** biomes;
-	PerlinSimplexNoise* temperatureMap;
-	PerlinSimplexNoise* downfallMap;
-	PerlinSimplexNoise* noiseMap;
+    Biome** biomes;
+    PerlinSimplexNoise* temperatureMap;
+    PerlinSimplexNoise* downfallMap;
+    PerlinSimplexNoise* noiseMap;
 
-	Random rndTemperature;
-	Random rndDownfall;
-	Random rndNoise;
+    Random rndTemperature;
+    Random rndDownfall;
+    Random rndNoise;
 
-	static const float zoom;
-
-	static const float tempScale;
-	static const float downfallScale;
-	static const float noiseScale;
+    static const float zoom;
+    static const float tempScale;
+    static const float downfallScale;
+    static const float noiseScale;
 };
 
-#endif /*NET_MINECRAFT_WORLD_LEVEL_BIOME__BiomeSource_H__*/
+#endif
