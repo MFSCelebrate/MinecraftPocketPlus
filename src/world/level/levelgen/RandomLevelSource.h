@@ -20,12 +20,12 @@ class RandomLevelSource: public ChunkSource
 
 public:
     // 3D 噪声访问器（传入 XYZ）
-inline double getLPerlinNoise1(double x, double y, double z) const { return lperlinNoise1.getValue(x, y, z); }
-inline double getLPerlinNoise2(double x, double y, double z) const { return lperlinNoise2.getValue(x, y, z); }
-inline double getPerlinNoise1 (double x, double y, double z) const { return perlinNoise1.getValue(x, y, z); }
+inline double getLPerlinNoise1(double x, double y, double z) { return lperlinNoise1.getValue(x, y, z); }
+inline double getLPerlinNoise2(double x, double y, double z) { return lperlinNoise2.getValue(x, y, z); }
+inline double getPerlinNoise1 (double x, double y, double z) { return perlinNoise1.getValue(x, y, z); }
 
 // 2D 版也提供 double 版
-inline double getPerlinNoise2(double x, double z) const { return perlinNoise2.getValue(x, z); }
+inline double getPerlinNoise2(double x, double z) { return perlinNoise2.getValue(x, z); }
 // … 其他 2D 噪声类似，如果需要的话
     inline double getPerlinNoise3(double x, double z) { return perlinNoise3.getValue(x, z); }
     inline double getScaleNoise(double x, double z) { return scaleNoise.getValue(x, z); }
