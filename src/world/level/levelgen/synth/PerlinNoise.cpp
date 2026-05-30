@@ -29,7 +29,19 @@ PerlinNoise::PerlinNoise( Random* random, int levels )
 	init(levels);
 }
 
-double PerlinNoise::getValue(double x, double y, double z) const {
+// 非 const 版本：2D
+double PerlinNoise::getValue(double x, double y) {
+    double value = 0;
+    double pow = 1;
+    for (int i = 0; i < levels; i++) {
+        value += noiseLevels[i]->getValue(x * pow, y * pow) / pow;
+        pow /= 2;
+    }
+    return value;
+}
+
+// 非 const 版本：3D（如果需要）
+double PerlinNoise::getValue(double x, double y, double z) {
     double value = 0;
     double pow = 1;
     for (int i = 0; i < levels; i++) {
@@ -39,16 +51,27 @@ double PerlinNoise::getValue(double x, double y, double z) const {
     return value;
 }
 
-// 非 const 版本：调用 const 版本
-double PerlinNoise::getValue(double x, double y) {
-    return static_cast<const PerlinNoise*>(this)->getValue(x, y);
+// const 版本：2D（确保存在）
+double PerlinNoise::getValue(double x, double y) const {
+    double value = 0;
+    double pow = 1;
+    for (int i = 0; i < levels; i++) {
+        value += noiseLevels[i]->getValue(x * pow, y * pow) / pow;
+        pow /= 2;
+    }
+    return value;
 }
 
-// 如果还需要 3D 非 const 版本（虽然当前错误未报，但为完整也加上）
-double PerlinNoise::getValue(double x, double y, double z) {
-    return static_cast<const PerlinNoise*>(this)->getValue(x, y, z);
+// const 版本：3D
+double PerlinNoise::getValue(double x, double y, double z) const {
+    double value = 0;
+    double pow = 1;
+    for (int i = 0; i < levels; i++) {
+        value += noiseLevels[i]->getValue(x * pow, y * pow, z * pow) / pow;
+        pow /= 2;
+    }
+    return value;
 }
-
 double* PerlinNoise::getRegion( double* buffer, double x, double y, double z, int xSize, int ySize, int zSize, double xScale, double yScale, double zScale )
 {
 	const int size = xSize * ySize * zSize;
