@@ -56,14 +56,11 @@ void TeleportScreen::teleport() {
     std::string input = textBox->text;
     if (input.empty()) return;
 
-    // 按空格分割
     std::stringstream ss(input);
     std::vector<std::string> parts;
     std::string part;
-    while (ss >> part) {
-        parts.push_back(part);
-    }
-    if (parts.size() < 3) return;  // 至少需要 X Y Z
+    while (ss >> part) parts.push_back(part);
+    if (parts.size() < 3) return;
 
     LocalPlayer* player = minecraft->player;
     if (!player) return;
@@ -72,20 +69,19 @@ void TeleportScreen::teleport() {
     double y = player->y;
     double z = player->z;
 
-    // 辅助 lambda：解析单个坐标，支持 '~' 前缀
     auto parseCoord = [](const std::string& s, double current) -> double {
         if (s.empty()) return current;
         if (s[0] == '~') {
-            if (s.length() == 1) return current;          // 单独的 "~"
-            const char* numStr = s.c_str() + 1;           // 跳过 '~'
+            if (s.length() == 1) return current;
+            const char* numStr = s.c_str() + 1;
             char* endptr;
             double offset = strtod(numStr, &endptr);
-            if (endptr == numStr) offset = 0.0;            // 无效数字当作 0
+            if (endptr == numStr) offset = 0.0;
             return current + offset;
         } else {
             char* endptr;
             double absolute = strtod(s.c_str(), &endptr);
-            if (endptr == s.c_str()) return current;      // 解析失败，保持原值
+            if (endptr == s.c_str()) return current;
             return absolute;
         }
     };
@@ -94,9 +90,19 @@ void TeleportScreen::teleport() {
     y = parseCoord(parts[1], y);
     z = parseCoord(parts[2], z);
 
-    // 传送玩家
+    // 强制精确传送：临时禁用物理碰撞
+    bool oldNoPhysics = player->noPhysics;
+    player->noPhysics = true;
     player->setPos(x, y, z);
     player->xOld = player->x;
     player->yOld = player->y;
     player->zOld = player->z;
+    player->noPhysics = oldNoPhysics;
+
+    // 可选：强制更新 chunk 位置，避免卡地形
+    if (minecraft->levelRenderer) {
+        minecraft->levelRenderer->xOld = -9999; // 强制重新排序 chunk
+        minecraft->levelRenderer->yOld = -9999;
+        minecraft->levelRenderer->zOld = -9999;
+    }
 }
