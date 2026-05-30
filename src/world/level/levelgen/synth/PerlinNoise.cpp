@@ -39,6 +39,16 @@ double PerlinNoise::getValue(double x, double y, double z) const {
     return value;
 }
 
+// 非 const 版本：调用 const 版本
+double PerlinNoise::getValue(double x, double y) {
+    return static_cast<const PerlinNoise*>(this)->getValue(x, y);
+}
+
+// 如果还需要 3D 非 const 版本（虽然当前错误未报，但为完整也加上）
+double PerlinNoise::getValue(double x, double y, double z) {
+    return static_cast<const PerlinNoise*>(this)->getValue(x, y, z);
+}
+
 double* PerlinNoise::getRegion( double* buffer, double x, double y, double z, int xSize, int ySize, int zSize, double xScale, double yScale, double zScale )
 {
 	const int size = xSize * ySize * zSize;
