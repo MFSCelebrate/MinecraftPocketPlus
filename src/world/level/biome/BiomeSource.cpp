@@ -4,174 +4,112 @@
 #include "../ChunkPos.h"
 
 const float BiomeSource::zoom = 2 * 1;
-
 const float BiomeSource::tempScale = zoom / 80.0f;
 const float BiomeSource::downfallScale = zoom / 40.0f;
 const float BiomeSource::noiseScale = 1 / 4.0f;
 
 BiomeSource::BiomeSource()
-:	temperatureMap(NULL),
-	downfallMap(NULL),
-	noiseMap(NULL),
-	lenTemperatures(0),
-	lenDownfalls(0),
-	lenNoises(0),
-	lenBiomes(0),
-	temperatures(NULL),
-	downfalls(NULL),
-	noises(NULL),
-	biomes(NULL)
+    : temperatureMap(NULL),
+      downfallMap(NULL),
+      noiseMap(NULL),
+      lenTemperatures(0),
+      lenDownfalls(0),
+      lenNoises(0),
+      lenBiomes(0),
+      temperatures(NULL),
+      downfalls(NULL),
+      noises(NULL),
+      biomes(NULL)
 {
-	biomes = new Biome*[16*16];
+    biomes = new Biome*[16 * 16];
 }
 
-BiomeSource::BiomeSource( Level* level )
-:	rndTemperature(level->getSeed() * 9871),
-	rndDownfall(level->getSeed() * 39811),
-	rndNoise(level->getSeed() * 543321),
-	lenTemperatures(0),
-	lenDownfalls(0),
-	lenNoises(0),
-	lenBiomes(0),
-	temperatures(NULL),
-	downfalls(NULL),
-	noises(NULL),
-	biomes(NULL)
+BiomeSource::BiomeSource(Level* level)
+    : rndTemperature(level->getSeed() * 9871),
+      rndDownfall(level->getSeed() * 39811),
+      rndNoise(level->getSeed() * 543321),
+      lenTemperatures(0),
+      lenDownfalls(0),
+      lenNoises(0),
+      lenBiomes(0),
+      temperatures(NULL),
+      downfalls(NULL),
+      noises(NULL),
+      biomes(NULL)
 {
-	temperatureMap = new PerlinSimplexNoise(&rndTemperature, 4);
-	downfallMap = new PerlinSimplexNoise(&rndDownfall, 4);
-	noiseMap = new PerlinSimplexNoise(&rndNoise, 2);
+    temperatureMap = new PerlinSimplexNoise(&rndTemperature, 4);
+    downfallMap   = new PerlinSimplexNoise(&rndDownfall, 4);
+    noiseMap      = new PerlinSimplexNoise(&rndNoise, 2);
 
-	biomes = new Biome*[16*16];
-	temperatures = new float[16*16];
+    biomes = new Biome*[16 * 16];
+    temperatures = new double[16 * 16];
+    downfalls    = new double[16 * 16];
+    noises       = new double[16 * 16];
 }
 
-BiomeSource::~BiomeSource() {
-	LOGI("Deleting biome maps...\n");
-	delete temperatureMap;
-	delete downfallMap;
-	delete noiseMap;
-
-	LOGI("Deleting biome data arrays...\n");
-	delete[] temperatures;
-	delete[] downfalls;
-	delete[] noises;
-	delete[] biomes;
-}
-
-Biome* BiomeSource::getBiome( const ChunkPos& chunk )
+BiomeSource::~BiomeSource()
 {
-	return getBiome(chunk.x << 4, chunk.z << 4);
+    delete temperatureMap;
+    delete downfallMap;
+    delete noiseMap;
+    delete[] temperatures;
+    delete[] downfalls;
+    delete[] noises;
+    delete[] biomes;
 }
 
-Biome* BiomeSource::getBiome( int x, int z )
+Biome* BiomeSource::getBiome(const ChunkPos& chunk)
 {
-	return getBiomeBlock(x, z, 1, 1)[0];
+    return getBiome(chunk.x << 4, chunk.z << 4);
 }
 
-//float BiomeSource::getTemperature( int x, int z )
-//{
-//	temperatures = temperatureMap->getRegion(temperatures, x, z, 1, 1, tempScale, tempScale, 0.5f);
-//	return temperatures[0];
-//}
+Biome* BiomeSource::getBiome(int x, int z)
+{
+    return getBiomeBlock(x, z, 1, 1)[0];
+}
 
-Biome** BiomeSource::getBiomeBlock( int x, int z, int w, int h )
+Biome** BiomeSource::getBiomeBlock(int x, int z, int w, int h)
 {
     biomes = getBiomeBlock(biomes, x, z, w, h);
     return biomes;
 }
 
-// BiomeSource.cpp getBiomeBlock 函数开头
-Biome** BiomeSource::getBiomeBlock(Biome** biomes__, int x, int z, int w, int h) {
-    // 关键：对输入坐标应用世界变换
+Biome** BiomeSource::getBiomeBlock(Biome** biomes__, int x, int z, int w, int h)
+{
     double tx = (x + m_offsetX) * m_scaleX;
     double tz = (z + m_offsetZ) * m_scaleZ;
-    
-    // 采样时使用变换后的坐标
-    temperatures = temperatureMap->getRegion(temperatures, (float)tx, (float)z, 
-        w, w, tempScale, tempScale, 0.25f);
-    downfalls = downfallMap->getRegion(downfalls, (float)tx, (float)z, 
-        w, w, downfallScale, downfallScale, 0.3333f);
-    noises = noiseMap->getRegion(noises, (float)tx, (float)z, 
-        w, w, noiseScale, noiseScale, 0.588f);
-    // 后续逻辑不变...
-	int pp = 0;
-	for (int yy = 0; yy < w; yy++) {
-		for (int xx = 0; xx < h; xx++) {
-			float noise = (noises[pp] * 1.1f + 0.5f);
 
-			float split2 = 0.01f;
-			float split1 = 1 - split2;
-			float temperature = (temperatures[pp] * 0.15f + 0.7f) * split1 + noise * split2;
-			split2 = 0.002f;
-			split1 = 1 - split2;
-			float downfall = (downfalls[pp] * 0.15f + 0.5f) * split1 + noise * split2;
-			temperature = 1 - ((1 - temperature) * (1 - temperature));
-			if (temperature < 0) temperature = 0;
-			if (downfall < 0) downfall = 0;
-			if (temperature > 1) temperature = 1;
-			if (downfall > 1) downfall = 1;
+    // 使用 int 坐标调用 8 参数版本 getRegion（2D）
+    temperatures = temperatureMap->getRegion(temperatures, (int)tx, (int)tz,
+                                             w, h, tempScale, tempScale, 0.25f);
+    downfalls    = downfallMap->getRegion(downfalls,    (int)tx, (int)tz,
+                                             w, h, downfallScale, downfallScale, 0.3333f);
+    noises       = noiseMap->getRegion(noises,         (int)tx, (int)tz,
+                                             w, h, noiseScale, noiseScale, 0.588f);
 
-			temperatures[pp] = temperature;
-			downfalls[pp] = downfall;
-			// System.out.println(downfall);
-			biomes[pp++] = Biome::getBiome(temperature, downfall);
-		}
-	}
+    int pp = 0;
+    for (int yy = 0; yy < w; yy++) {
+        for (int xx = 0; xx < h; xx++) {
+            double noiseVal = (noises[pp] * 1.1 + 0.5);
 
-	return biomes;
+            double split2 = 0.01;
+            double split1 = 1 - split2;
+            double temperature = (temperatures[pp] * 0.15 + 0.7) * split1 + noiseVal * split2;
+            split2 = 0.002;
+            split1 = 1 - split2;
+            double downfall = (downfalls[pp] * 0.15 + 0.5) * split1 + noiseVal * split2;
+
+            temperature = 1 - ((1 - temperature) * (1 - temperature));
+            if (temperature < 0) temperature = 0;
+            if (downfall   < 0) downfall   = 0;
+            if (temperature > 1) temperature = 1;
+            if (downfall   > 1) downfall   = 1;
+
+            temperatures[pp] = temperature;
+            downfalls[pp]    = downfall;
+            biomes[pp++] = Biome::getBiome((float)temperature, (float)downfall);
+        }
+    }
+
+    return biomes;
 }
-
-float* BiomeSource::getTemperatureBlock( /*float* temperatures__, */int x, int z, int w, int h )
-{
-	//LOGI("gTempBlock: 1\n");
-	//const int size = w * h;
-	//if (lenTemperatures < size) {
-	//	if (temperatures) delete[] temperatures;
-	//	temperatures = new float[size];
-	//	lenTemperatures = size;
-	//}
-
-	float * ot = temperatures;
-	temperatures = temperatureMap->getRegion(temperatures, x, z, w, h, tempScale, tempScale, 0.25f);
-	noises = noiseMap->getRegion(noises, x, z, w, h, noiseScale, noiseScale, 0.588f);
-
-	if (ot != temperatures) {
-		LOGI("tmp ptr changed\n");
-	}
-
-	int pp = 0;
-	for (int yy = 0; yy < w; yy++) {
-		for (int xx = 0; xx < h; xx++) {
-			float noise = (noises[pp] * 1.1f + 0.5f);
-
-			float split2 = 0.01f;
-			float split1 = 1 - split2;
-			float temperature = (temperatures[pp] * 0.15f + 0.7f) * split1 + noise * split2;
-			temperature = 1 - ((1 - temperature) * (1 - temperature));
-
-			if (temperature < 0) temperature = 0;
-			if (temperature > 1) temperature = 1;
-
-			temperatures[pp] = temperature;
-			pp++;
-		}
-	}
-
-	// System.out.println(min+", "+max);
-
-	return temperatures;
-}
-
-//float* BiomeSource::getDownfallBlock( /*float* downfalls__,*/ int x, int z, int w, int h )
-//{
-//	//const int size = w * h;
-//	//if (lenDownfalls < size) {
-//	//	delete[] downfalls;
-//	//	downfalls = new float[size];
-//	//	lenDownfalls = size;
-//	//}
-//
-//	downfalls = downfallMap->getRegion(downfalls, x, z, w, w, downfallScale, downfallScale, 0.5f);
-//	return downfalls;
-//}
