@@ -92,7 +92,7 @@ private:
     int customSeaLevel;
 
     double m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;
-    float m_worldScaleX, m_worldScaleY, m_worldScaleZ;
+    double m_worldScaleX, m_worldScaleY, m_worldScaleZ;
     bool m_disableSkygrid;
 };
 
