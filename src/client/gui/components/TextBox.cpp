@@ -49,24 +49,21 @@ void TextBox::mouseClicked(Minecraft* minecraft, int x, int y, int buttonNum) {
     }
 }
 
-void TextBox::charPressed(Minecraft* minecraft, char c)  {
-    if (focused && c >= 32 && c < 127 && (int)text.size() < 256) {
-        text.push_back(c);
+void TextBox::charPressed(Minecraft* minecraft, char c) {
+    if (focused && (c >= 32 || c == '.' || c == '-')) {  // 允许 . 和 - 
+        if ((int)text.size() < 256) {
+            text.push_back(c);
+        }
     }
 }
-
 void TextBox::keyPressed(Minecraft* minecraft, int key) {
     if (!focused) return;
     
-    // 拦截主键盘数字 0-9，直接交给 charPressed 处理
-    if (key >= '0' && key <= '9') {
-        charPressed(minecraft, (char)key);
-        return;
-    }
-    
+    // 只处理控制键
     if (key == Keyboard::KEY_BACKSPACE && !text.empty()) {
         text.pop_back();
     }
+    // 所有其他键（包括数字、小数点）都交给 charPressed
 }
 
 void TextBox::tick(Minecraft* minecraft) {
