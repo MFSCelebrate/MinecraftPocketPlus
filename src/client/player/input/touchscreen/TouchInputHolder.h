@@ -161,21 +161,29 @@ public:
 				break;
 			}
 		}
-		if (isActive && !wasActive) {
-			_startTurnTime = now;
-			_totalMoveDelta = 0;
-			bool isInMovement = _lastPlayer? getSpeedSquared(_lastPlayer) > 0.01f : false;
-			state = State_Deciding;
-			_canDestroy = !isInMovement;
-			_forceCanUse = false;
-			if (!_canDestroy && (_lastPlayer && _lastPlayer->canUseCarriedItemWhileMoving())) {
-				_forceCanUse = true;
-				_canDestroy = true;
-			}
-			_sentFirstRemove = false;
-		} else if (wasActive && !isActive) {
-			_sentFirstRemove = false;
-			state = State_None;
+		
+		if(isActive && !wasActive){
+        _startTurnTime = now;
+        _totalMoveDelta = 0;
+        bool isInMovement = _lastPlayer ? getSpeedSquared(_lastPlayer) > 0.01f : false;
+        state = State_Deciding;
+        _canDestroy = !isInMovement;
+        
+        // 🧊 修复：每次新触摸都重置 _forceCanUse
+        // 不能让它从一个触摸周期"泄漏"到下一个
+        _forceCanUse = false;
+        
+        if(!_canDestroy && (_lastPlayer && _lastPlayer->canUseCarriedItemWhileMoving())){
+            _forceCanUse = true;
+            _canDestroy = true;
+        }
+        _sentFirstRemove = false;
+    } else if(wasActive && !isActive){
+        _sentFirstRemove = false;
+        state = State_None;
+        // 🧊 手指抬起时也重置，双保险
+        _canDestroy = false;
+        _forceCanUse = false;
 		}
 
 		if (MODE_DELTA == mode && (wasActive || isActive)) {
@@ -273,17 +281,28 @@ public:
 	// Implementation for the IBuildInput part
 	//
 	virtual bool tickBuild(Player* player, BuildActionIntention* bai) override {
-		_lastPlayer = player;
+    _lastPlayer = player;
 
-		if (state == State_Destroy) {
-			if (!_sentFirstRemove) {
-				*bai = BuildActionIntention((_forceCanUse?0:BuildActionIntention::BAI_FIRSTREMOVE) | BuildActionIntention::BAI_INTERACT);
-				_sentFirstRemove = true;
-			} else {
-				*bai = BuildActionIntention((_forceCanUse?0:BuildActionIntention::BAI_REMOVE) | BuildActionIntention::BAI_INTERACT);
-			}
-			return true;
-		}
+    if(state == State_Destroy){
+        if(!_sentFirstRemove){
+            // 🧊 修复：_forceCanUse 不应抑制 BAI_FIRSTREMOVE/BAI_REMOVE
+            // 它只应该影响 BAI_INTERACT（是否允许"使用"物品）
+            // 破坏方块始终应该允许
+            *bai = BuildActionIntention(
+                BuildActionIntention::BAI_FIRSTREMOVE
+                | (_forceCanUse ? 0 : BuildActionIntention::BAI_INTERACT)  // 只在非forceCanUse时加交互
+            );
+            _sentFirstRemove = true;
+        } else {
+            *bai = BuildActionIntention(
+                BuildActionIntention::BAI_REMOVE
+                | (_forceCanUse ? 0 : BuildActionIntention::BAI_INTERACT)
+            );
+        }
+        return true;
+    }
+    
+    // ... 后面不变 ...
 
 		Multitouch::rewind();
 		const float now = getTimeS();
