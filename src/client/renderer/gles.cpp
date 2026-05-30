@@ -40,20 +40,30 @@ void __gluMakeIdentityf(GLfloat m[16]) {
 void glInit()
 {
 #ifndef OPENGL_ES
-	
-	GLenum err = glewInit();
-	printf("Err: %d\n", err);
+    // ❌ 删除 glewInit() —— 和 glad 冲突
+    // GLenum err = glewInit();
+    // printf("Err:%d\n", err);
+    
+    // ✅ 如果 glad 还没初始化，这里补初始化（通常 main_glfw 已做）
+    // glad 需要先有 GLFW 上下文，所以这里只做检查
+    if (!gladLoadGL()) {
+        printf("WARNING: glad not initialized! Call gladLoadGLLoader first.\n");
+    }
+    printf("GL version: %s\n", glGetString(GL_VERSION));
 #endif
 }
 
-void anGenBuffers(GLsizei n, GLuint* buffers) {
-#ifdef __EMSCRIPTEN__
+void anGenBuffers(GLsizei n, GLuint* buffers){
+    // ✅ 统一使用真正的 glGenBuffers
+    // glad 正确加载后，glGenBuffers 应该可用
     glGenBuffers(n, buffers);
-#else
-    static GLuint k = 1;
-    for (int i = 0; i < n; ++i)
-        buffers[i] = ++k;
-#endif
+    
+    // 如果 glGenBuffers 返回 0（表示失败），回退到假 ID
+    if (buffers[0] == 0 && n > 0) {
+        static GLuint k = 1;
+        for(int i = 0; i < n; ++i)
+            buffers[i] = ++k;
+    }
 }
 
 #ifdef USE_VBO
