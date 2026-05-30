@@ -71,7 +71,7 @@ public:
         bool updateLights = false;
         if (newChunk == NULL) {
         if (source == NULL) {
-            return emptyChunk.get();   // 返回裸指针，但不转移所有权
+            return emptyChunk;
         } else {
             newChunk = source->getChunk(x, z);
         }
