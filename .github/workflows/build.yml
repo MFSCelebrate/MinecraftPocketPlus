@@ -32,13 +32,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout current code (NEW)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           path: new_source
 
       - name: Checkout previous commit (OLD)
         if: github.event_name == 'push'
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.before }}
           path: old_source
@@ -54,24 +54,24 @@ jobs:
 
       - name: Upload OLD source artifact
         if: github.event_name == 'push'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: Source_Code_Old
           path: Source_Code_Old.zip
 
       - name: Upload NEW source artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: Source_Code
           path: Source_Code.zip
 
-  # ================= Windows 构建（可跳过） =================
+  # ================= Windows 构建 =================
   build-windows:
     name: Build Windows
     runs-on: ubuntu-22.04
     if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.disable_build != 'true' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
       - name: Setup caches
         uses: ./.github/actions/setup-cache
@@ -108,9 +108,14 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
+
+      # 🧊 把 data 目录复制到构建输出，让 exe 能找到贴图/字体/声音
+      - name: Copy data directory to build output
+        run: |
+          cp -r ${{github.workspace}}/data ${{github.workspace}}/build/data
       
       - name: Upload Artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: mcpe-windows
           path: |
@@ -118,8 +123,9 @@ jobs:
             ${{github.workspace}}/build/libpng16.dll
             ${{github.workspace}}/build/OpenAL32.dll
             ${{github.workspace}}/build/libz.dll
+            ${{github.workspace}}/build/data/**
 
-  # ================= Android 构建（可跳过） =================
+  # ================= Android 构建 =================
   build-android:
     name: Build Android (${{ matrix.abi }})
     runs-on: ubuntu-22.04
@@ -139,11 +145,11 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Cache Android command-line tools
         id: cache-android-tools
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ${{ env.ANDROID_SDK_ROOT }}
           key: android-cmdline-tools-v36
@@ -161,7 +167,7 @@ jobs:
 
       - name: Cache Android NDK r14b
         id: cache-android-ndk
-        uses: actions/cache@v5
+        uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/android-ndk-r14b
           key: android-ndk-r14b
@@ -186,7 +192,7 @@ jobs:
           fi
 
       - name: Setup Java 25
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 25
@@ -207,12 +213,12 @@ jobs:
           ./build.sh --abi all
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v4
         with:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
-  # ================= 发布任务（仅在 main 分支且构建未跳过时运行） =================
+  # ================= 发布任务 =================
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -220,7 +226,7 @@ jobs:
     if: ${{ (github.event_name != 'workflow_dispatch' || github.event.inputs.disable_build != 'true') && github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Declare Version Variables
         id: ref
@@ -229,24 +235,24 @@ jobs:
           echo "hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_OUTPUT
 
       - name: Download Artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
 
       - name: Zip Windows Artifacts
         uses: vimtor/action-zip@v1.2
         with:
-          files: mcpe-windows/MinecraftPE.exe mcpe-windows/libpng16.dll mcpe-windows/OpenAL32.dll mcpe-windows/libz.dll
+          files: mcpe-windows/
           dest: minecraftpe-${{ steps.ref.outputs.hash }}-windows.zip
 
       - name: Zip Android arm64-v8a Artifact
         uses: vimtor/action-zip@v1.2
         with:
-          files: minecraftpe-apk-arm64-v8a/minecraftpe-v8a-debug.apk
+          files: minecraftpe-apk-arm64-v8a/minecraftpe-*-debug.apk
           dest: minecraftpe-${{ steps.ref.outputs.hash }}-android-arm64-v8a.zip
 
       - name: Zip Android armeabi-v7a Artifact
         uses: vimtor/action-zip@v1.2
         with:
-          files: minecraftpe-apk-armeabi-v7a/minecraftpe-v7a-debug.apk
+          files: minecraftpe-apk-armeabi-v7a/minecraftpe-*-debug.apk
           dest: minecraftpe-${{ steps.ref.outputs.hash }}-android-armeabi-v7a.zip
 
       - name: Zip Data
