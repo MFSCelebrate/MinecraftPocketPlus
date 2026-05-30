@@ -58,9 +58,9 @@ void TextBox::charPressed(Minecraft* minecraft, char c)  {
 void TextBox::keyPressed(Minecraft* minecraft, int key) {
     if (!focused) return;
     
-    // 拦截主键盘数字 0-9，直接交给 charPressed 处理，防止被误认为退格/回车
-    if ((key >= '0' && key <= '9')) {
-        charPressed((char)key);
+    // 拦截主键盘数字 0-9，直接交给 charPressed 处理
+    if (key >= '0' && key <= '9') {
+        charPressed(minecraft, (char)key);
         return;
     }
     
