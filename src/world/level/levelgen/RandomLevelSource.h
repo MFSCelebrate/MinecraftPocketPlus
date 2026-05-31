@@ -120,7 +120,7 @@ class PerformanceTestChunkSource : public ChunkSource
     Level* level;
 public:
     PerformanceTestChunkSource(Level* level) : ChunkSource(), level(level) {}
-    virtual bool hasChunk(int64_t x, int64_t y) { return true; }
+    virtual bool hasChunk(int64_t x, int64_t y) override { return true; }
     virtual LevelChunk* getChunk(int64_t x, int64_t z) override { return create(x, z); }
     virtual LevelChunk* create(int64_t x, int64_t z) override;
     virtual void postProcess(ChunkSource* parent, int64_t x, int64_t z) override {}
