@@ -6,7 +6,7 @@
 #include "../../../util/Random.h"
 #include "../../../util/Mth.h"
 
-void CanyonFeature::addFeature( Level* level, int x, int z, int xOffs, int zOffs,
+void CanyonFeature::addFeature( Level* level, int64_t x, int64_t z, int64_t xOffs, int64_t zOffs,
                                 unsigned char* blocks, int /* blocksSize */ )
 {
     if (random.nextInt(15) != 0) return;
