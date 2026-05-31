@@ -41,7 +41,10 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         for (int j=0; j<32; ++j)
             waterDepths[i][j] = 0;
 
-    buffer = new float[MAX_BUFFER_SIZE];
+    
+
+// ✅
+buffer = new double[MAX_BUFFER_SIZE];
 
     Random randomCopy = random;
     printf("random.get : %d\n", randomCopy.nextInt());
@@ -524,7 +527,7 @@ Biome* biome = level->getBiomeSource()->getBiome(
 
     // 雪处理
     // ✅ 新代码 —— 直接用 double*, getTemperatureBlock 早已删除
-	double* temperatures = level->getBiomeSource()->getTemperatureBlock(xo + 8, zo + 8, 16, 16);  // 💀 函数不存在
+	
     for (int64_t x = xo + 8; x < xo + 8 + 16; x++)
         for (int64_t z = zo + 8; z < zo + 8 + 16; z++) {
             int xp = x - (xo + 8);
@@ -589,7 +592,10 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 
     // 临时截断为 int 传给仍需要 int 的外部接口（当偏移极大时这些会失效，但噪声生成链已 double 化）
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
-    float* temperatures = level->getBiomeSource()->temperatures;
+
+// ✅
+double* temperatures = level->getBiomeSource()->temperatures;
+double* downfalls = level->getBiomeSource()->downfalls;
         // 原有内容
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
@@ -598,9 +604,8 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 
     return levelChunk;
 }
-
-// 修改：x, z 改为 double 世界坐标，y 仍为 int
-float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize) {
+// ✅
+double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, ...) {
     // ✅ farlandsScale 升级为 double（之前已在头文件改过）并去掉 f 后缀
 double farlandsScale = 1.0;
 double sx = 684.412 * farlandsScale * m_worldScaleX;
@@ -650,7 +655,9 @@ double* downfalls = level->getBiomeSource()->downfalls;
             dd = dd * dd;
             dd = dd * dd;
             dd = 1 - dd;
-            float scale = ((sr[pp] + 256.0f) / 512);
+
+// ✅
+double scale = ((sr[pp] + 256.0) / 512.0);
             scale *= dd;
             if (scale > 1) scale = 1;
             float depth = (dr[pp] / 8000.0f);
