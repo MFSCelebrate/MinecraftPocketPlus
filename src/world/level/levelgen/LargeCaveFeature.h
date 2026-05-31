@@ -18,7 +18,8 @@ protected:
     void addRoom(int xOffs, int zOffs, unsigned char* blocks, float xRoom, float yRoom, float zRoom);
     void addTunnel(int xOffs, int zOffs, unsigned char* blocks, float xCave, float yCave, float zCave,
                    float thickness, float yRot, float xRot, int step, int dist, float yScale);
-    void addFeature(Level* level, int x, int z, int xOffs, int zOffs,
-                    unsigned char* blocks, int blocksSize) override;
+    // ✅ 修复
+void addFeature(Level* level, int64_t x, int64_t z, int64_t xOffs, int64_t zOffs,
+    unsigned char* blocks, int blocksSize) override;
 };
 #endif
