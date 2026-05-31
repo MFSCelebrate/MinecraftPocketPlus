@@ -885,38 +885,46 @@ double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
     }
 
     // ===================== 噪声计算（Float 精度） =====================
-    float noiseValsF[8] = {0.0f};
-    if (rls) {
-        
-// 噪声输入
-double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
-double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
-double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+float noiseValsF[8] = {0.0f};
+if (rls) {
+    // 🧊 坐标用 double 算，不在中间步骤强转 float，彻底杜绝溢出
+    double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
+    double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
+    double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
 
-        const double s = 684.412;
-        const double scale_large_XZ = s / 80.0;
-        const double scale_large_Y  = s / 160.0;
+    const double s = 684.412;
+    const double scale_large_XZ = s / 80.0;
+    const double scale_large_Y  = s / 160.0;
 
-        float fx_large = (float)(sampleWorldX * scale_large_XZ);
-        float fy_large = (float)(sampleWorldY * scale_large_Y);
-        float fz_large = (float)(sampleWorldZ * scale_large_XZ);
+    // 🧊 坐标直接用 double 传入噪声函数（函数签名已升级为 double），
+    //    只用 float 存最终噪声值，观察精度损失
+    noiseValsF[0] = (float)rls->getLPerlinNoise1(sampleWorldX * scale_large_XZ,
+                                                   sampleWorldY * scale_large_Y,
+                                                   sampleWorldZ * scale_large_XZ);
+    noiseValsF[1] = (float)rls->getLPerlinNoise2(sampleWorldX * scale_large_XZ,
+                                                   sampleWorldY * scale_large_Y,
+                                                   sampleWorldZ * scale_large_XZ);
+    noiseValsF[2] = (float)rls->getPerlinNoise1( sampleWorldX * scale_large_XZ,
+                                                   sampleWorldY * scale_large_Y,
+                                                   sampleWorldZ * scale_large_XZ);
 
-        noiseValsF[0] = rls->getLPerlinNoise1(fx_large, fy_large, fz_large);
-        noiseValsF[1] = rls->getLPerlinNoise2(fx_large, fy_large, fz_large);
-        noiseValsF[2] = rls->getPerlinNoise1(fx_large, fy_large, fz_large);
+    const double scale_sand        = 1.0 / 32.0;
+    const double scale_depth       = 1.0 / 64.0;
+    const double scale_scale       = 1.0 / 80.0;
+    const double scale_depth_noise = 1.0 / 200.0;
+    const double scale_forest      = 0.5;
 
-        const double scale_sand       = 1.0 / 32.0;
-        const double scale_depth      = 1.0 / 64.0;
-        const double scale_scale      = 1.0 / 80.0;
-        const double scale_depth_noise= 1.0 / 200.0;
-        const double scale_forest     = 0.5;
-
-        noiseValsF[3] = rls->getPerlinNoise2((float)(sampleWorldX * scale_sand), (float)(sampleWorldZ * scale_sand));
-        noiseValsF[4] = rls->getPerlinNoise3((float)(sampleWorldX * scale_depth), (float)(sampleWorldZ * scale_depth));
-        noiseValsF[5] = rls->getScaleNoise((float)(sampleWorldX * scale_scale), (float)(sampleWorldZ * scale_scale));
-        noiseValsF[6] = rls->getDepthNoise((float)(sampleWorldX * scale_depth_noise), (float)(sampleWorldZ * scale_depth_noise));
-        noiseValsF[7] = rls->getForestNoise((float)(sampleWorldX * scale_forest), (float)(sampleWorldZ * scale_forest));
-    }
+    noiseValsF[3] = (float)rls->getPerlinNoise2(sampleWorldX * scale_sand,
+                                                  sampleWorldZ * scale_sand);
+    noiseValsF[4] = (float)rls->getPerlinNoise3(sampleWorldX * scale_depth,
+                                                  sampleWorldZ * scale_depth);
+    noiseValsF[5] = (float)rls->getScaleNoise( sampleWorldX * scale_scale,
+                                                sampleWorldZ * scale_scale);
+    noiseValsF[6] = (float)rls->getDepthNoise( sampleWorldX * scale_depth_noise,
+                                                sampleWorldZ * scale_depth_noise);
+    noiseValsF[7] = (float)rls->getForestNoise(sampleWorldX * scale_forest,
+                                                 sampleWorldZ * scale_forest);
+}
 
     // ===================== 构建显示行 (25 行，替换第18行为精度) =====================
     static char ln[27][1024];
