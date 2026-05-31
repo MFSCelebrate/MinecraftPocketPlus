@@ -7,7 +7,7 @@
 class CanyonFeature: public LargeFeature {
 public:
     // 暴露 addFeature，允许外部直接调用
-    virtual void addFeature(Level* level, int x, int z, int xOffs, int zOffs,
+    void addFeature(Level* level, int64_t x, int64_t z, int64_t xOffs, int64_t zOffs,
                             unsigned char* blocks, int blocksSize) override;
 protected:
     void addTunnel(int xOffs, int zOffs, unsigned char* blocks, float xCave, float yCave, float zCave,
