@@ -38,7 +38,8 @@ inline double getPerlinNoise2(double x, double z) const { return perlinNoise2.ge
     RandomLevelSource(Level* level, long seed, int version, bool spawnMobs);
     ~RandomLevelSource();
 
-    bool hasChunk(int64_t x, int y) override;
+    // ✅ 修复 —— y 也是 int64_t（匹配 ChunkSource 基类）
+bool hasChunk(int64_t x, int64_t y) override;
     LevelChunk* create(int64_t x, int64_t z) override;
     LevelChunk* getChunk(int64_t xOffs, int64_t zOffs) override;
     void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures);
