@@ -195,10 +195,10 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
     // ✅ 修正：y 坐标固定为常量，z 坐标用 zf，ySize = 1
-perlinNoise2.getRegion(sandBuffer, (float)xf, 0.0f, (float)zf, 16, 1, 16, sx, 1.0f, sz);
-perlinNoise2.getRegion(gravelBuffer, (float)xf, 109.01340f, (float)zf, 16, 1, 16, sx, 1.0f, sz);  // 砾石本没错，但顺手规范化
-perlinNoise3.getRegion(depthBuffer, (float)xf, 0.0f, (float)zf, 16, 1, 16, sx*2.0f, 1.0f, sz*2.0f);
-
+// ✅ 新代码 —— sandBuffer 已是 double*, 去掉 (float) 强转和 f 后缀
+perlinNoise2.getRegion(sandBuffer, xf, 0.0, zf, 16, 1, 16, (double)sx, 1.0, (double)sz);
+perlinNoise2.getRegion(gravelBuffer, xf, 109.01340, zf, 16, 1, 16, (double)sx, 1.0, (double)sz);
+perlinNoise3.getRegion(depthBuffer, xf, 0.0, zf, 16, 1, 16, (double)sx * 2.0, 1.0, (double)sz * 2.0);
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
             float temp = 1;
@@ -523,7 +523,8 @@ Biome* biome = level->getBiomeSource()->getBiome(
 		MobSpawner::postProcessSpawnMobs(level, biome, xo + 8, zo + 8, 16, 16, &random);
 
     // 雪处理
-    float* temperatures = level->getBiomeSource()->getTemperatureBlock(xo + 8, zo + 8, 16, 16);
+    // ✅ 新代码 —— 直接用 double*, getTemperatureBlock 早已删除
+	double* temperatures = level->getBiomeSource()->getTemperatureBlock(xo + 8, zo + 8, 16, 16);  // 💀 函数不存在
     for (int64_t x = xo + 8; x < xo + 8 + 16; x++)
         for (int64_t z = zo + 8; z < zo + 8 + 16; z++) {
             int xp = x - (xo + 8);
@@ -600,19 +601,20 @@ LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
 
 // 修改：x, z 改为 double 世界坐标，y 仍为 int
 float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize) {
-    float farlandsScale = 1.0f;
-
-    float sx = 684.412f * farlandsScale * m_worldScaleX;
-    float sy = 684.412f * farlandsScale * m_worldScaleY;
-    float sz = 684.412f * farlandsScale * m_worldScaleZ;
+    // ✅ farlandsScale 升级为 double（之前已在头文件改过）并去掉 f 后缀
+double farlandsScale = 1.0;
+double sx = 684.412 * farlandsScale * m_worldScaleX;
+double sy = 684.412 * farlandsScale * m_worldScaleY;
+double sz = 684.412 * farlandsScale * m_worldScaleZ;
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
         LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
     }
 
-    float* temperatures = level->getBiomeSource()->temperatures;
-    float* downfalls = level->getBiomeSource()->downfalls;
+    // ✅ 新代码 —— 直接用 double*, getTemperatureBlock 早已删除
+double* temperatures = level->getBiomeSource()->temperatures;
+double* downfalls = level->getBiomeSource()->downfalls;
 
     // X/Z 偏移已在传入的 worldBlock 中包含，此处仅缩放，不再加偏移
     double noiseX = x / 4.0;
