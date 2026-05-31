@@ -20,7 +20,7 @@ public:
 	{
 	}
 
-	bool place(Level* level, Random* random, int x, int y, int z) {
+	bool place(Level* level, Random* random, int64_t x, int y, int64_t z) {
         int treeHeight = random->nextInt(3) + 4;
 
         bool free = true;
@@ -30,8 +30,8 @@ public:
             int r = 1;
             if (yy == y) r = 0;
             if (yy >= y + 1 + treeHeight - 2) r = 2;
-            for (int xx = x - r; xx <= x + r && free; xx++) {
-                for (int zz = z - r; zz <= z + r && free; zz++) {
+            for (int64_t xx = x - r; xx <= x + r && free; xx++) {
+                for (int64_t zz = z - r; zz <= z + r && free; zz++) {
                     if (yy >= 0 && yy < Level::DEPTH) {
                         int tt = level->getTile(xx, yy, zz);
                         if (tt != 0 && tt != ((Tile*)Tile::leaves)->id) free = false;
