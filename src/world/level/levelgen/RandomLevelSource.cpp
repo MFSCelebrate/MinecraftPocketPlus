@@ -575,11 +575,31 @@ double temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0 * SNOW_SC
 }
 
 
-LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
-	// 第 600 行附近，temperatures 现在是 double*，已自动匹配
-    prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
-//                                               ✅ double* 已匹配
-    return getChunk(x, z);
+LevelChunk* RandomLevelSource::create(int64_t x, int64_t z)
+{
+    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
+    ChunkMap::iterator it = chunkMap.find(hashedPos);
+    if (it != chunkMap.end())
+        return it->second;
+
+    random.setSeed((long)(x * 341872712l + z * 132899541l));
+
+    // 🧊 恢复这三个被误删的变量声明
+    unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
+    LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);
+    chunkMap.insert(std::make_pair(hashedPos, levelChunk));
+
+    double worldBlockX = x * 16.0 + m_worldOffsetX;    // ✅ 恢复
+    double worldBlockZ = z * 16.0 + m_worldOffsetZ;    // ✅ 恢复
+
+    Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
+    double* temperatures = level->getBiomeSource()->temperatures;  // ✅ 恢复
+
+    prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);  // ✅ 现在都能找到
+    buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
+
+    levelChunk->recalcHeightmap();
+    return levelChunk;
 }
 
 LevelChunk* RandomLevelSource::getChunk(int64_t xOffs, int64_t zOffs) {
@@ -661,9 +681,9 @@ double* downfalls = level->getBiomeSource()->downfalls;
             
 
 // ✅ 修复
-double temp = temperatures[xp * 16 + zp];
-            float downfall = downfalls[xp * 16 + zp] * temperature;
-            float dd = 1 - downfall;
+double temperature = temperatures[xp * 16 + zp];
+            double downfall = downfalls[xp * 16 + zp] * temperature;
+            double dd = 1 - downfall;
             dd = dd * dd;
             dd = dd * dd;
             dd = 1 - dd;
