@@ -88,17 +88,17 @@ private:
     Level* level;
     bool spawnMobs;
 
-    float* buffer;
-    float sandBuffer[16 * 16];
-    float gravelBuffer[16 * 16];
-    float depthBuffer[16 * 16];
-    float* pnr;
-    float* ar;
-    float* br;
-    float* sr;
-    float* dr;
-    float* fi;
-    float* fis;
+    double* buffer;
+    double sandBuffer[16*16];
+    double gravelBuffer[16*16];
+    double depthBuffer[16*16];
+    double* pnr;
+    double* ar;
+    double* br;
+    double* sr;
+    double* dr;
+    double* fi;
+    double* fis;
 
     int customSeaLevel;
 
