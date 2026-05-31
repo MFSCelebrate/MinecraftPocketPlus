@@ -113,9 +113,8 @@ RandomLevelSource::~RandomLevelSource() {
     delete[] fis;
 }
 
-// 修改：xOffs, zOffs 改为 double 世界坐标
-void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures) {
-    int waterHeight = customSeaLevel + 1;
+void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, double* temperatures) {
+	int waterHeight = customSeaLevel + 1;
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
@@ -153,7 +152,8 @@ void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char
                         float val = _s0;
                         float vala = (_s1 - _s0) * zStep;
                         for (int z = 0; z < CHUNK_WIDTH; z++) {
-                            float temp = temperatures[(xc * CHUNK_WIDTH + x) * 16 + (zc * CHUNK_WIDTH + z)];
+// ✅ 修复
+double temp = temperatures[(xc * CHUNK_WIDTH + x) * 16 + (zc * CHUNK_WIDTH + z)];
                             int tileId = 0;
                             if (yc * CHUNK_HEIGHT + y < waterHeight) {
                                 if (temp < SNOW_CUTOFF && yc * CHUNK_HEIGHT + y >= waterHeight - 1) {
@@ -273,6 +273,8 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     double worldBlockZ = zt * 16.0 + m_worldOffsetZ;
     int64_t xo = (int64_t)worldBlockX;
     int64_t zo = (int64_t)worldBlockZ;
+	// 在 postProcess 开头附近（约 530 行），确保有：
+double* temperatures = level->getBiomeSource()->temperatures;
     
     // 【新增】计算变换后的参考坐标，用于群系查询和地物放置
     double transformedXo = (xo + m_worldOffsetX) * m_worldScaleX;
@@ -313,7 +315,9 @@ Biome* biome = level->getBiomeSource()->getBiome(
         int64_t z = zo + random.nextInt(16) + 8;
         LakeFeature feature(Tile::calmWater->id);
 		feature.place(level, &random, x, y, z);
-        LOGI("Adding underground lake @ (%d,%d,%d)\n", x, y, z);
+
+// ✅ 修复
+LOGI("Adding underground lake @ (%lld,%d,%lld)\n", (long long)x, y, (long long)z);
     }
 
 	////@todo: hide those chunks if they are aren't visible
@@ -533,7 +537,8 @@ Biome* biome = level->getBiomeSource()->getBiome(
             int xp = x - (xo + 8);
             int zp = z - (zo + 8);
             int y = level->getTopSolidBlock(x, z);
-            float temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0f * SNOW_SCALE;
+        
+double temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0 * SNOW_SCALE;
             if (temp < SNOW_CUTOFF) {
                 if (y > 0 && y < 128 && level->isEmptyTile(x, y, z) && level->getMaterial(x, y - 1, z)->blocksMotion()) {
                     if (level->getMaterial(x, y - 1, z) != Material::ice) level->setTile(x, y, z, Tile::topSnow->id);
@@ -571,6 +576,9 @@ Biome* biome = level->getBiomeSource()->getBiome(
 
 
 LevelChunk* RandomLevelSource::create(int64_t x, int64_t z) {
+	// 第 600 行附近，temperatures 现在是 double*，已自动匹配
+    prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
+//                                               ✅ double* 已匹配
     return getChunk(x, z);
 }
 
@@ -605,14 +613,15 @@ double* downfalls = level->getBiomeSource()->downfalls;
     return levelChunk;
 }
 // ✅
-double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, ...) {
-    // ✅ farlandsScale 升级为 double（之前已在头文件改过）并去掉 f 后缀
-double farlandsScale = 1.0;
-double sx = 684.412 * farlandsScale * m_worldScaleX;
-double sy = 684.412 * farlandsScale * m_worldScaleY;
-double sz = 684.412 * farlandsScale * m_worldScaleZ;
+// ✅ 完整签名
+double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize) {
+    double farlandsScale = 1.0;
+    double sx = 684.412 * farlandsScale * m_worldScaleX;
+    double sy = 684.412 * farlandsScale * m_worldScaleY;
+    double sz = 684.412 * farlandsScale * m_worldScaleZ;
 
     const int size = xSize * ySize * zSize;
+    // ... 后续不变
     if (size > MAX_BUFFER_SIZE) {
         LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
     }
@@ -649,7 +658,10 @@ double* downfalls = level->getBiomeSource()->downfalls;
         int xp = xx * wScale + wScale / 2;
         for (int zz = 0; zz < zSize; zz++) {
             int zp = zz * wScale + wScale / 2;
-            float temperature = temperatures[xp * 16 + zp];
+            
+
+// ✅ 修复
+double temp = temperatures[xp * 16 + zp];
             float downfall = downfalls[xp * 16 + zp] * temperature;
             float dd = 1 - downfall;
             dd = dd * dd;
