@@ -6,18 +6,18 @@
 #include "../../Level.h"
 class Random;
 
-class Feature
-{
+// ✅ 新代码 —— x/z 升级为 int64_t，y 保持 int（高度永远在 0~127）
+class Feature {
 public:
-	Feature(bool doUpdate = false);
+    Feature(bool doUpdate = false);
     virtual ~Feature() {}
-    virtual bool place(Level* level, Random* random, int x, int y, int z) = 0;
+    virtual bool place(Level* level, Random* random, int64_t x, int y, int64_t z) = 0;
     virtual void init(float v1, float v2, float v3) {}
 protected:
-	void placeBlock(Level* level, int x, int y, int z, int tile);
-	void placeBlock(Level* level, int x, int y, int z, int tile, int data);
+    void placeBlock(Level* level, int64_t x, int y, int64_t z, int tile);
+    void placeBlock(Level* level, int64_t x, int y, int64_t z, int tile, int data);
 private:
-	bool doUpdate;
+    bool doUpdate;
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL_LEVELGEN_FEATURE__Feature_H__*/
