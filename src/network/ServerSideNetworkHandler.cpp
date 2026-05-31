@@ -173,34 +173,24 @@ void ServerSideNetworkHandler::onDisconnect(const RakNet::RakNetGUID& guid)
 	}
 }
 
+// ===== ServerSideNetworkHandler.cpp —— handle(LoginPacket*) 修复 =====
 void ServerSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginPacket* packet)
 {
-	if (!level) return;
-	if (!_allowIncoming) return;
+    if (!level) return;
+    if (!_allowIncoming) return;
 
-	LOGI("LoginPacket\n");
+    LOGI("LoginPacket\n");
 
-	int loginStatus = LoginStatus::Success;
-	//
-	// Bad/incompatible client version
-	//
-	bool oldClient = packet->clientNetworkVersion < SharedConstants::NetworkProtocolLowestSupportedVersion;
-	bool oldServer = packet->clientNetworkLowestSupportedVersion > SharedConstants::NetworkProtocolVersion;
-	if (oldClient || oldServer)
-		loginStatus = oldClient? LoginStatus::Failed_ClientOld : LoginStatus::Failed_ServerOld;
+    // 🧊 移除版本检查 —— 来者不拒，任何版本都能加入
+    int loginStatus = LoginStatus::Success;
 
-	RakNet::BitStream bitStream;
-	LoginStatusPacket(loginStatus).write(&bitStream);
-	rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, false);
+    RakNet::BitStream bitStream;
+    LoginStatusPacket(loginStatus).write(&bitStream);
+    rakPeer->Send(&bitStream, HIGH_PRIORITY, RELIABLE_ORDERED, 0, source, false);
 
-	if (LoginStatus::Success != loginStatus)
-		return;
-
-	//
-	// Valid client version
-	//
-	Player* newPlayer = new ServerPlayer(minecraft, level);
-
+    // 后续创建玩家逻辑保持不变...
+    Player* newPlayer = new ServerPlayer(minecraft, level);
+    // ...
 	minecraft->gameMode->initAbilities(newPlayer->abilities);
 	newPlayer->owner = source;
 	newPlayer->name = packet->clientName.C_String();
