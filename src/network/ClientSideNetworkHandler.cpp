@@ -100,24 +100,10 @@ void ClientSideNetworkHandler::onDisconnect(const RakNet::RakNetGUID& guid)
 #endif
 }
 
-void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginStatusPacket* packet) {
-	if (packet->status == LoginStatus::Success) {
-		raknetInstance->setIsLoggedIn(true);
-		return;
-	}
-
-	if (packet->status == LoginStatus::Failed_ClientOld) {
-		LOGI("Disconnect! Client is outdated!\n");
-#ifndef STANDALONE_SERVER
-		minecraft->setScreen(new DisconnectionScreen("Could not connect: Outdated client!"));
-#endif
-	}
-	if (packet->status == LoginStatus::Failed_ServerOld) {
-		LOGI("Disconnect! Server is outdated!\n");
-#ifndef STANDALONE_SERVER
-		minecraft->setScreen(new DisconnectionScreen("Could not connect: Outdated server!"));
-#endif
-	}
+// ClientSideNetworkHandler.cpp —— 也去掉（可选）
+void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, LoginStatusPacket* packet){
+    // 🧊 无视服务器返回的版本状态，直接标记已登录
+    raknetInstance->setIsLoggedIn(true);
 }
 
 void ClientSideNetworkHandler::handle(const RakNet::RakNetGUID& source, StartGamePacket* packet)
