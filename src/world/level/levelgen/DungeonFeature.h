@@ -6,8 +6,9 @@
 
 class DungeonFeature: public LargeFeature {
 public:
-    virtual void addFeature(Level* level, int x, int z, int xOffs, int zOffs,
-                            unsigned char* blocks, int blocksSize) override;
+    // ✅
+void addFeature(Level* level, int64_t x, int64_t z, int64_t xOffs, int64_t zOffs,
+    unsigned char* blocks, int blocksSize) override;
 protected:
     void addRoom(int xOffs, int zOffs, unsigned char* blocks, float xRoom, float yRoom, float zRoom);
     void addTunnel(int xOffs, int zOffs, unsigned char* blocks, float xCave, float yCave, float zCave,
