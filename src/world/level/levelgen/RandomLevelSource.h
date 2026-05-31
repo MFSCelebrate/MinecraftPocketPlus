@@ -39,7 +39,7 @@ inline double getPerlinNoise2(double x, double z) const { return perlinNoise2.ge
     ~RandomLevelSource();
 
     // ✅ 修复 —— y 也是 int64_t（匹配 ChunkSource 基类）
-bool hasChunk(int64_t x, int64_t y);
+bool hasChunk(int64_t x, int64_t y) override;
     LevelChunk* create(int64_t x, int64_t z) override;
     LevelChunk* getChunk(int64_t xOffs, int64_t zOffs) override;
     void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures);
@@ -120,7 +120,7 @@ class PerformanceTestChunkSource : public ChunkSource
     Level* level;
 public:
     PerformanceTestChunkSource(Level* level) : ChunkSource(), level(level) {}
-    virtual bool hasChunk(int64_t x, int y) override { return true; }
+    virtual bool hasChunk(int64_t x, int64_t y) { return true; }
     virtual LevelChunk* getChunk(int64_t x, int64_t z) override { return create(x, z); }
     virtual LevelChunk* create(int64_t x, int64_t z) override;
     virtual void postProcess(ChunkSource* parent, int64_t x, int64_t z) override {}
