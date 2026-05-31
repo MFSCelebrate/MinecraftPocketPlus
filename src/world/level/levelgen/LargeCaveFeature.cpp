@@ -138,9 +138,9 @@ void LargeCaveFeature::addTunnel(int xOffs, int zOffs, unsigned char* blocks, fl
     }
 }
 
-void LargeCaveFeature::addFeature(Level* level, int x, int z, int xOffs, int zOffs,
-                                  unsigned char* blocks, int /*blocksSize*/)
-{
+// ✅ 修复
+void LargeCaveFeature::addFeature(Level* level, int64_t x, int64_t z, int64_t xOffs, int64_t zOffs,
+    unsigned char* blocks, int blocksSize) {
     int caves = random.nextInt(random.nextInt(random.nextInt(40) + 1) + 1);
     if (random.nextInt(15) != 0) caves = 0;
 
