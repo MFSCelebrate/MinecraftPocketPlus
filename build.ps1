@@ -19,7 +19,7 @@ $ErrorActionPreference = "Stop"
 # ── Paths ────────────────────────────────────────────────────
 $repo       = $PSScriptRoot
 $apkbuild   = "C:\apkbuild"
-$ndk        = "C:\android-ndk-r14b"
+$ndk = "C:\android-ndk-r23c"
 $sdkTools   = "$env:LOCALAPPDATA\Android\Sdk\build-tools\35.0.0"
 $androidJar = "$env:LOCALAPPDATA\Android\Sdk\platforms\android-36\android.jar"
 $adb        = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
