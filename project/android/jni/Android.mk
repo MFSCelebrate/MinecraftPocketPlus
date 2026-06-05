@@ -6,6 +6,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := minecraftpe
 LOCAL_SRC_FILES := ../../../src/main.cpp \
+                   ../../../src/main_android.cpp \
                    ../../../src/main_android_java.cpp \
                    ../../../src/platform/audio/SoundSystemSL.cpp \
                    ../../../src/platform/input/Controller.cpp \
