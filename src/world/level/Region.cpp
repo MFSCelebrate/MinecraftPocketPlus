@@ -4,20 +4,34 @@
 #include "tile/Tile.h"
 #include "Level.h"
 
-Region::Region(Level* level, int64_t x1, int y1, int64_t z1, int64_t x2, int y2, int64_t z2) {
+Region::Region(Level* level, int64_t x1, int y1, int64_t z1, int64_t x2, int y2, int64_t z2){
     this->level = level;
+    
+    // 🛡️ 确保 x1 ≤ x2, z1 ≤ z2
+    if(x1 > x2) std::swap(x1, x2);
+    if(z1 > z2) std::swap(z1, z2);
+    
     xc1 = x1 >> 4;
     zc1 = z1 >> 4;
     int64_t xc2 = x2 >> 4;
     int64_t zc2 = z2 >> 4;
-    size_x = xc2 - xc1 + 1;       // 直接赋值给 int64_t
+    
+    size_x = xc2 - xc1 + 1;
     size_z = zc2 - zc1 + 1;
+    
+    // 🛡️ 防止天文数字分配（一个区块最多覆盖 32x32 个 LevelChunk 引用）
+    const int64_t MAX_REGION_CHUNKS = 64;
+    if(size_x < 0 || size_x > MAX_REGION_CHUNKS) size_x = 1;
+    if(size_z < 0 || size_z > MAX_REGION_CHUNKS) size_z = 1;
+    
     chunks = new LevelChunk**[size_x];
-    for (int64_t i = 0; i < size_x; ++i)        // 用 int64_t 循环
+    for(int64_t i = 0; i < size_x; ++i)
         chunks[i] = new LevelChunk*[size_z];
-    for (int64_t xc = xc1; xc <= xc2; xc++) {
-        for (int64_t zc = zc1; zc <= zc2; zc++) {
-            chunks[xc - xc1][zc - zc1] = level->getChunk(xc, zc);
+    
+    for(int64_t xc = xc1; xc <= xc2; xc++){
+        for(int64_t zc = zc1; zc <= zc2; zc++){
+            if(xc >= xc1 && xc - xc1 < size_x && zc >= zc1 && zc - zc1 < size_z)
+                chunks[xc - xc1][zc - zc1] = level->getChunk(xc, zc);
         }
     }
 }
