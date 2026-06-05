@@ -6,7 +6,6 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := minecraftpe
 LOCAL_SRC_FILES := ../../../src/main.cpp \
-                   ../../../src/main_android.cpp \
                    ../../../src/main_android_java.cpp \
                    ../../../src/platform/audio/SoundSystemSL.cpp \
                    ../../../src/platform/input/Controller.cpp \
@@ -276,7 +275,7 @@ LOCAL_CPPFLAGS += -frtti -DPROFILER
 #LOCAL_CFLAGS := $(LOCAL_CFLAGS)
 
 LOCAL_LDLIBS    := -llog -landroid -lEGL -lGLESv1_CM -lOpenSLES
-LOCAL_STATIC_LIBRARIES := android_native_app_glue RakNet
+LOCAL_STATIC_LIBRARIES := RakNet
 
 #LOCAL_CPP_FEATURES := exceptions
 
