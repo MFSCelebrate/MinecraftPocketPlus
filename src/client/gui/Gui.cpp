@@ -798,7 +798,7 @@ void Gui::renderDebugInfo() {
 
     // 玩家原始坐标 (double 精度)
     double px = p->x;
-    double py = p->y - p->heightOffset;
+    double py = p->y - p->heightOffset + 64;
     double pz = p->z;
 
     // 应用位置偏移 (OffsetPosTranslator)
@@ -938,7 +938,7 @@ if (rls) {
     sprintf(ln[7], "Z(World): %.15f", pzo);
     sprintf(ln[8], "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
-            worldScaleX, worldScaleY, worldScaleZ);
+            worldScaleX, (double)worldScaleY, (double)worldScaleZ);
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
