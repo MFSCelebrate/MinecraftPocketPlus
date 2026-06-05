@@ -65,8 +65,12 @@ void Chunk::translateToPos()
     glTranslatef2((float)x, (float)y, (float)z);
 }
 
-void Chunk::rebuild()
-{
+void Chunk::rebuild() {
+    // 🛡️ 防御垃圾值
+    if(xs <= 0 || xs > 256) xs = 16;
+    if(ys <= 0 || ys > 256) ys = 16;
+    if(zs <= 0 || zs > 256) zs = 16;
+    
     if (!dirty) return;
     updates++;
 
