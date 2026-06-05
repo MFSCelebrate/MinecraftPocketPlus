@@ -137,7 +137,7 @@ jobs:
 
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-      ANDROID_NDK_PATH: ${{ github.workspace }}/android-ndk-r14b
+      ANDROID_NDK_PATH: ${{ github.workspace }}/android-ndk-r23c
       ANDROID_PLATFORM_API: 36
       ANDROID_BUILD_TOOLS_VERSION: 36.0.0
       ADB: /bin/true
@@ -165,21 +165,23 @@ jobs:
           fi
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-${ANDROID_PLATFORM_API}" "build-tools;${ANDROID_BUILD_TOOLS_VERSION}"
 
-      - name: Cache Android NDK r14b
+      - name: Cache Android NDK r23c
         id: cache-android-ndk
         uses: actions/cache@v4
         with:
-          path: ${{ github.workspace }}/android-ndk-r14b
-          key: android-ndk-r14b
+          path: ${{ github.workspace }}/android-ndk-r23c
+          key: android-ndk-r23c
 
-      - name: Install Android NDK r14b
+      # ✅ 新 — r23c 下载地址 + 需要重命名解压目录
+      - name: Install Android NDK r23c
         if: steps.cache-android-ndk.outputs.cache-hit != 'true'
         run: |
           if [ ! -d "$ANDROID_NDK_PATH" ]; then
-            curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r14b-linux-x86_64.zip"
-            unzip -q ndk.zip -d "$GITHUB_WORKSPACE"
+            curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r23c-linux.zip"
+            unzip -q ndk.zip
+            mv android-ndk-r23c "$ANDROID_NDK_PATH"
           fi
-
+    
       - name: Install system prerequisites
         run: |
           sudo apt-get update -qq
@@ -210,7 +212,7 @@ jobs:
       - name: Run Android build script
         run: |
           chmod +x ./build.sh
-          ./build.sh --abi all
+          ./build.sh
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
