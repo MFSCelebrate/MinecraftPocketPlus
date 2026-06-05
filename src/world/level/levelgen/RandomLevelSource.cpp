@@ -15,6 +15,8 @@
 #include "DungeonFeature.h"
 #include <cmath>
 
+#include <cstdint>
+
 const float RandomLevelSource::SNOW_CUTOFF = 0.5f;
 const float RandomLevelSource::SNOW_SCALE = 0.3f;
 static const int MAX_BUFFER_SIZE = 1024;
@@ -705,18 +707,18 @@ LevelChunk* PerformanceTestChunkSource::create(int64_t x, int64_t z)
 {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     memset(blocks, 0, LevelChunk::ChunkBlockCount);
-    int xi = (int)x;
-    int zi = (int)z;
-    for (int y = 0; y < 65; y++) {
+    int64_t xi = x;
+    int64_t zi = z;
+    for (int64_t y = 0; y < 65; y++) {
         if (y < 60) {
-            for (int xx = (y + 1) & 1; xx < 16; xx += 2) {
-                for (int zz = y & 1; zz < 16; zz += 2) {
+            for (int64_t xx = (y + 1) & 1; xx < 16; xx += 2) {
+                for (int64_t zz = y & 1; zz < 16; zz += 2) {
                     blocks[xx << 11 | zz << 7 | y] = 3;
                 }
             }
         } else {
-            for (int xx = 0; xx < 16; xx += 2) {
-                for (int zz = 0; zz < 16; zz += 2) {
+            for (int64_t xx = 0; xx < 16; xx += 2) {
+                for (int64_t zz = 0; zz < 16; zz += 2) {
                     blocks[xx << 11 | zz << 7 | y] = 3;
                 }
             }
