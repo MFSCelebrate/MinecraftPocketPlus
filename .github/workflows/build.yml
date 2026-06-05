@@ -179,7 +179,6 @@ jobs:
           if [ ! -d "$ANDROID_NDK_PATH" ]; then
             curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r23c-linux.zip"
             unzip -q ndk.zip
-            mv android-ndk-r23c "$ANDROID_NDK_PATH"
           fi
     
       - name: Install system prerequisites
