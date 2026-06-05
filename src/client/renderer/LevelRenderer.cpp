@@ -400,10 +400,14 @@ void LevelRenderer::resortChunks( int64_t xc, int64_t yc, int64_t zc ) {
 	for (int x = 0; x < xChunks; x++) {
 		int64_t xx = x * CHUNK_SIZE;       // ★ 升级为 int64_t
 
-		int64_t xOff = (xx + s1 - xc);     // ★ 升级为 int64_t
-		if (xOff < 0) xOff -= (s2 - 1);
-		xOff /= s2;
-		xx -= xOff * s2;
+		// ✅ 新代码 —— 用安全取模代替除法
+int64_t xOff = xx + s1 - xc;
+// 安全取模：先对 s2 取余，保证在 [-(s2-1), s2-1] 范围内，再调整为正
+xOff = xOff % s2;
+if(xOff < 0) xOff += s2;
+// xOff 现在是 [0, s2-1]，代表偏移的格子数
+xx = xc - s1 + xOff;
+// xx 现在在 xc 附近 ±s1 范围内，safe!
 
 		if (xx < xMinChunk) xMinChunk = xx;
 		if (xx > xMaxChunk) xMaxChunk = xx;
