@@ -809,9 +809,9 @@ if (lvl && lvl->getChunkSource()) {
     }
 }
 
-float now = getTimeS();
 long curSeed = lvl ? lvl->getSeed() : 0;
-bool needBigUpdate = (s_lastBigUpdate <.Seed || rls != s_lastRls);
+bool needBigUpdate = (s_lastBigUpdate < 0.0f || now - s_lastBigUpdate > 0.5f
+                      || curSeed != s_lastSeed || rls != s_lastRls);
 
 if (needBigUpdate && rls) {
     s_lastBigUpdate = now;
@@ -840,8 +840,8 @@ if (needBigUpdate && rls) {
     }
     {
         big_float s = rls->getBigWorldScaleZ();
-        s_bigSclZStr = }
-
+        s_bigSclZStr = s.str();
+	} 
     {
         big_float r = big_float(px) * rls->getBigWorldScaleX()
                     + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
