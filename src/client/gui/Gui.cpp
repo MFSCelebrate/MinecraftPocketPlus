@@ -774,16 +774,24 @@ void Gui::renderDebugInfo() {
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
 
-    std::string bigOffXStr, bigOffYStr, bigOffZStr;
-std::string bigSclXStr, bigSclYStr, bigSclZStr;
-
-double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-std::string pxoStr, pyoStr, pzoStr;
-
 double px = p->x;
 double py = p->y - p->heightOffset + 64;
 double pz = p->z;
 posTranslator.to(px, py, pz);
+
+// 🔥 缓存变量（static，只算一次，后续帧复用字符串）
+static std::string s_bigOffXStr, s_bigOffYStr, s_bigOffZStr;
+static std::string s_bigSclXStr, s_bigSclYStr, s_bigSclZStr;
+static std::string s_pxoStr, s_pyoStr, s_pzoStr;
+static double s_pxo, s_pyo, s_pzo;
+static float s_lastBigUpdate = -1.0f;
+static long s_lastSeed = 0;
+static RandomLevelSource* s_lastRls = nullptr;
+
+std::string bigOffXStr, bigOffYStr, bigOffZStr;
+std::string bigSclXStr, bigSclYStr, bigSclZStr;
+double pxo = 0.0, pyo = 0.0, pzo = 0.0;
+std::string pxoStr, pyoStr, pzoStr;
 
 RandomLevelSource* rls = nullptr;
 if (lvl && lvl->getChunkSource()) {
@@ -794,58 +802,81 @@ if (lvl && lvl->getChunkSource()) {
             terrainOffsetX = rls->getWorldOffsetX();
             terrainOffsetY = rls->getWorldOffsetY();
             terrainOffsetZ = rls->getWorldOffsetZ();
-           worldScaleX = rls->getWorldScaleX();
-worldScaleY = rls->getWorldScaleY();
-worldScaleZ = rls->getWorldScaleZ();
-
-            {
-                big_float o = rls->getBigWorldOffsetX();
-                bigOffXStr = o.str();
-            }
-            {
-                big_float o = rls->getBigWorldOffsetY();
-                bigOffYStr = o.str();
-            }
-            {
-                big_float o = rls->getBigWorldOffsetZ();
-                bigOffZStr = o.str();
-            }
-            {
-                big_float s = rls->getBigWorldScaleX();
-                bigSclXStr = s.str();
-            }
-            {
-                big_float s = rls->getBigWorldScaleY();
-                bigSclYStr = s.str();
-            }
-            {
-                big_float s = rls->getBigWorldScaleZ();
-                bigSclZStr = s.str();
-            }
-
-            {
-                big_float r = big_float(px) * rls->getBigWorldScaleX()
-                            + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
-                pxo = r.convert_to<double>();
-                pxoStr = r.str();
-            }
-            {
-                big_float r = big_float(py) * rls->getBigWorldScaleY()
-                            + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
-                pyo = r.convert_to<double>();
-                pyoStr = r.str();
-            }
-            {
-                big_float r = big_float(pz) * rls->getBigWorldScaleZ()
-                            + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
-                pzo = r.convert_to<double>();
-                pzoStr = r.str();
-            }
+            worldScaleX = rls->getWorldScaleX();
+            worldScaleY = rls->getWorldScaleY();
+            worldScaleZ = rls->getWorldScaleZ();
         }
     }
 }
 
-if (!rls) {
+float now = getTimeS();
+long curSeed = lvl ? lvl->getSeed() : 0;
+bool needBigUpdate = (s_lastBigUpdate <.Seed || rls != s_lastRls);
+
+if (needBigUpdate && rls) {
+    s_lastBigUpdate = now;
+    s_lastSeed = curSeed;
+    s_lastRls = rls;
+
+    {
+        big_float o = rls->getBigWorldOffsetX();
+        s_bigOffXStr = o.str();
+    }
+    {
+        big_float o = rls->getBigWorldOffsetY();
+        s_bigOffYStr = o.str();
+    }
+    {
+        big_float o = rls->getBigWorldOffsetZ();
+        s_bigOffZStr = o.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleX();
+        s_bigSclXStr = s.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleY();
+        s_bigSclYStr = s.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleZ();
+        s_bigSclZStr = }
+
+    {
+        big_float r = big_float(px) * rls->getBigWorldScaleX()
+                    + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
+        s_pxo = r.convert_to<double>();
+        s_pxoStr = r.str();
+    }
+    {
+        big_float r = big_float(py) * rls->getBigWorldScaleY()
+                    + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
+        s_pyo = r.convert_to<double>();
+        s_pyoStr = r.str();
+    }
+    {
+        big_float r = big_float(pz) * rls->getBigWorldScaleZ()
+                    + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
+        s_pzo = r.convert_to<double>();
+        s_pzoStr = r.str();
+    }
+}
+
+if (rls) {
+    bigOffXStr = s_bigOffXStr;
+    bigOffYStr = s_bigOffYStr;
+    bigOffZStr = s_bigOffZStr;
+    bigSclXStr = s_bigSclXStr;
+    bigSclYStr = s_bigSclYStr;
+    bigSclZStr = s_bigSclZStr;
+    pxoStr = s_pxoStr;
+    pyoStr = s_pyoStr;
+    pzoStr = s_pzoStr;
+    pxo = s_pxo;
+    pyo = s_pyo;
+    pzo = s_pzo;
+} else {
+    s_lastBigUpdate = -1.0f;
     pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
     pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
     pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
