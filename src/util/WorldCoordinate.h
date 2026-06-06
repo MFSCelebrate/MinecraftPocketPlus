@@ -85,6 +85,19 @@ inline std::string worldCoordToString(WorldCoordinate v) {
     return std::string(buf);
 }
 
+inline std::string worldCoordBigToString(const BigWorldCoordinate& val) {
+    std::string raw = val.str();
+    // 补到至少 13 位（12 位小数 + 1 位整数）
+    while ((int64_t)raw.length() <= 12)
+        raw = "0" + raw;
+    size_t dotPos = raw.length() - 12;
+    std::string s = raw.substr(0, dotPos) + "." + raw.substr(dotPos);
+    // 去掉末尾多余的 0
+    while (!s.empty() && s.back() == '0') s.pop_back();
+    if (!s.empty() && s.back() == '.') s.pop_back();
+    return s;
+}
+
 // =====================================================================
 //  BigWorldCoordinate 精确计算（防溢出）
 // =====================================================================
@@ -92,17 +105,6 @@ inline std::string worldCoordToString(WorldCoordinate v) {
 /// 判断是否需要启用大整数路径
 inline bool needsBigWorldCoord(double v) {
     return std::abs(v) >= BIG_THRESHOLD;
-}
-
-/// double → BigWorldCoordinate (× FIXED_SCALE)
-inline BigWorldCoordinate doubleToWorldCoordBig(double v) {
-    double ipart = std::floor(std::abs(v));
-    double fpart = std::abs(v) - ipart;
-    BigWorldCoordinate iBig((int64_t)ipart);
-    BigWorldCoordinate fBig = static_cast<BigWorldCoordinate>(
-        (int64_t)(fpart * FIXED_SCALE_D + 0.5));
-    BigWorldCoordinate result = iBig * BigWorldCoordinate(FIXED_SCALE) + fBig;
-    return (v < 0) ? -result : result;
 }
 
 /// 计算 worldCoord = px * scale + offset * scale
