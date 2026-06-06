@@ -755,7 +755,6 @@ void Gui::onLevelGenerated() {
 }
 
 void Gui::renderDebugInfo() {
-    // FPS counter (updates once per second)
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
     static int fpsFrames = 0;
@@ -770,12 +769,9 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p = minecraft->player;
     Level* lvl = minecraft->level;
 
-    // 获取世界偏移和缩放（double 版本 + big_float 版本）
+    // 获取世界偏移和缩放（double 版本 + 字符串版本）
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
-
-    big_float bigOffX, bigOffY, bigOffZ;
-    big_float bigSclX, bigSclY, bigSclZ;
     std::string bigOffXStr, bigOffYStr, bigOffZStr;
     std::string bigSclXStr, bigSclYStr, bigSclZStr;
 
@@ -788,7 +784,7 @@ void Gui::renderDebugInfo() {
         if (cache) {
             rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
             if (rls) {
-                // double 版本（Float 噪声路径 + 显示用）
+                // double 版本
                 terrainOffsetX = rls->getWorldOffsetX();
                 terrainOffsetY = rls->getWorldOffsetY();
                 terrainOffsetZ = rls->getWorldOffsetZ();
@@ -796,28 +792,44 @@ void Gui::renderDebugInfo() {
                 worldScaleY = rls->getWorldScaleY();
                 worldScaleZ = rls->getWorldScaleZ();
 
-                // big_float 版本（精确计算 + 显示用）
-                bigOffX = rls->getBigWorldOffsetX();
-                bigOffY = rls->getBigWorldOffsetY();
-                bigOffZ = rls->getBigWorldOffsetZ();
-                bigSclX = rls->getBigWorldScaleX();
-                bigSclY = rls->getBigWorldScaleY();
-                bigSclZ = rls->getBigWorldScaleZ();
+                // 🔥 big_float 字符串：直接从 getter 获取，不存栈变量
+                bigOffXStr = rls->getBigWorldOffsetX().str();
+                bigOffYStr = rls->getBigWorldOffsetY().str();
+                bigOffZStr = rls->getBigWorldOffsetZ().str();
+                bigSclXStr = rls->getBigWorldScaleX().str();
+                bigSclYStr = rls->getBigWorldScaleY().str();
+                bigSclZStr = rls->getBigWorldScaleZ().str();
 
-                // 字符串（调试屏幕显示）
-                bigOffXStr = bigOffX.str();
-                bigOffYStr = bigOffY.str();
-                bigOffZStr = bigOffZ.str();
-                bigSclXStr = bigSclX.str();
-                bigSclYStr = bigSclY.str();
-                bigSclZStr = bigSclZ.str();
+                // 🔥 pxo/pyo/pzo 计算：用 lambda 隔离 big_float 生命周期
+                pxoStr = ([&]() {
+                    big_float bp(px), bs(rls->getBigWorldScale *o = result.convert_to<double>();
+                    return result.str();
+                })();
+                pyoStr = ([&]() {
+                    big_float bp(py), bs(rls->getBigWorldScaleY()), bo(rls->getBigWorldOffsetY());
+                    big_float result = bp * bs + bo * bs;
+                    pyo = result.convert_to<double>();
+                    return result.str();
+                })();
+                pzoStr = ([&]() {
+                    big_float bp(pz), bs(rls->getBigWorldScaleZ()), bo(rls->getBigWorldOffsetZ());
+                    big_float result = bp * bs + bo * bs;
+                    pzo = result.convert_to<double>();
+                    return result.str();
+                })();
             }
         }
     }
 
+    if (!rls) {
+        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+    }
+
     // 获取海平面高度
     int seaLevel = 63;
-    if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
+    if (minecraft->options.getOpt(OPTIONS_SEA_ {
         std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
         if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
     }
@@ -829,28 +841,6 @@ void Gui::renderDebugInfo() {
 
     // 应用位置偏移 (OffsetPosTranslator)
     posTranslator.to(px, py, pz);
-
-    // pxo/pyo/pzo 用 big_float 计算，永不溢出
-    if (rls) {
-        big_float bigPx(px), bigPy(py), bigPz(pz);
-        big_float bigPxo = bigPx * bigSclX + bigOffX * bigSclX;
-        big_float bigPyo = bigPy * bigSclY + bigOffY * bigSclY;
-        big_float bigPzo = bigPz * bigSclZ + bigOffZ * bigSclZ;
-
-        // 转 double 给后续噪声计算
-        pxo = bigPxo.convert_to<double>();
-        pyo = bigPyo.convert_to<double>();
-        pzo = bigPzo.convert_to<double>();
-
-        // 完整精度字符串给显示
-        pxoStr = bigPxo.str();
-        pyoStr = bigPyo.str();
-        pzoStr = bigPzo.str();
-    } else {
-        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-    }
 
     int64_t bx = Mth::floor64(px), by = Mth::floor64(py), bz = Mth::floor64(pz);
     int64_t cx = bx >> 4, cz = bz >> 4;
@@ -886,12 +876,7 @@ void Gui::renderDebugInfo() {
 
     // 调试屏幕缩放
     float debugScale = 1.0f;
-    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
-    if (!scaleStr.empty()) {
-        debugScale = (float)atof(scaleStr.c_str());
-    }
-
-    // 字符串截断工具
+    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN ifscale截断工具
     auto trimBig = [](const std::string& s, size_t maxLen) -> std::string {
         if (s.length() <= maxLen) return s;
         return s.substr(0, maxLen) + "...";
@@ -899,9 +884,8 @@ void Gui::renderDebugInfo() {
 
     // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
     double noiseVals[8] = {0.0};
-    double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
+    =, ny_large = 0.0, nz_large = 0.0;
     if (rls) {
-        // 噪声输入：直接复用 pxo/pyo/pzo（已用 big_float 计算，安全转换到 double）
         double sampleWorldX = pxo;
         double sampleWorldY = pyo;
         double sampleWorldZ = pzo;
@@ -918,9 +902,7 @@ void Gui::renderDebugInfo() {
         noiseVals[1] = rls->getLPerlinNoise2(nx_large, ny_large, nz_large);
         noiseVals[2] = rls->getPerlinNoise1(nx_large, ny_large, nz_large);
 
-        const double scale_sand       = 1.0 / 32.0;
-        const double scale_depth      = 1.0 / 64.0;
-        const double scale_scale      = 1.0 / 80.0;
+        const double scale_sand       = 1       10_0 80.0;
         const double scale_depth_noise= 1.0 / 200.0;
         const double scale_forest     = 0.5;
 
@@ -934,7 +916,6 @@ void Gui::renderDebugInfo() {
     // ===================== 噪声计算（Float 精度 — 保持原样不动） =====================
     float noiseValsF[8] = {0.0f};
     if (rls) {
-        // 🧊 坐标用 double 算，不在中间步骤强转 float，彻底杜绝溢出
         double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
         double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
         double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
@@ -943,7 +924,6 @@ void Gui::renderDebugInfo() {
         const double scale_large_XZ = s / 80.0;
         const double scale_large_Y  = s / 160.0;
 
-        // 🧊 坐标直接用 double 传入噪声函数，只用 float 存最终噪声值
         noiseValsF[0] = (float)rls->getLPerlinNoise1(sampleWorldX * scale_large_XZ,
                                                        sampleWorldY * scale_large_Y,
                                                        sampleWorldZ * scale_large_XZ);
@@ -978,10 +958,7 @@ void Gui::renderDebugInfo() {
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
-    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-
-    // 🔥 X/Y/Z(World) 使用 big_float 完整精度字符串显示
-    if (!pxoStr.empty()) {
+    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pzoStr.empty()) {
         snprintf(ln[5], sizeof(ln[5]), "X(World/BigInteger): %s", trimBig(pxoStr, 20).c_str());
         snprintf(ln[6], sizeof(ln[6]), "Y(World/BigInteger): %s", trimBig(pyoStr, 20).c_str());
         snprintf(ln[7], sizeof(ln[7]), "Z(World/BigInteger): %s", trimBig(pzoStr, 20).c_str());
@@ -991,8 +968,7 @@ void Gui::renderDebugInfo() {
         sprintf(ln[7], "Z(World): %.15f", pzo);
     }
 
-    // 🔥 ln[8] 显示 double 精度 + big_float 完整精度
-    if (!bigOffXStr.empty()) {
+OffXStr.empty()) {
         snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %s / %s / %s (Scales: %s / %s / %s)",
             trimBig(bigOffXStr, 8).c_str(), trimBig(bigOffYStr, 8).c_str(),
@@ -1000,11 +976,11 @@ void Gui::renderDebugInfo() {
             trimBig(bigSclXStr, 8).c_str(), trimBig(bigSclYStr, 8).c_str(),
             trimBig(bigSclZStr, 8).c_str());
     } else {
-		snprintf(ln[8], sizeof(ln[8]),
+        snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
-	}
+    }
     
 
     ln[9][0] = '\0';
@@ -1012,13 +988,11 @@ void Gui::renderDebugInfo() {
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
 
-    // 噪声标签 (Wiki 对齐)
     const char* labels[8] = {
         "Low-Noise", "High-Noise", "Selector-Noise", "Sand-Noise",
         "Gravel-Noise", "Scale-Noise", "Depth-Noise", "Tree-Density-Noise"
     };
 
-    // Double 噪声行
     char firstPartD[1024] = "";
     char secondPartD[1024] = "";
     for (int i = 0; i < 4; i++) {
@@ -1033,15 +1007,7 @@ void Gui::renderDebugInfo() {
         snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
         strcat(secondPartD, tmp);
     }
-    snprintf(ln[13], sizeof(ln[13]), "Terrain Noise: %s", firstPartD);
-    snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPartD);
-
-    // Float 噪声行（保持原样）
-    char firstPartF[1024] = "";
-    char secondPartF[1024] = "";
-    for (int i = 0; i < 4; i++) {
-        char tmp[64];
-        bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
+    snprintf(ln[13], sizeof(ln   14 second4 i char::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
         snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
         strcat(firstPartF, tmp);
     }
@@ -1055,7 +1021,6 @@ void Gui::renderDebugInfo() {
     snprintf(ln[16], sizeof(ln[16]), "Terrain Noise(Float): %s", firstPartF);
     snprintf(ln[17], sizeof(ln[17]), "Surface Noise(Float): %s", secondPartF);
 
-    // ★ 第18行留空，稍后手动绘制精度
     ln[18][0] = '\0';
 
     ln[19][0] = '\0';
@@ -1069,7 +1034,6 @@ void Gui::renderDebugInfo() {
     sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
     ln[24][0] = '\0';
 
-    // 条纹修复警告行
     bool stripeRepairOn = minecraft->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     if (!stripeRepairOn) {
         snprintf(ln[25], sizeof(ln[25]),
@@ -1077,19 +1041,17 @@ void Gui::renderDebugInfo() {
     } else {
         ln[25][0] = '\0';
     }
-    ln[26][0] = '\0';   // 额外空行占位
+    ln[26][0] = '\0';
 
     // ===================== 渲染 =====================
     const int N = 27;
-    const float LH  = (float)Font::DefaultLineHeight;
-    const float MGN = 2.0f;
-    const float PAD = 2.0f;
-    Font* font = minecraft->font;
+    const float LH float)Font::DefaultLineHeight;
+    const float MGN =;
+ minefont;
 
     glPushMatrix();
     glScalef(debugScale, debugScale, 1.0f);
 
-    // 背景框
     for (int i = 0; i < N; i++) {
         if (ln[i][0] == '\0') continue;
         float w  = (float)font->width(ln[i]);
@@ -1100,7 +1062,6 @@ void Gui::renderDebugInfo() {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 文本
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
@@ -1121,17 +1082,15 @@ void Gui::renderDebugInfo() {
     }
     t.endOverrideAndDraw();
 
-    // ========== 精度丢失显示（替换原 ln[18] 位置） ==========
+    // ========== 精度丢失显示 ==========
     {
         double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
         double doubleStep; float floatStep;
         Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
         float yPos = MGN + 18 * LH;
 
-        // BigFloat 精度：cpp_dec_float_100 有 100 位十进制尾数
-        // ULP = maxCoord * 10^(-100)
         double bigStep = maxCoord * 1e-100;
-        if (bigStep <= 0 && maxCoord > 0) bigStep = 5e-324;  // 最小正 double
+        if (bigStep <= 0 && maxCoord > 0) bigStep = 5e-324;
 
         char bufDouble[64], bufFloat[64], bufBig[64];
         snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
@@ -1140,18 +1099,8 @@ void Gui::renderDebugInfo() {
 
         auto trimZeros = [](char* str) {
             if (!str || *str == '\0') return;
-            char* dot = strchr(str, '.');
-            if (!dot) return;
-            char* p = str + strlen(str) - 1;
-            while (p > dot && *p == '0') *p-- = '\0';
-            if (*p == '.') *p = '\0';
-        };
-        trimZeros(bufDouble);
-        trimZeros(bufFloat);
-        trimZeros(bufBig);
-
-        const char* labelText = "Current Precision:";
-        const char* middleText = " (Float:";
+            char* dot = strchr(str              Z*";
+* middleText = " (Float:";
         const char* bigText   = ") (BigFloat:";
         const char* endText   = ")";
 
@@ -1182,17 +1131,14 @@ void Gui::renderDebugInfo() {
         font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
         xCursor += font->width(bigText);
 
-        // BigFloat 精度颜色：与 Double 同色（正常为绿色）
         int colBig = Mth::getPrecisionColor(bigStep);
         font->draw(bufBig, xCursor, yPos, colBig);
         xCursor += font->width(bufBig);
 
-        font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
-    }
+        font->draw(endText, y    }
 
     glPopMatrix();
 }
-
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
@@ -1518,4 +1464,3 @@ void Gui::renderToolBar( float a, int ySlot, const int screenWidth ) {
 
 	glPopMatrix2();
 }
-
