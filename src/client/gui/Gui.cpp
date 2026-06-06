@@ -824,8 +824,14 @@ void Gui::renderDebugInfo() {
     }
 
     // ── 计算 pxo/pyo/pzo ──
-    showBig = needsBigWorldCoord(px) || needsBigWorldCoord(py) || needsBigWorldCoord(pz);
-
+    double estPxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+double estPyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+double estPzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+showBig = !std::isfinite(estPxo) || !std::isfinite(estPyo) || !std::isfinite(estPzo)
+       || std::abs(estPxo) >= BIG_THRESHOLD
+       || std::abs(estPyo) >= BIG_THRESHOLD
+       || std::abs(estPzo) >= BIG_THRESHOLD;
+	
 if (rls) {
     if (showBig) {
         BigWorldCoordinate bpx = doubleToWorldCoordBig(px);
@@ -970,7 +976,7 @@ if (rls) {
     }
 
     // ===================== 构建显示行 (27 行) =====================
-    static char ln[27][1024];
+    static char ln[27][2147483647];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
@@ -1020,13 +1026,13 @@ if (rls) {
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
+        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
         strcat(firstPartD, tmp);
     }
     for (int i = 4; i < 8; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
+        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
         strcat(secondPartD, tmp);
     }
     snprintf(ln[13], sizeof(ln[13]), "Terrain Noise: %s", firstPartD);
@@ -1040,13 +1046,13 @@ if (rls) {
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
+        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
         strcat(firstPartF, tmp);
     }
     for (int i = 4; i < 8; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s:%.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
+        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
         strcat(secondPartF, tmp);
     }
     ln[15][0] = '\0';
@@ -1146,9 +1152,9 @@ if (rls) {
         trimZeros(bufFloat);
         trimZeros(bufBig);
 
-        const char* labelText = "Current Precision:";
-        const char* middleText = " (Float:";
-        const char* bigText   = ") (BigWorldCoordinate:";
+        const char* labelText = "Current Precision: ";
+        const char* middleText = " (Float: ";
+        const char* bigText   = ") (BigWorldCoordinate: ";
         const char* endText   = ")";
 
         float totalWidth = font->width(labelText)
