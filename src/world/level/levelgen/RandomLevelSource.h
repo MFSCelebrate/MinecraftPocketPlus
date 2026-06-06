@@ -125,8 +125,6 @@ big_float m_worldScaleZ = 1;
 
     int customSeaLevel;
 
-    big_float m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;
-    big_float m_worldScaleX, m_worldScaleY, m_worldScaleZ;
     bool m_disableSkygrid;
 };
 
