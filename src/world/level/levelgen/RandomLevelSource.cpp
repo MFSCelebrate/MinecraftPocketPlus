@@ -60,11 +60,15 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         m_worldScaleX = worldCoordFromString(scaleXStr);
     }
     std::string scaleYStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
-    if (!scaleYStr.empty()) {
-        m_worldScaleY = worldCoordFromString(scaleYStr);
-    if (!scaleZStr.empty()) {
-        m_worldScaleZ = worldCoordFromString(scaleZStr);
-    }
+if (!scaleYStr.empty()) {
+    m_worldScaleY = worldCoordFromString(scaleYStr);
+    if (m_worldScaleY <= 0) m_worldScaleY = FIXED_SCALE;
+}
+std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+if (!scaleZStr.empty()) {
+    m_worldScaleZ = worldCoordFromString(scaleZStr);
+    if (m_worldScaleZ <= 0) m_worldScaleZ = FIXED_SCALE;
+}
 
     std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
     if (!xStr.empty()) { m_worldOffsetX = worldCoordFromString(xStr); }
@@ -85,7 +89,6 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
             );
         }
     }
-}
 }
 
 RandomLevelSource::~RandomLevelSource()
@@ -542,10 +545,9 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         int x = xo + random.nextInt(16) + 8;
         int y = random.nextInt(random.nextInt(random.nextInt(112) + 8) + 8);
         int z = zo + random.nextInt(16) + 8;
-        DungeonFeature dungeon;
+                DungeonFeature dungeon;
         dungeon.addFeature(level, x >> 4, z >> 4, xo >> 4, zo >> 4, blocks, LevelChunk::ChunkBlockCount);
 }
-
     HeavyTile::instaFall = false;
     level->isGeneratingTerrain = false;
 }
@@ -566,18 +568,18 @@ double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z,
     double* downfalls = level->getBiomeSource()->downfalls;
 
     double noiseX = x / 4.0;
-    double noiseY = (y + m_worldOffsetY.convert_to<double>()) / 8.0;
+        double noiseY = (y + worldCoordToDouble(m_worldOffsetY)) / 8.0;
     double noiseZ = z / 4.0;
 
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-    sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
-                              1.121 * m_worldScaleX.convert_to<double>(),
-                              1.121 * m_worldScaleZ.convert_to<double>(), 0.5);
-    dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
-                              200.0 * m_worldScaleX.convert_to<double>(),
-                              200.0 * m_worldScaleZ.convert_to<double>(), 0.5);
+        sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
+                              1.121 * worldCoordToDouble(m_worldScaleX),
+                              1.121 * worldCoordToDouble(m_worldScaleZ), 0.5);
+        dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
+                              200.0 * worldCoordToDouble(m_worldScaleX),
+                              200.0 * worldCoordToDouble(m_worldScaleZ), 0.5);
 	
     double xf = (double)noiseX;
     double yf = (double)noiseY;
@@ -657,8 +659,8 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z)
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-    double worldBlockX = x * 16.0 + m_worldOffsetX.convert_to<double>();
-    double worldBlockZ = z * 16.0 + m_worldOffsetZ.convert_to<double>();
+        double worldBlockX = x * 16.0 + worldCoordToDouble(m_worldOffsetX);
+    double worldBlockZ = z * 16.0 + worldCoordToDouble(m_worldOffsetZ);
 
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
     double* temperatures = level->getBiomeSource()->temperatures;
