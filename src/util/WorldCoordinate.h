@@ -28,31 +28,23 @@ static constexpr int64_t FIXED_SCALE = 1000000000000LL;     // 10^12
 static constexpr double  FIXED_SCALE_D = 1.0e12;
 static constexpr double  BIG_THRESHOLD = 281474976710656.0; // 2^48
 
-// ── 字符串 → 定点 WorldCoordinate ──
+// ── 字符串 → WorldCoordinate ──
 inline WorldCoordinate worldCoordFromString(const std::string& s) {
     if (s.empty()) return 0;
-
-    // ── 辅助：去掉前导零，避免 cpp_int 八进制陷阱 ──
-    auto stripLeadingZeros = [](std::string num) -> std::string {
-        size_t start = (num[0] == '-') ? 1 : 0;
-        while (start < num.length() - 1 && num[start] == '0') {
-            num.erase(start, 1);
-        }
-        return num;
-    };
+    // 先清洗
+    std::string clean = sanitizeNumberString(s);
 
     BigWorldCoordinate val;
-    size_t dot = s.find('.');
+    size_t dot = clean.find('.');
     if (dot == std::string::npos) {
-        // 整数字符串
-        std::string num = stripLeadingZeros(s);
-        val = BigWorldCoordinate(num) * BigWorldCoordinate(FIXED_SCALE);
+        // 整数
+        val = BigWorldCoordinate(clean) * BigWorldCoordinate(FIXED_SCALE);
     } else {
-        std::string iPart = s.substr(0, dot);
-        std::string fPart = s.substr(dot + 1);
+        std::string iPart = clean.substr(0, dot);
+        std::string fPart = clean.substr(dot + 1);
         if (fPart.length() > 12) fPart.resize(12);
         else fPart.append(12 - fPart.length(), '0');
-        std::string combined = stripLeadingZeros(iPart + fPart);
+        std::string combined = sanitizeNumberString(iPart + fPart);
         val = BigWorldCoordinate(combined);
     }
 
@@ -83,6 +75,21 @@ inline std::string worldCoordToString(WorldCoordinate v) {
     if (*p == '.') *p = '\0';
     else *(p + 1) = '\0';
     return std::string(buf);
+}
+
+// ── 辅助：清洗字符串，去掉 + / 科学计数法 / 前导零 ──
+inline std::string sanitizeNumberString(const std::string& raw) {
+    std::string s = raw;
+    // 1. 去掉前导 +
+    if (!s.empty() && s[0] == '+') s.erase(0, 1);
+    // 2. 去掉前导零（至少保留一位数字）
+    size_t start = (s[0] == '-') ? 1 : 0;
+    while (start < s.length() - 1 && s[start] == '0') {
+        s.erase(start, 1);
+    }
+    // 3. 如果全空或只剩负号，返回 "0"
+    if (s.empty() || s == "-") s = "0";
+    return s;
 }
 
 inline std::string worldCoordBigToString(const BigWorldCoordinate& val) {
@@ -124,18 +131,22 @@ inline double worldCoordBigToDouble(const BigWorldCoordinate& v) {
     return v.convert_to<double>() / FIXED_SCALE_D;
 }
 
-/// BigWorldCoordinate → 格式化字符串
+// ── double → BigWorldCoordinate ──
 inline BigWorldCoordinate doubleToWorldCoordBig(double v) {
-    char buf[64];
+    // 用足够大的缓冲区，%.12f 对大值也不会溢出
+    char buf[128];
     snprintf(buf, sizeof(buf), "%.12f", v);
     std::string s(buf);
-    // 删掉小数点
+    // 找到小数点并删除
     size_t dot = s.find('.');
     if (dot != std::string::npos) {
         s.erase(dot, 1);
     }
+    // 清洗：+ 号、前导零
+    s = sanitizeNumberString(s);
     return BigWorldCoordinate(s);
 }
+
 // =====================================================================
 //  整数坐标工具（参考代码）
 // =====================================================================
@@ -189,3 +200,4 @@ inline WorldCoordinate clampBigWorldCoordinateToWorld(const BigWorldCoordinate& 
 }
 
 #endif /* NET_MINECRAFT_WORLD__WorldCoordinate_H__ */
+
