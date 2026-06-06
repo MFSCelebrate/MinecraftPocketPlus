@@ -28,6 +28,21 @@ static constexpr int64_t FIXED_SCALE = 1000000000000LL;     // 10^12
 static constexpr double  FIXED_SCALE_D = 1.0e12;
 static constexpr double  BIG_THRESHOLD = 281474976710656.0; // 2^48
 
+// ── 辅助：清洗字符串，去掉 + / 科学计数法 / 前导零 ──
+inline std::string sanitizeNumberString(const std::string& raw) {
+    std::string s = raw;
+    // 1. 去掉前导 +
+    if (!s.empty() && s[0] == '+') s.erase(0, 1);
+    // 2. 去掉前导零（至少保留一位数字）
+    size_t start = (s[0] == '-') ? 1 : 0;
+    while (start < s.length() - 1 && s[start] == '0') {
+        s.erase(start, 1);
+    }
+    // 3. 如果全空或只剩负号，返回 "0"
+    if (s.empty() || s == "-") s = "0";
+    return s;
+}
+
 // ── 字符串 → WorldCoordinate ──
 inline WorldCoordinate worldCoordFromString(const std::string& s) {
     if (s.empty()) return 0;
@@ -75,21 +90,6 @@ inline std::string worldCoordToString(WorldCoordinate v) {
     if (*p == '.') *p = '\0';
     else *(p + 1) = '\0';
     return std::string(buf);
-}
-
-// ── 辅助：清洗字符串，去掉 + / 科学计数法 / 前导零 ──
-inline std::string sanitizeNumberString(const std::string& raw) {
-    std::string s = raw;
-    // 1. 去掉前导 +
-    if (!s.empty() && s[0] == '+') s.erase(0, 1);
-    // 2. 去掉前导零（至少保留一位数字）
-    size_t start = (s[0] == '-') ? 1 : 0;
-    while (start < s.length() - 1 && s[start] == '0') {
-        s.erase(start, 1);
-    }
-    // 3. 如果全空或只剩负号，返回 "0"
-    if (s.empty() || s == "-") s = "0";
-    return s;
 }
 
 inline std::string worldCoordBigToString(const BigWorldCoordinate& val) {
