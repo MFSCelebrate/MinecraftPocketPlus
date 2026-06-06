@@ -9,18 +9,6 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
 
 include(cmake/EnumOption.cmake)
 
-# 在 target_include_directories 之前添加：
-include(FetchContent)
-FetchContent_Declare(
-    boost_mp
-    URL https://github.com/boostorg/multiprecision/archive/refs/tags/boost-1.83.0.tar.gz
-    SOURCE_SUBDIR ""  # header-only，不需要编译
-)
-FetchContent_MakeAvailable(boost_mp)
-
-# 然后添加 include：
-target_include_directories(MinecraftPE PRIVATE ${boost_mp_SOURCE_DIR}/include)
-
 if(EMSCRIPTEN)
     # When configuring web builds with "emcmake cmake -B build -S .", set PLATFORM to Web by default
     set(PLATFORM Web CACHE STRING "Platform to build for.")
@@ -325,6 +313,15 @@ if(UNIX)
     target_link_libraries("${PROJECT_NAME}-server" ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
+# ⬇ 加在 add_executable(${PROJECT_NAME} ${CLIENT_SOURCES}) 之前
+include(FetchContent)
+FetchContent_Declare(
+    boost_mp
+    URL https://github.com/boostorg/multiprecision/archive/refs/tags/boost-1.83.0.tar.gz
+    SOURCE_SUBDIR ""
+)
+FetchContent_MakeAvailable(boost_mp)
+
 add_executable(${PROJECT_NAME} ${CLIENT_SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC ${PLATFORM_CPP})
@@ -335,6 +332,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     "${openal_SOURCE_DIR}/include"
     "${glfw_SOURCE_DIR}/include"
     "lib/include"
+    ${boost_mp_SOURCE_DIR}/include   # ⬅ 加这一行
 )
 
 if(${PLATFORM} MATCHES "Web")
