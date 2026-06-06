@@ -6,6 +6,10 @@
 #include "LargeCaveFeature.h"
 #include "synth/PerlinNoise.h"
 #include "../../../SharedConstants.h"
+#include <boost/multiprecision/cpp_dec_float.hpp>
+
+// ===== 在类定义之前（或 namespace 内）定义类型别名 =====
+typedef boost::multiprecision::cpp_dec_float_100 big_float;
 
 class Biome;
 class Level;
@@ -43,15 +47,37 @@ public:
     virtual bool shouldSave() override;
     virtual std::string gatherStats() override;
 
-    double getWorldOffsetX() const { return m_worldOffsetX; }
-    double getWorldOffsetY() const { return m_worldOffsetY; }
-    double getWorldOffsetZ() const { return m_worldOffsetZ; }
+    double getWorldOffsetX() const {
+    double v = m_worldOffsetX.convert_to<double>();
+}
+double getWorldOffsetY() const {
+    double v = m_worldOffsetY.convert_to<double>();
+}
+double getWorldOffsetZ() const {
+    double v = m_worldOffsetZ.convert_to<double>();
+}
+double getWorldScaleX() const {
+    double v = m_worldScaleX.convert_to<double>();
+}
+double getWorldScaleY() const {
+    double v = m_worldScaleY.convert_to<double>();
+}
+double getWorldScaleZ() const {
+    double v = m_worldScaleZ.convert_to<double>();
+}
+
+const big_float& getBigWorldScaleX() const { return m_worldScaleX; }
+const big_float& getBigWorldScaleY() const { return m_worldScaleY; }
+const big_float& getBigWorldScaleZ() const { return m_worldScaleZ; }
+const big_float& getBigWorldOffsetX() const { return m_worldOffsetX }
+const big_float& getBigWorldOffsetY() const { return m_worldOffsetY; }
+const big_float& getBigWorldOffsetZ() const { return m_worldOffsetZ; }
+
     void setWorldOffset(double ox, double oy, double oz) {
-        m_worldOffsetX = ox; m_worldOffsetY = oy; m_worldOffsetZ = oz;
+    m_worldOffsetX = big_float(ox);
+    m_worldOffsetY = big_float(oy);
+    m_worldOffsetZ = big_float(oz);
     }
-    double getWorldScaleX() const { return m_worldScaleX; }
-    double getWorldScaleY() const { return m_worldScaleY; }
-    double getWorldScaleZ() const { return m_worldScaleZ; }
     int getSeaLevel() const { return customSeaLevel; }
 
     LargeCaveFeature caveFeature;
@@ -91,8 +117,8 @@ private:
 
     int customSeaLevel;
 
-    double m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;
-    double m_worldScaleX, m_worldScaleY, m_worldScaleZ;
+    big_float m_worldOffsetX, m_worldOffsetY, m_worldOffsetZ;
+    big_float m_worldScaleX, m_worldScaleY, m_worldScaleZ;
     bool m_disableSkygrid;
 };
 
