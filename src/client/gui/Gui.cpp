@@ -780,6 +780,11 @@ std::string bigSclXStr, bigSclYStr, bigSclZStr;
 double pxo = 0.0, pyo = 0.0, pzo = 0.0;
 std::string pxoStr, pyoStr, pzoStr;
 
+double px = p->x;
+double py = p->y - p->heightOffset + 64;
+double pz = p->z;
+posTranslator.to(px, py, pz);
+
 RandomLevelSource* rls = nullptr;
 if (lvl && lvl->getChunkSource()) {
     ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -853,35 +858,10 @@ if (!rls) {
         if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
     }
 
-    // 玩家原始坐标 (double 精度)
-    double px = p->x;
-    double py = p->y - p->heightOffset + 64;
-    double pz = p->z;
-
-    // 应用位置偏移 (OffsetPosTranslator)
-    posTranslator.to(px, py, pz);
-
-    // pxo/pyo/pzo 用 big_float 计算，永不溢出
-    if (rls) {
-        big_float bigPx(px), bigPy(py), bigPz(pz);
-        big_float bigPxo = bigPx * bigSclX + bigOffX * bigSclX;
-        big_float bigPyo = bigPy * bigSclY + bigOffY * bigSclY;
-        big_float bigPzo = bigPz * bigSclZ + bigOffZ * bigSclZ;
-
-        // 转 double 给后续噪声计算
-        pxo = bigPxo.convert_to<double>();
-        pyo = bigPyo.convert_to<double>();
-        pzo = bigPzo.convert_to<double>();
-
-        // 完整精度字符串给显示
-        pxoStr = bigPxo.str();
-        pyoStr = bigPyo.str();
-        pzoStr = bigPzo.str();
-    } else {
+    
         pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
         pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
         pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-    }
 
     int64_t bx = Mth::floor64(px), by = Mth::floor64(py), bz = Mth::floor64(pz);
     int64_t cx = bx >> 4, cz = bz >> 4;
