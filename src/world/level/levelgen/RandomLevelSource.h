@@ -49,9 +49,9 @@ public:
     void setWorldOffset(double ox, double oy, double oz) {
         m_worldOffsetX = ox; m_worldOffsetY = oy; m_worldOffsetZ = oz;
     }
-    float getWorldScaleX() const { return m_worldScaleX; }
-    float getWorldScaleY() const { return m_worldScaleY; }
-    float getWorldScaleZ() const { return m_worldScaleZ; }
+    double getWorldScaleX() const { return m_worldScaleX; }
+    double getWorldScaleY() const { return m_worldScaleY; }
+    double getWorldScaleZ() const { return m_worldScaleZ; }
     int getSeaLevel() const { return customSeaLevel; }
 
     LargeCaveFeature caveFeature;
