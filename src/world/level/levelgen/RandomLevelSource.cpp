@@ -90,6 +90,7 @@ if (!scaleZStr.empty()) {
         }
     }
 }
+}
 
 RandomLevelSource::~RandomLevelSource()
 {
