@@ -774,46 +774,77 @@ void Gui::renderDebugInfo() {
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
 
-    big_float bigOffX, bigOffY, bigOffZ;
-    big_float bigSclX, bigSclY, bigSclZ;
     std::string bigOffXStr, bigOffYStr, bigOffZStr;
-    std::string bigSclXStr, bigSclYStr, bigSclZStr;
+std::string bigSclXStr, bigSclYStr, bigSclZStr;
 
-    double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-    std::string pxoStr, pyoStr, pzoStr;
+double pxo = 0.0, pyo = 0.0, pzo = 0.0;
+std::string pxoStr, pyoStr, pzoStr;
 
-    RandomLevelSource* rls = nullptr;
-    if (lvl && lvl->getChunkSource()) {
-        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-        if (cache) {
-            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-            if (rls) {
-                // double 版本（Float 噪声路径 + 显示用）
-                terrainOffsetX = rls->getWorldOffsetX();
-                terrainOffsetY = rls->getWorldOffsetY();
-                terrainOffsetZ = rls->getWorldOffsetZ();
-                worldScaleX = rls->getWorldScaleX();
-                worldScaleY = rls->getWorldScaleY();
-                worldScaleZ = rls->getWorldScaleZ();
+RandomLevelSource* rls = nullptr;
+if (lvl && lvl->getChunkSource()) {
+    ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+    if (cache) {
+        rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+        if (rls) {
+            terrainOffsetX = rls->getWorldOffsetX();
+            terrainOffsetY = rls->getWorldOffsetY();
+            terrainOffsetZ = rls->getWorldOffsetZ();
+           worldScaleX = rls->getWorldScaleX();
+worldScaleY = rls->getWorldScaleY();
+worldScaleZ = rls->getWorldScaleZ();
 
-                // big_float 版本（精确计算 + 显示用）
-                bigOffX = rls->getBigWorldOffsetX();
-                bigOffY = rls->getBigWorldOffsetY();
-                bigOffZ = rls->getBigWorldOffsetZ();
-                bigSclX = rls->getBigWorldScaleX();
-                bigSclY = rls->getBigWorldScaleY();
-                bigSclZ = rls->getBigWorldScaleZ();
+            {
+                big_float o = rls->getBigWorldOffsetX();
+                bigOffXStr = o.str();
+            }
+            {
+                big_float o = rls->getBigWorldOffsetY();
+                bigOffYStr = o.str();
+            }
+            {
+                big_float o = rls->getBigWorldOffsetZ();
+                bigOffZStr = o.str();
+            }
+            {
+                big_float s = rls->getBigWorldScaleX();
+                bigSclXStr = s.str();
+            }
+            {
+                big_float s = rls->getBigWorldScaleY();
+                bigSclYStr = s.str();
+            }
+            {
+                big_float s = rls->getBigWorldScaleZ();
+                bigSclZStr = s.str();
+            }
 
-                // 字符串（调试屏幕显示）
-                bigOffXStr = bigOffX.str();
-                bigOffYStr = bigOffY.str();
-                bigOffZStr = bigOffZ.str();
-                bigSclXStr = bigSclX.str();
-                bigSclYStr = bigSclY.str();
-                bigSclZStr = bigSclZ.str();
+            {
+                big_float r = big_float(px) * rls->getBigWorldScaleX()
+                            + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
+                pxo = r.convert_to<double>();
+                pxoStr = r.str();
+            }
+            {
+                big_float r = big_float(py) * rls->getBigWorldScaleY()
+                            + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
+                pyo = r.convert_to<double>();
+                pyoStr = r.str();
+            }
+            {
+                big_float r = big_float(pz) * rls->getBigWorldScaleZ()
+                            + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
+                pzo = r.convert_to<double>();
+                pzoStr = r.str();
             }
         }
     }
+}
+
+if (!rls) {
+    pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+    pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+    pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+}
 
     // 获取海平面高度
     int seaLevel = 63;
