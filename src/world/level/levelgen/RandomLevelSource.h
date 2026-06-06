@@ -9,7 +9,10 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
 // ===== 在类定义之前（或 namespace 内）定义类型别名 =====
-typedef boost::multiprecision::cpp_dec_float_100 big_float;
+typedef boost::multiprecision::number<
+    boost::multiprecision::cpp_dec_float<100>,
+    boost::multiprecision::et_off   // ← 关闭表达式模板
+> big_float;
 
 class Biome;
 class Level;
