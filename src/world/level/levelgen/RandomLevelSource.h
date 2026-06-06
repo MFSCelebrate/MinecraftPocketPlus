@@ -9,10 +9,8 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 
 // ===== 在类定义之前（或 namespace 内）定义类型别名 =====
-typedef boost::multiprecision::number<
-    boost::multiprecision::cpp_dec_float<100>,
-    boost::multiprecision::et_off   // ← 关闭表达式模板
-> big_float;
+// RandomLevelSource.h
+typedef boost::multiprecision::cpp_dec_float_50 big_float;
 
 class Biome;
 class Level;
@@ -117,6 +115,13 @@ private:
     double* dr;
     double* fi;
     double* fis;
+
+    big_float m_worldOffsetX = 0;
+big_float m_worldOffsetY = 0;
+big_float m_worldOffsetZ = 0;
+big_float m_worldScaleX = 1;
+big_float m_worldScaleY = 1;
+big_float m_worldScaleZ = 1;
 
     int customSeaLevel;
 
