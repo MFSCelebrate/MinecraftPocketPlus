@@ -976,7 +976,7 @@ if (rls) {
     }
 
     // ===================== 构建显示行 (27 行) =====================
-    static char ln[27][2147483647];
+    static char ln[27][2048];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
