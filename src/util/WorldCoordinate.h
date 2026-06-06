@@ -31,18 +31,31 @@ static constexpr double  BIG_THRESHOLD = 281474976710656.0; // 2^48
 // ── 字符串 → 定点 WorldCoordinate ──
 inline WorldCoordinate worldCoordFromString(const std::string& s) {
     if (s.empty()) return 0;
-    size_t dot = s.find('.');
+
+    // ── 辅助：去掉前导零，避免 cpp_int 八进制陷阱 ──
+    auto stripLeadingZeros = [](std::string num) -> std::string {
+        size_t start = (num[0] == '-') ? 1 : 0;
+        while (start < num.length() - 1 && num[start] == '0') {
+            num.erase(start, 1);
+        }
+        return num;
+    };
+
     BigWorldCoordinate val;
+    size_t dot = s.find('.');
     if (dot == std::string::npos) {
-        val = BigWorldCoordinate(s) * BigWorldCoordinate(FIXED_SCALE);
+        // 整数字符串
+        std::string num = stripLeadingZeros(s);
+        val = BigWorldCoordinate(num) * BigWorldCoordinate(FIXED_SCALE);
     } else {
         std::string iPart = s.substr(0, dot);
         std::string fPart = s.substr(dot + 1);
         if (fPart.length() > 12) fPart.resize(12);
         else fPart.append(12 - fPart.length(), '0');
-        val = BigWorldCoordinate(iPart + fPart);
+        std::string combined = stripLeadingZeros(iPart + fPart);
+        val = BigWorldCoordinate(combined);
     }
-    // clamp 到 int64_t 范围
+
     const BigWorldCoordinate maxV = (std::numeric_limits<WorldCoordinate>::max)();
     const BigWorldCoordinate minV = (std::numeric_limits<WorldCoordinate>::min)();
     if (val > maxV) return (std::numeric_limits<WorldCoordinate>::max)();
