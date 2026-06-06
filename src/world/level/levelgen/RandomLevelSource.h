@@ -45,26 +45,7 @@ public:
     virtual bool shouldSave() override;
     virtual std::string gatherStats() override;
 
-    double getWorldOffsetX() const {
-    double v = m_worldOffsetX.convert_to<double>();
-}
-double getWorldOffsetY() const {
-    double v = m_worldOffsetY.convert_to<double>();
-}
-double getWorldOffsetZ() const {
-    double v = m_worldOffsetZ.convert_to<double>();
-}
-double getWorldScaleX() const {
-    double v = m_worldScaleX.convert_to<double>();
-}
-double getWorldScaleY() const {
-    double v = m_worldScaleY.convert_to<double>();
-}
-double getWorldScaleZ() const {
-    double v = m_worldScaleZ.convert_to<double>();
-}
-
-double getWorldOffsetX() const { return worldCoordToDouble(m_worldOffsetX); }
+    double getWorldOffsetX() const { return worldCoordToDouble(m_worldOffsetX); }
 double getWorldOffsetY() const { return worldCoordToDouble(m_worldOffsetY); }
 double getWorldOffsetZ() const { return worldCoordToDouble(m_worldOffsetZ); }
 double getWorldScaleX()  const { return worldCoordToDouble(m_worldScaleX); }
