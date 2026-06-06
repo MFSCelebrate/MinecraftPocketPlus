@@ -20,9 +20,25 @@ inline int floor(double x) {
     return (int)std::floor(x);  // 保留原版行为
 }
 
+// ===== 修改 floor64（防止 x ≥ 2^63 时 UB） =====
 inline int64_t floor64(double x) {
+    if (x >= (double)INT64_MAX) return INT64_MAX;
+    if (x <= (double)INT64_MIN) return INT64_MIN;
     return (int64_t)std::floor(x);
 }
+
+// ===== 新增 safe_mod（安全 int64_t 取模，避免 INT64_MIN % s2 的 UB） =====
+inline int64_t safe_mod(int64_t value, int64_t mod) {
+    if (mod <= 0) return 0;
+    if (value >= 0) return value % mod;
+    // 负数：用 uint64_t 过渡
+    uint64_t uval = (uint64_t)(-value);
+    uint64_t umod = (uint64_t)mod;
+    uint64_t urem = uval % umod;
+    if (urem == 0) return 0;
+    return mod - (int64_t)urem;
+}
+
     inline double sin(double x) { return std::sin(x); }
     inline double cos(double x) { return std::cos(x); }
     inline double atan(double x) { return std::atan(x); }
