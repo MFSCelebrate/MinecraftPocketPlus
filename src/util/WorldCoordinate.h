@@ -123,17 +123,17 @@ inline double worldCoordBigToDouble(const BigWorldCoordinate& v) {
 }
 
 /// BigWorldCoordinate → 格式化字符串
-inline std::string worldCoordBigToString(const BigWorldCoordinate& val) {
-    std::string raw = val.str();
-    while ((int64_t)raw.length() <= 12)
-        raw = "0" + raw;
-    size_t dotPos = raw.length() - 12;
-    std::string s = raw.substr(0, dotPos) + "." + raw.substr(dotPos);
-    while (!s.empty() && s.back() == '0') s.pop_back();
-    if (!s.empty() && s.back() == '.') s.pop_back();
-    return s;
+inline BigWorldCoordinate doubleToWorldCoordBig(double v) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%.12f", v);
+    std::string s(buf);
+    // 删掉小数点
+    size_t dot = s.find('.');
+    if (dot != std::string::npos) {
+        s.erase(dot, 1);
+    }
+    return BigWorldCoordinate(s);
 }
-
 // =====================================================================
 //  整数坐标工具（参考代码）
 // =====================================================================
