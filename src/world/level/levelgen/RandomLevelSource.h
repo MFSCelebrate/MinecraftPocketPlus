@@ -6,11 +6,8 @@
 #include "LargeCaveFeature.h"
 #include "synth/PerlinNoise.h"
 #include "../../../SharedConstants.h"
-#include <boost/multiprecision/cpp_dec_float.hpp>
 
-// ===== 在类定义之前（或 namespace 内）定义类型别名 =====
-// RandomLevelSource.h
-typedef boost::multiprecision::cpp_dec_float_50 big_float;
+#include "../../util/WorldCoordinate.h"
 
 class Biome;
 class Level;
@@ -67,18 +64,36 @@ double getWorldScaleZ() const {
     double v = m_worldScaleZ.convert_to<double>();
 }
 
-const big_float& getBigWorldOffsetX() const { return m_worldOffsetX; }
-const big_float& getBigWorldOffsetY() const { return m_worldOffsetY; }
-const big_float& getBigWorldOffsetZ() const { return m_worldOffsetZ; }
-const big_float& getBigWorldScaleX()  const { return m_worldScaleX; }
-const big_float& getBigWorldScaleY()  const { return m_worldScaleY; }
-const big_float& getBigWorldScaleZ()  const { return m_worldScaleZ; }
+double getWorldOffsetX() const { return worldCoordToDouble(m_worldOffsetX); }
+double getWorldOffsetY() const { return worldCoordToDouble(m_worldOffsetY); }
+double getWorldOffsetZ() const { return worldCoordToDouble(m_worldOffsetZ); }
+double getWorldScaleX()  const { return worldCoordToDouble(m_worldScaleX); }
+double getWorldScaleY()  const { return worldCoordToDouble(m_worldScaleY); }
+double getWorldScaleZ()  const { return worldCoordToDouble(m_worldScaleZ); }
+
+// ===== 新 getter（字符串，给调试屏幕） =====
+std::string getStrOffsetX() const { return worldCoordToString(m_worldOffsetX); }
+std::string getStrOffsetY() const { return worldCoordToString(m_worldOffsetY); }
+std::string getStrOffsetZ() const { return worldCoordToString(m_worldOffsetZ); }
+std::string getStrScaleX()  const { return worldCoordToString(m_worldScaleX); }
+std::string getStrScaleY()  const { return worldCoordToString(m_worldScaleY); }
+std::string getStrScaleZ()  const { return worldCoordToString(m_worldScaleZ); }
+
+// ===== 新 getter（裸值，给 cpp_int 计算路径） =====
+WorldCoordinate getRawOffsetX() const { return m_worldOffsetX; }
+WorldCoordinate getRawOffsetY() const { return m_worldOffsetY; }
+WorldCoordinate getRawOffsetZ() const { return m_worldOffsetZ; }
+WorldCoordinate getRawScaleX()  const { return m_worldScaleX; }
+WorldCoordinate getRawScaleY()  const { return m_worldScaleY; }
+WorldCoordinate getRawScaleZ()  const { return m_worldScaleZ; }
 
     void setWorldOffset(double ox, double oy, double oz) {
-    m_worldOffsetX = big_float(ox);
-    m_worldOffsetY = big_float(oy);
-    m_worldOffsetZ = big_float(oz);
+    // 把 double 转成定点存储
+    m_worldOffsetX = (WorldCoordinate)(ox * FIXED_SCALE_D);
+    m_worldOffsetY = (WorldCoordinate)(oy * FIXED_SCALE_D);
+    m_worldOffsetZ = (WorldCoordinate)(oz * FIXED_SCALE_D);
     }
+
     int getSeaLevel() const { return customSeaLevel; }
 
     LargeCaveFeature caveFeature;
@@ -116,12 +131,12 @@ private:
     double* fi;
     double* fis;
 
-    big_float m_worldOffsetX = 0;
-big_float m_worldOffsetY = 0;
-big_float m_worldOffsetZ = 0;
-big_float m_worldScaleX = 1;
-big_float m_worldScaleY = 1;
-big_float m_worldScaleZ = 1;
+    WorldCoordinate m_worldOffsetX = 0;
+WorldCoordinate m_worldOffsetY = 0;
+WorldCoordinate m_worldOffsetZ = 0;
+WorldCoordinate m_worldScaleX = FIXED_SCALE;
+WorldCoordinate m_worldScaleY = FIXED_SCALE;
+WorldCoordinate m_worldScaleZ = FIXED_SCALE;
 
     int customSeaLevel;
 
