@@ -892,7 +892,7 @@ if (rls) {
 
     // 调试屏幕缩放
     float debugScale = 1.0f;
-craft(OPTIONS_DEBUG_SCREEN_SIZE);
+    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
     if (!scaleStr.empty()) {
         debugScale = (float)atof(scaleStr.c_str());
     }
@@ -930,7 +930,8 @@ craft(OPTIONS_DEBUG_SCREEN_SIZE);
         noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
     }
 
-    // ===================== 噪声计算（Float 精度 =.0f};
+    // ===================== 噪声计算（Float 精度 — 保持原样不动） =====================
+    float noiseValsF[8] = {0.0f};
     if (rls) {
         double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
         double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
