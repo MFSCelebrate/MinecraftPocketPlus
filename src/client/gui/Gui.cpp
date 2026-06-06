@@ -772,60 +772,59 @@ void Gui::renderDebugInfo() {
     // 获取世界偏移和缩放（double 版本 + 字符串版本）
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
-    std::string bigOffXStr, bigOffYStr, bigOffZStr;
-    std::string bigSclXStr, bigSclYStr, bigSclZStr;
+  
+std::string bigOffXStr, bigOffYStr, bigOffZStr;
+std::string bigSclXStr, bigSclYStr, bigSclZStr;
 
-    double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-    std::string pxoStr, pyoStr, pzoStr;
+double pxo = 0.0, pyo = 0.0, pzo = 0.0;
+std::string pxoStr, pyoStr, pzoStr;
 
-    RandomLevelSource* rls = nullptr;
-    if (lvl && lvl->getChunkSource()) {
-        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-        if (cache) {
-            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-            if (rls) {
-                // double 版本
-                terrainOffsetX = rls->getWorldOffsetX();
-                terrainOffsetY = rls->getWorldOffsetY();
-                terrainOffsetZ = rls->getWorldOffsetZ();
-                worldScaleX = rls->getWorldScaleX();
-                worldScaleY = rls->getWorldScaleY();
-                worldScaleZ = rls->getWorldScaleZ();
+RandomLevelSource* rls = nullptr;
+if (lvl && lvl->getChunkSource()) {
+    ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+    if (cache) {
+        rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+        if (rls) {
+            terrainOffsetX = rls->getWorldOffsetX();
+            terrainOffsetY = rls->getWorldOffsetY();
+            terrainOffsetZ = rls->getWorldOffsetZ();
+            worldScaleX = rls->getWorldScaleX();
+            worldScaleY = rls->getWorldScaleY();
+            worldScaleZ = rls->getWorldScaleZ();
 
-                // 🔥 big_float 字符串：直接从 getter 获取，不存栈变量
-                bigOffXStr = rls->getBigWorldOffsetX().str();
-                bigOffYStr = rls->getBigWorldOffsetY().str();
-                bigOffZStr = rls->getBigWorldOffsetZ().str();
-                bigSclXStr = rls->getBigWorldScaleX().str();
-                bigSclYStr = rls->getBigWorldScaleY().str();
-                bigSclZStr = rls->getBigWorldScaleZ().str();
+            bigOffXStr = rls->getBigWorldOffsetX().str();
+            bigOffYStr = rls->getBigWorldOffsetY().str();
+            bigOffZStr = rls->getBigWorldOffsetZ().str();
+            bigS rstrBigclZStr = rls->getBigWorldScaleZ().str();
 
-                // 🔥 pxo/pyo/pzo 计算：用 lambda 隔离 big_float 生命周期
-                pxoStr = ([&]() {
-                    big_float bp(px), bs(rls->getBigWorldScale *o = result.convert_to<double>();
-                    return result.str();
-                })();
-                pyoStr = ([&]() {
-                    big_float bp(py), bs(rls->getBigWorldScaleY()), bo(rls->getBigWorldOffsetY());
-                    big_float result = bp * bs + bo * bs;
-                    pyo = result.convert_to<double>();
-                    return result.str();
-                })();
-                pzoStr = ([&]() {
-                    big_float bp(pz), bs(rls->getBigWorldScaleZ()), bo(rls->getBigWorldOffsetZ());
-                    big_float result = bp * bs + bo * bs;
-                    pzo = result.convert_to<double>();
-                    return result.str();
-                })();
+            // Lambda 隔离 big_float 生命周期，用完即毁
+            {
+                big_float a(px), b(rls->getBigWorldScaleX()), c(rls->getBigWorldOffsetX());
+                big_float r = a * b + c * b;
+                pxo = r.convert_to<double>();
+                pxoStr = r.str();
+            }
+            {
+                big_float a(py), b(rls->getBigWorldScaleY()), cY());
+                big_float r = a * b + c * b;
+                pyo = r.convert_to<double>();
+                pyoStr = r.str();
+            }
+            {
+                big_float a(pz), b(rls->getBigWorldScaleZ()), c(rls->getBigWorldOffsetZ());
+                big_float r = a * b + c * b;
+                pzo = r.convert_to<double>();
+                pzoStr = r.str();
             }
         }
     }
+}
 
-    if (!rls) {
-        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-    }
+if (!rls) {
+    pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+    pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+    pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+}
 
     // 获取海平面高度
     int seaLevel = 63;
