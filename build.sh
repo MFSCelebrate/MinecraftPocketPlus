@@ -211,6 +211,7 @@ function write_stub_file() {
 
 function build_ndk_abi() {
   local abi="$1"
+  rm -rf "$REPO_ROOT/project/android/obj" "$REPO_ROOT/project/android/libs"
 
   # 🔥 Clean rebuild：先清掉旧的 obj/libs
   "$ANDROID_NDK_PATH/ndk-build" \
