@@ -999,10 +999,12 @@ void Gui::renderDebugInfo() {
             trimBig(bigOffZStr, 8).c_str(),
             trimBig(bigSclXStr, 8).c_str(), trimBig(bigSclYStr, 8).c_str(),
             trimBig(bigSclZStr, 8).c_str());
-    } elseprintf(ln[8], sizeof(ln[8]),
+    } else {
+		snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
+		}
     }
 
     ln[9][0] = '\0';
