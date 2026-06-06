@@ -212,6 +212,15 @@ function write_stub_file() {
 function build_ndk_abi() {
   local abi="$1"
 
+  # 🔥 Clean rebuild：先清掉旧的 obj/libs
+  "$ANDROID_NDK_PATH/ndk-build" \
+      NDK_PROJECT_PATH="$REPO_ROOT/project/android" \
+      APP_BUILD_SCRIPT="$JNI_DIR/Android.mk" \
+      APP_ABI="$abi" \
+      clean 2>&1 | tail -3
+
+  # ... 然后正常构建
+
   # armeabi-v7a needs a few extra NDK flags to get hardware FPU support
   # without APP_ABI the default would be whatever Android.mk says, so we
   # always pass it explicitly so the same Android.mk works for both targets
