@@ -858,11 +858,6 @@ if (!rls) {
         if (!slStr.empty()) seaLevel = atoi(slStr.c_str());
     }
 
-    
-        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-
     int64_t bx = Mth::floor64(px), by = Mth::floor64(py), bz = Mth::floor64(pz);
     int64_t cx = bx >> 4, cz = bz >> 4;
 
