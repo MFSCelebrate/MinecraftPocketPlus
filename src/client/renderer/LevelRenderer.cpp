@@ -380,63 +380,53 @@ void LevelRenderer::deleteChunks()
 	sortedChunks = NULL;
 }
 
-void LevelRenderer::resortChunks( int64_t xc, int64_t yc, int64_t zc ) {
-	
-	xc -= CHUNK_SIZE / 2;
-	//yc -= CHUNK_SIZE / 2;
-	zc -= CHUNK_SIZE / 2;
-	xMinChunk = INT64_MAX;    // ★ 使用 64 位最大值
-	yMinChunk = INT64_MAX;
-	zMinChunk = INT64_MAX;
-	xMaxChunk = INT64_MIN;    // ★ 使用 64 位最小值
-	yMaxChunk = INT64_MIN;
-	zMaxChunk = INT64_MIN;
+void LevelRenderer::resortChunks(int64_t xc, int64_t yc, int64_t zc) {
+    xc -= CHUNK_SIZE / 2;
+    zc -= CHUNK_SIZE / 2;
+    xMinChunk = INT64_MAX; yMinChunk = INT64_MAX;
+    zMinChunk = INT64_MAX;
+    xMaxChunk = INT64_MIN; yMaxChunk = INT64_MIN;
+    zMaxChunk = INT64_MIN;
 
-	int dirty = 0;
+    int dirty = 0;
 
-	int64_t s2 = xChunks * CHUNK_SIZE;    // ★ 升级为 int64_t
-	int64_t s1 = s2 / 2;
+    int64_t s2 = xChunks * CHUNK_SIZE;
+    int64_t s1 = s2 / 2;
 
-	for (int x = 0; x < xChunks; x++) {
-		int64_t xx = x * CHUNK_SIZE;       // ★ 升级为 int64_t
+    for (int x = 0; x < xChunks; x++) {
+        int64_t xx = x * CHUNK_SIZE;
+        // 🔥 X 轴：用 safe_mod 替代原来的取模
+        int64_t xOff = Mth::safe_mod(xx + s1 - xc, s2);  // 结果 [0, s2-1]
+        xx = xc - s1 + xOff;
 
-		// ✅ 新代码 —— 用安全取模代替除法
-int64_t xOff = xx + s1 - xc;
-// 安全取模：先对 s2 取余，保证在 [-(s2-1), s2-1] 范围内，再调整为正
-xOff = xOff % s2;
-if(xOff < 0) xOff += s2;
-// xOff 现在是 [0, s2-1]，代表偏移的格子数
-xx = xc - s1 + xOff;
-// xx 现在在 xc 附近 ±s1 范围内，safe!
+        if (xx < xMinChunk) xMinChunk = xx;
+        if (xx > xMaxChunk) xMaxChunk = xx;
 
-		if (xx < xMinChunk) xMinChunk = xx;
-		if (xx > xMaxChunk) xMaxChunk = xx;
+        for (int z = 0; z < zChunks; z++) {
+            int64_t zz = z * CHUNK_SIZE;
+            // 🔥 Z 轴：统一成与 X 轴一致的 safe_mod 逻辑
+            // 原代码用除法 + 条件调整，容易在边界溢出
+            int64_t zOff = Mth::safe_mod(zz + s1 - zc, s2);
+            zz = zc - s1 + zOff;
 
-		for (int z = 0; z < zChunks; z++) {
-			int64_t zz = z * CHUNK_SIZE;   // ★ 升级为 int64_t
-			int64_t zOff = (zz + s1 - zc); // ★ 升级为 int64_t
-			if (zOff < 0) zOff -= (s2 - 1);
-			zOff /= s2;
-			zz -= zOff * s2;
+            if (zz < zMinChunk) zMinChunk = zz;
+            if (zz > zMaxChunk) zMaxChunk = zz;
 
-			if (zz < zMinChunk) zMinChunk = zz;
-			if (zz > zMaxChunk) zMaxChunk = zz;
+            for (int y = 0; y < yChunks; y++) {
+                int64_t yy = y * CHUNK_SIZE;
+                if (yy < yMinChunk) yMinChunk = yy;
+                if (yy > yMaxChunk) yMaxChunk = yy;
 
-			for (int y = 0; y < yChunks; y++) {
-				int64_t yy = y * CHUNK_SIZE; // ★ 升级为 int64_t
-				if (yy < yMinChunk) yMinChunk = yy;
-				if (yy > yMaxChunk) yMaxChunk = yy;
-
-				Chunk* chunk = chunks[(z * yChunks + y) * xChunks + x];
-				bool wasDirty = chunk->isDirty();
-				chunk->setPos(xx, yy, zz);
-				if (!wasDirty && chunk->isDirty()) {
-					dirtyChunks.push_back(chunk);
-					++dirty;
-				}
-			}
-		}
-	}
+                Chunk* chunk = chunks[(z * yChunks + y) * xChunks + x];
+                bool wasDirty = chunk->isDirty();
+                chunk->setPos(xx, yy, zz);
+                if (!wasDirty && chunk->isDirty()) {
+                    dirtyChunks.push_back(chunk);
+                    ++dirty;
+                }
+            }
+        }
+    }
 }
 
 int LevelRenderer::render(Mob* player, int layer, float alpha)
