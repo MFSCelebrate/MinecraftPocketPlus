@@ -57,39 +57,34 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     if (Minecraft::instance) {
     std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
     if (!scaleXStr.empty()) {
-        m_worldScaleX = big_float(scaleXStr);
-        if (m_worldScaleX <= 0) m_worldScaleX = 1;
+        m_worldScaleX = worldCoordFromString(scaleXStr);
     }
     std::string scaleYStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
     if (!scaleYStr.empty()) {
-        m_worldScaleY = big_float(scaleYStr);
-        if (m_worldScaleY <= 0) m_worldScaleY = 1;
-    }
-    std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+        m_worldScaleY = worldCoordFromString(scaleYStr);
     if (!scaleZStr.empty()) {
-        m_worldScaleZ = big_float(scaleZStr);
-        if (m_worldScaleZ <= 0) m_worldScaleZ = 1;
+        m_worldScaleZ = worldCoordFromString(scaleZStr);
     }
 
     std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
-    if (!xStr.empty()) { m_worldOffsetX = big_float(xStr); }
+    if (!xStr.empty()) { m_worldOffsetX = worldCoordFromString(xStr); }
     std::string yStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
-    if (!yStr.empty()) { m_worldOffsetY = big_float(yStr); }
+    if (!yStr.empty()) { m_worldOffsetY = worldCoordFromString(yStr); }
     std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-    if (!zStr.empty()) { m_worldOffsetZ = big_float(zStr); }
+    if (!zStr.empty()) { m_worldOffsetZ = worldCoordFromString(zStr); }
 
-    // BiomeSource 传入时用 convert_to<double>()
+    // BiomeSource 传入时用 worldCoordToDouble()
     if (level) {
         BiomeSource* biomeSource = level->getBiomeSource();
         if (biomeSource) {
             biomeSource->setWorldTransform(
-                m_worldOffsetX.convert_to<double>(),
-                m_worldOffsetZ.convert_to<double>(),
-                m_worldScaleX.convert_to<double>(),
-                m_worldScaleZ.convert_to<double>()
+                worldCoordToDouble(m_worldOffsetX),
+                worldCoordToDouble(m_worldOffsetZ),
+                worldCoordToDouble(m_worldScaleX),
+                worldCoordToDouble(m_worldScaleZ)
             );
         }
-	}
+    }
 }
 }
 
@@ -184,8 +179,8 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
-        double sx = (1.0 / 32.0) * m_worldScaleX.convert_to<double>();
-    double sz = (1.0 / 32.0) * m_worldScaleZ.convert_to<double>();
+        double sx = 684.412 * worldCoordToDouble(m_worldScaleX);
+    double sz = 684.412 * worldCoordToDouble(m_worldScaleZ);
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
 
@@ -262,12 +257,12 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
 
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 {
-        double worldBlockX = xt * 16.0 + m_worldOffsetX.convert_to<double>();
-    double worldBlockZ = zt * 16.0 + m_worldOffsetZ.convert_to<double>();
+        double worldBlockX = xt * 16.0 + worldCoordToDouble(m_worldOffsetX);
+    double worldBlockZ = zt * 16.0 + worldCoordToDouble(m_worldOffsetZ);
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
-    double transformedXo = (xo + m_worldOffsetX.convert_to<double>()) * m_worldScaleX.convert_to<double>();
-    double transformedZo = (zo + m_worldOffsetZ.convert_to<double>()) * m_worldScaleZ.convert_to<double>();
+    double transformedXo = (xo + worldCoordToDouble(m_worldScaleX)) * worldCoordToDouble(m_worldScaleX);
+    double transformedZo = (zo + worldCoordToDouble(m_worldScaleZ)) * worldCoordToDouble(m_worldScaleZ);
 	
     if (!level->hasChunk(xt - 1, zt - 1) || !level->hasChunk(xt, zt - 1) ||
         !level->hasChunk(xt - 1, zt) || !level->hasChunk(xt, zt)) {
@@ -558,9 +553,9 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
-        double sx = 684.412 * farlandsScale * m_worldScaleX.convert_to<double>();
-    double sy = 684.412 * farlandsScale * m_worldScaleY.convert_to<double>();
-    double sz = 684.412 * farlandsScale * m_worldScaleZ.convert_to<double>();
+        double sx = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleX);
+    double sy = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleY);
+    double sz = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleZ);
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
