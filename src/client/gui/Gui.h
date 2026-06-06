@@ -60,7 +60,10 @@ public:
 
 	void renderBubbles();
 	void renderHearts();
-	void renderDebugInfo();
+
+	__attribute__((no_stack_protector))
+    void renderDebugInfo();
+
 	void renderPlayerList(Font* font, int screenWidth, int screenHeight);
 
 	void renderProgressIndicator( const bool isTouchInterface, const int screenWidth, const int screenHeight, float a );
