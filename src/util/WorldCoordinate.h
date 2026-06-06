@@ -66,7 +66,7 @@ inline std::string worldCoordToString(WorldCoordinate v) {
              neg ? "-" : "", (long long)ip, (long long)fp);
     // 去掉末尾多余的 0
     char* p = buf + strlen(buf) - 1;
-    while (p > buf && *p == '0') *p--;
+    while (p > buf && *p == '0') --p;
     if (*p == '.') *p = '\0';
     else *(p + 1) = '\0';
     return std::string(buf);
