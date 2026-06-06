@@ -972,7 +972,7 @@ void Gui::renderDebugInfo() {
                                                      sampleWorldZ * scale_forest);
     }
 
-    // ===================== 构建显示行 (27 行) =====================
+    // ===================== 构建显示行 (27 行) BigInteger Ver =====================
     static char ln[27][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
