@@ -184,8 +184,8 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
-    double sx = (1.0 / 32.0) * m_worldScaleX.convert_to<double>();
-double sz = (1.0 / 32.0) * m_worldScaleZ.convert_to<double>();
+        double sx = (1.0 / 32.0) * m_worldScaleX.convert_to<double>();
+    double sz = (1.0 / 32.0) * m_worldScaleZ.convert_to<double>();
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
 
@@ -262,13 +262,13 @@ double sz = (1.0 / 32.0) * m_worldScaleZ.convert_to<double>();
 
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 {
-    double worldBlockX = xt * 16.0 + m_worldOffsetX.convert_to<double>();
-double worldBlockZ = zt * 16.0 + m_worldOffset.con_toint)worldBlockint ();
- double transformedXo = (xo + m_worldOffsetX.convert_to<double>()) * m_worldScaleX.convert_to<double>();
-double transformedZo = (zo + m_worldOffsetZ.convert_to<double>()) * m_worldScaleZ.convert_to<double>();
+        double worldBlockX = xt * 16.0 + m_worldOffsetX.convert_to<double>();
+    double worldBlockZ = zt * 16.0 + m_worldOffsetZ.convert_to<double>();
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
-
+    double transformedXo = (xo + m_worldOffsetX.convert_to<double>()) * m_worldScaleX.convert_to<double>();
+    double transformedZo = (zo + m_worldOffsetZ.convert_to<double>()) * m_worldScaleZ.convert_to<double>();
+	
     if (!level->hasChunk(xt - 1, zt - 1) || !level->hasChunk(xt, zt - 1) ||
         !level->hasChunk(xt - 1, zt) || !level->hasChunk(xt, zt)) {
         return;
@@ -558,9 +558,9 @@ double transformedZo = (zo + m_worldOffsetZ.convert_to<double>()) * m_worldScale
 double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
-    double sx = 684.412 * farlandsScale * m_worldScaleX.convert_to<double>();
-double sy = 684.412 * farlandsScale * m_worldScaleY.convert_to<double>();
-double sz = 684.412 * farlandsScale * m_worldScaleZ.convert_to<double>();
+        double sx = 684.412 * farlandsScale * m_worldScaleX.convert_to<double>();
+    double sy = 684.412 * farlandsScale * m_worldScaleY.convert_to<double>();
+    double sz = 684.412 * farlandsScale * m_worldScaleZ.convert_to<double>();
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
@@ -571,15 +571,19 @@ double sz = 684.412 * farlandsScale * m_worldScaleZ.convert_to<double>();
     double* downfalls = level->getBiomeSource()->downfalls;
 
     double noiseX = x / 4.0;
-    double noiseY = (y + m_worldOffsetY) / 8.0;
+    double noiseY = (y + m_worldOffsetY.convert_to<double>()) / 8.0;
     double noiseZ = z / 4.0;
 
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-    sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize, 1.121 * m_worldScaleX, 1.121 * m_worldScaleZ, 0.5);
-    dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize, 200.0 * m_worldScaleX, 200.0 * m_worldScaleZ, 0.5);
-
+    sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
+                              1.121 * m_worldScaleX.convert_to<double>(),
+                              1.121 * m_worldScaleZ.convert_to<double>(), 0.5);
+    dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
+                              200.0 * m_worldScaleX.convert_to<double>(),
+                              200.0 * m_worldScaleZ.convert_to<double>(), 0.5);
+	
     double xf = (double)noiseX;
     double yf = (double)noiseY;
     double zf = (double)noiseZ;
