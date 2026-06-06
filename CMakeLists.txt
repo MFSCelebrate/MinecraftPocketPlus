@@ -9,6 +9,18 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.10)
 
 include(cmake/EnumOption.cmake)
 
+# 在 target_include_directories 之前添加：
+include(FetchContent)
+FetchContent_Declare(
+    boost_mp
+    URL https://github.com/boostorg/multiprecision/archive/refs/tags/boost-1.83.0.tar.gz
+    SOURCE_SUBDIR ""  # header-only，不需要编译
+)
+FetchContent_MakeAvailable(boost_mp)
+
+# 然后添加 include：
+target_include_directories(MinecraftPE PRIVATE ${boost_mp_SOURCE_DIR}/include)
+
 if(EMSCRIPTEN)
     # When configuring web builds with "emcmake cmake -B build -S .", set PLATFORM to Web by default
     set(PLATFORM Web CACHE STRING "Platform to build for.")
