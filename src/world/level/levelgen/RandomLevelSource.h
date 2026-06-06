@@ -69,12 +69,12 @@ double getWorldScaleZ() const {
     double v = m_worldScaleZ.convert_to<double>();
 }
 
-const big_float& getBigWorldScaleX() const { return m_worldScaleX; }
-const big_float& getBigWorldScaleY() const { return m_worldScaleY; }
-const big_float& getBigWorldScaleZ() const { return m_worldScaleZ; }
 const big_float& getBigWorldOffsetX() const { return m_worldOffsetX; }
 const big_float& getBigWorldOffsetY() const { return m_worldOffsetY; }
 const big_float& getBigWorldOffsetZ() const { return m_worldOffsetZ; }
+const big_float& getBigWorldScaleX()  const { return m_worldScaleX; }
+const big_float& getBigWorldScaleY()  const { return m_worldScaleY; }
+const big_float& getBigWorldScaleZ()  const { return m_worldScaleZ; }
 
     void setWorldOffset(double ox, double oy, double oz) {
     m_worldOffsetX = big_float(ox);
