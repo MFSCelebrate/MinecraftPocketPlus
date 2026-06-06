@@ -31,6 +31,7 @@
 #include <sstream>
 
 // 新增：用于获取地形偏移量 Important!!!
+#include "../../util/WorldCoordinate.h"
 #include "../../world/level/levelgen/RandomLevelSource.h"
 #include "../../world/level/chunk/ChunkCache.h"
 
@@ -746,57 +747,6 @@ void Gui::renderBubbles() {
 	}
 }
 
-// 独立栈帧，只在缓存失效时调用
-static void updateBigFloatCache(RandomLevelSource* rls,
-                                double px, double py, double pz,
-                                std::string& boX, std::string& boY, std::string& boZ,
-                                std::string& bsX, std::string& bsY, std::string& bsZ,
-                                double& poX, double& poY, double& poZ,
-                                std::string& psX, std::string& psY, std::string& psZ) {
-    {
-        big_float o = rls->getBigWorldOffsetX();
-        boX = o.str();
-    }
-    {
-        big_float o = rls->getBigWorldOffsetY();
-        boY = o.str();
-    }
-    {
-        big_float o = rls->getBigWorldOffsetZ();
-        boZ = o.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleX();
-        bsX = s.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleY();
-        bsY = s.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleZ();
-        bsZ = s.str();
-    }
-    {
-        big_float r = big_float(px) * rls->getBigWorldScaleX()
-                    + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
-        poX = r.convert_to<double>();
-        psX = r.str();
-    }
-    {
-        big_float r = big_float(py) * rls->getBigWorldScaleY()
-                    + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
-        poY = r.convert_to<double>();
-        psY = r.str();
-    }
-    {
-        big_float r = big_float(pz) * rls->getBigWorldScaleZ()
-                    + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
-        poZ = r.convert_to<double>();
-        psZ = r.str();
-    }
-}
-
 static OffsetPosTranslator posTranslator;
 void Gui::onLevelGenerated() {
     if (Level* level = minecraft->level) {
@@ -821,75 +771,81 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p = minecraft->player;
     Level* lvl = minecraft->level;
 
-    // 获取世界偏移和缩放（double 版本 + big_float 版本）
+    // ── 偏移/缩放：double（给后续计算 + Float 噪声） ──
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
 
-double px = p->x;
-double py = p->y - p->heightOffset + 64;
-double pz = p->z;
-posTranslator.to(px, py, pz);
+    // ── 偏移/缩放字符串（给 ln[8] 显示，无浮点舍入） ──
+    std::string sOffX, sOffY, sOffZ, sSclX, sSclY, sSclZ;
 
-// 🔥 缓存变量（static，只算一次，后续帧复用字符串）
-static std::string s_bigOffXStr, s_bigOffYStr, s_bigOffZStr;
-static std::string s_bigSclXStr, s_bigSclYStr, s_bigSclZStr;
-static std::string s_pxoStr, s_pyoStr, s_pzoStr;
-static double s_pxo, s_pyo, s_pzo;
-static float s_lastBigUpdate = -1.0f;
-static long s_lastSeed = 0;
-static RandomLevelSource* s_lastRls = nullptr;
+    // ── 裸定点值（给 cpp_int 计算路径） ──
+    WorldCoordinate rawOffX = 0, rawOffY = 0, rawOffZ = 0;
+    WorldCoordinate rawSclX = FIXED_SCALE, rawSclY = FIXED_SCALE, rawSclZ = FIXED_SCALE;
 
-std::string bigOffXStr, bigOffYStr, bigOffZStr;
-std::string bigSclXStr, bigSclYStr, bigSclZStr;
-double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-std::string pxoStr, pyoStr, pzoStr;
+    // ── pxo/pyo/pzo ──
+    double pxo = 0.0, pyo = 0.0, pzo = 0.0;
+    bool showBig = false;
+    std::string pxoBigStr, pyoBigStr, pzoBigStr;
 
-RandomLevelSource* rls = nullptr;
-if (lvl && lvl->getChunkSource()) {
-    ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-    if (cache) {
-        rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-        if (rls) {
-            terrainOffsetX = rls->getWorldOffsetX();
-            terrainOffsetY = rls->getWorldOffsetY();
-            terrainOffsetZ = rls->getWorldOffsetZ();
-            worldScaleX = rls->getWorldScaleX();
-            worldScaleY = rls->getWorldScaleY();
-            worldScaleZ = rls->getWorldScaleZ();
+    // 玩家原始坐标
+    double px = p->x;
+    double py = p->y - p->heightOffset + 64;
+    double pz = p->z;
+    posTranslator.to(px, py, pz);
+
+    RandomLevelSource* rls = nullptr;
+    if (lvl && lvl->getChunkSource()) {
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+        if (cache) {
+            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            if (rls) {
+                terrainOffsetX = rls->getWorldOffsetX();
+                terrainOffsetY = rls->getWorldOffsetY();
+                terrainOffsetZ = rls->getWorldOffsetZ();
+                worldScaleX   = rls->getWorldScaleX();
+                worldScaleY   = rls->getWorldScaleY();
+                worldScaleZ   = rls->getWorldScaleZ();
+
+                sOffX = rls->getStrOffsetX();
+                sOffY = rls->getStrOffsetY();
+                sOffZ = rls->getStrOffsetZ();
+                sSclX = rls->getStrScaleX();
+                sSclY = rls->getStrScaleY();
+                sSclZ = rls->getStrScaleZ();
+
+                rawOffX = rls->getRawOffsetX();
+                rawOffY = rls->getRawOffsetY();
+                rawOffZ = rls->getRawOffsetZ();
+                rawSclX = rls->getRawScaleX();
+                rawSclY = rls->getRawScaleY();
+                rawSclZ = rls->getRawScaleZ();
+            }
         }
     }
-}
 
-long curSeed = lvl ? lvl->getSeed() : 0;
-bool needBigUpdate = (s_lastBigUpdate < 0.0f || now - s_lastBigUpdate > 0.5f
-                      || curSeed != s_lastSeed || rls != s_lastRls);
+    // ── 计算 pxo/pyo/pzo ──
+    showBig = needsBigWorldCoord(px) || needsBigWorldCoord(py) || needsBigWorldCoord(pz);
 
-if (needBigUpdate && rls) {
-    updateBigFloatCache(rls, px, py, pz,
-                        s_bigOffXStr, s_bigOffYStr, s_bigOffZStr,
-                        s_bigSclXStr, s_bigSclYStr, s_bigSclZStr,
-                        s_pxo, s_pyo, s_pzo,
-                        s_pxoStr, s_pyoStr, s_pzoStr);
-    s_lastBigUpdate = now;
-    s_lastSeed = curSeed;
-    s_lastRls = rls;
-}
-	
 if (rls) {
-    bigOffXStr = s_bigOffXStr;
-    bigOffYStr = s_bigOffYStr;
-    bigOffZStr = s_bigOffZStr;
-    bigSclXStr = s_bigSclXStr;
-    bigSclYStr = s_bigSclYStr;
-    bigSclZStr = s_bigSclZStr;
-    pxoStr = s_pxoStr;
-    pyoStr = s_pyoStr;
-    pzoStr = s_pzoStr;
-    pxo = s_pxo;
-    pyo = s_pyo;
-    pzo = s_pzo;
+    if (showBig) {
+        BigWorldCoordinate bpx = doubleToWorldCoordBig(px);
+        BigWorldCoordinate bpy = doubleToWorldCoordBig(py);
+        BigWorldCoordinate bpz = doubleToWorldCoordBig(pz);
+        BigWorldCoordinate bxo = computeWorldCoordBig(bpx, rawSclX, rawOffX);
+        BigWorldCoordinate byo = computeWorldCoordBig(bpy, rawSclY, rawOffY);
+        BigWorldCoordinate bzo = computeWorldCoordBig(bpz, rawSclZ, rawOffZ);
+        pxo = worldCoordBigToDouble(bxo);
+        pyo = worldCoordBigToDouble(byo);
+        pzo = worldCoordBigToDouble(bzo);
+        pxoBigStr = worldCoordBigToString(bxo);
+        pyoBigStr = worldCoordBigToString(byo);
+        pzoBigStr = worldCoordBigToString(bzo);
+    } else {
+        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+    }
 } else {
-    s_lastBigUpdate = -1.0f;
     pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
     pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
     pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
@@ -936,22 +892,15 @@ if (rls) {
 
     // 调试屏幕缩放
     float debugScale = 1.0f;
-    std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
+craft(OPTIONS_DEBUG_SCREEN_SIZE);
     if (!scaleStr.empty()) {
         debugScale = (float)atof(scaleStr.c_str());
     }
-
-    // 字符串截断工具
-    auto trimBig = [](const std::string& s, size_t maxLen) -> std::string {
-        if (s.length() <= maxLen) return s;
-        return s.substr(0, maxLen) + "...";
-    };
 
     // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
     double noiseVals[8] = {0.0};
     double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
     if (rls) {
-        // 噪声输入：直接复用 pxo/pyo/pzo（已用 big_float 计算，安全转换到 double）
         double sampleWorldX = pxo;
         double sampleWorldY = pyo;
         double sampleWorldZ = pzo;
@@ -981,10 +930,8 @@ if (rls) {
         noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
     }
 
-    // ===================== 噪声计算（Float 精度 — 保持原样不动） =====================
-    float noiseValsF[8] = {0.0f};
+    // ===================== 噪声计算（Float 精度 =.0f};
     if (rls) {
-        // 🧊 坐标用 double 算，不在中间步骤强转 float，彻底杜绝溢出
         double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
         double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
         double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
@@ -993,7 +940,6 @@ if (rls) {
         const double scale_large_XZ = s / 80.0;
         const double scale_large_Y  = s / 160.0;
 
-        // 🧊 坐标直接用 double 传入噪声函数，只用 float 存最终噪声值
         noiseValsF[0] = (float)rls->getLPerlinNoise1(sampleWorldX * scale_large_XZ,
                                                        sampleWorldY * scale_large_Y,
                                                        sampleWorldZ * scale_large_XZ);
@@ -1022,7 +968,7 @@ if (rls) {
                                                      sampleWorldZ * scale_forest);
     }
 
-    // ===================== 构建显示行 (27 行) BigInteger Ver =====================
+    // ===================== 构建显示行 (27 行) =====================
     static char ln[27][1024];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
@@ -1030,39 +976,36 @@ if (rls) {
     sprintf(ln[3], "--- Local Server Position ---");
     sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
 
-    // 🔥 X/Y/Z(World) 使用 big_float 完整精度字符串显示
-    if (!pxoStr.empty()) {
-        snprintf(ln[5], sizeof(ln[5]), "X(World/BigInteger): %s", trimBig(pxoStr, 20).c_str());
-        snprintf(ln[6], sizeof(ln[6]), "Y(World/BigInteger): %s", trimBig(pyoStr, 20).c_str());
-        snprintf(ln[7], sizeof(ln[7]), "Z(World/BigInteger): %s", trimBig(pzoStr, 20).c_str());
+    // 🔥 X/Y/Z(World) — 阈值分支显示
+    if (showBig) {
+        snprintf(ln[5], sizeof(ln[5]), "X(World/BigWorldCoordinate): %s", pxoBigStr.c_str());
+        snprintf(ln[6], sizeof(ln[6]), "Y(World/BigWorldCoordinate): %s", pyoBigStr.c_str());
+        snprintf(ln[7], sizeof(ln[7]), "Z(World/BigWorldCoordinate): %s", pzoBigStr.c_str());
     } else {
         sprintf(ln[5], "X(World): %.15f", pxo);
         sprintf(ln[6], "Y(World): %.15f", pyo);
         sprintf(ln[7], "Z(World): %.15f", pzo);
     }
 
-    // 🔥 ln[8] 显示 double 精度 + big_float 完整精度
-    if (!bigOffXStr.empty()) {
+    // 🔥 ln[8] — 偏移/缩放（用 FixedCoord 字符串，无浮点舍入）
+    if (!sOffX.empty()) {
         snprintf(ln[8], sizeof(ln[8]),
-            "Offsets: %s / %s / %s (Scales: %s / %s / %s)",
-            trimBig(bigOffXStr, 8).c_str(), trimBig(bigOffYStr, 8).c_str(),
-            trimBig(bigOffZStr, 8).c_str(),
-            trimBig(bigSclXStr, 8).c_str(), trimBig(bigSclYStr, 8).c_str(),
-            trimBig(bigSclZStr, 8).c_str());
+            "Offset: %s / %s / %s (Scale: %s / %s / %s)",
+            sOffX.c_str(), sOffY.c_str(), sOffZ.c_str(),
+            sSclX.c_str(), sSclY.c_str(), sSclZ.c_str());
     } else {
-		snprintf(ln[8], sizeof(ln[8]),
+        snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
-	}
-    
+    }
 
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
     sprintf(ln[12], "Sea Level: %d", seaLevel);
 
-    // 噪声标签 (Wiki 对齐)
+    // 噪声标签
     const char* labels[8] = {
         "Low-Noise", "High-Noise", "Selector-Noise", "Sand-Noise",
         "Gravel-Noise", "Scale-Noise", "Depth-Noise", "Tree-Density-Noise"
@@ -1071,6 +1014,8 @@ if (rls) {
     // Double 噪声行
     static char firstPartD[2048] = "";
     static char secondPartD[2048] = "";
+    firstPartD[0] = '\0';
+    secondPartD[0] = '\0';
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
@@ -1086,9 +1031,11 @@ if (rls) {
     snprintf(ln[13], sizeof(ln[13]), "Terrain Noise: %s", firstPartD);
     snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPartD);
 
-    // Float 噪声行（保持原样）
+    // Float 噪声行
     static char firstPartF[2048] = "";
     static char secondPartF[2048] = "";
+    firstPartF[0] = '\0';
+    secondPartF[0] = '\0';
     for (int i = 0; i < 4; i++) {
         char tmp[64];
         bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
@@ -1127,7 +1074,7 @@ if (rls) {
     } else {
         ln[25][0] = '\0';
     }
-    ln[26][0] = '\0';   // 额外空行占位
+    ln[26][0] = '\0';
 
     // ===================== 渲染 =====================
     const int N = 27;
@@ -1178,15 +1125,13 @@ if (rls) {
         Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
         float yPos = MGN + 18 * LH;
 
-        // BigFloat 精度：cpp_dec_float_100 有 100 位十进制尾数
-        // ULP = maxCoord * 10^(-100)
-        double bigStep = maxCoord * 1e-100;
-        if (bigStep <= 0 && maxCoord > 0) bigStep = 5e-324;  // 最小正 double
+        // BigCoord 步长：定点数最小精度 = 1 / FIXED_SCALE = 1e-12
+        double bigStep = 1.0 / FIXED_SCALE_D;
 
         char bufDouble[64], bufFloat[64], bufBig[64];
         snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
         snprintf(bufFloat, sizeof(bufFloat), "%.9f", floatStep);
-        snprintf(bufBig, sizeof(bufBig), "%.9f", bigStep);
+        snprintf(bufBig, sizeof(bufBig), "%.12f", bigStep);
 
         auto trimZeros = [](char* str) {
             if (!str || *str == '\0') return;
@@ -1202,7 +1147,7 @@ if (rls) {
 
         const char* labelText = "Current Precision:";
         const char* middleText = " (Float:";
-        const char* bigText   = ") (BigFloat:";
+        const char* bigText   = ") (BigWorldCoordinate:";
         const char* endText   = ")";
 
         float totalWidth = font->width(labelText)
@@ -1232,8 +1177,7 @@ if (rls) {
         font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
         xCursor += font->width(bigText);
 
-        // BigFloat 精度颜色：与 Double 同色（正常为绿色）
-        int colBig = Mth::getPrecisionColor(bigStep);
+        int colBig = 0xFF88FF88; // BigCoord 步长恒定 1e-12，永远绿色
         font->draw(bufBig, xCursor, yPos, colBig);
         xCursor += font->width(bufBig);
 
@@ -1242,7 +1186,6 @@ if (rls) {
 
     glPopMatrix();
 }
-
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
@@ -1568,3 +1511,4 @@ void Gui::renderToolBar( float a, int ySlot, const int screenWidth ) {
 
 	glPopMatrix2();
 }
+
