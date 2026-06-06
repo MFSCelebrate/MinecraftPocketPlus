@@ -1004,8 +1004,8 @@ void Gui::renderDebugInfo() {
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
-		}
-    }
+	}
+    
 
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
