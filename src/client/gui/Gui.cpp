@@ -746,6 +746,57 @@ void Gui::renderBubbles() {
 	}
 }
 
+// 独立栈帧，只在缓存失效时调用
+static void updateBigFloatCache(RandomLevelSource* rls,
+                                double px, double py, double pz,
+                                std::string& boX, std::string& boY, std::string& boZ,
+                                std::string& bsX, std::string& bsY, std::string& bsZ,
+                                double& poX, double& poY, double& poZ,
+                                std::string& psX, std::string& psY, std::string& psZ) {
+    {
+        big_float o = rls->getBigWorldOffsetX();
+        boX = o.str();
+    }
+    {
+        big_float o = rls->getBigWorldOffsetY();
+        boY = o.str();
+    }
+    {
+        big_float o = rls->getBigWorldOffsetZ();
+        boZ = o.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleX();
+        bsX = s.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleY();
+        bsY = s.str();
+    }
+    {
+        big_float s = rls->getBigWorldScaleZ();
+        bsZ = s.str();
+    }
+    {
+        big_float r = big_float(px) * rls->getBigWorldScaleX()
+                    + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
+        poX = r.convert_to<double>();
+        psX = r.str();
+    }
+    {
+        big_float r = big_float(py) * rls->getBigWorldScaleY()
+                    + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
+        poY = r.convert_to<double>();
+        psY = r.str();
+    }
+    {
+        big_float r = big_float(pz) * rls->getBigWorldScaleZ()
+                    + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
+        poZ = r.convert_to<double>();
+        psZ = r.str();
+    }
+}
+
 static OffsetPosTranslator posTranslator;
 void Gui::onLevelGenerated() {
     if (Level* level = minecraft->level) {
@@ -814,54 +865,16 @@ bool needBigUpdate = (s_lastBigUpdate < 0.0f || now - s_lastBigUpdate > 0.5f
                       || curSeed != s_lastSeed || rls != s_lastRls);
 
 if (needBigUpdate && rls) {
+    updateBigFloatCache(rls, px, py, pz,
+                        s_bigOffXStr, s_bigOffYStr, s_bigOffZStr,
+                        s_bigSclXStr, s_bigSclYStr, s_bigSclZStr,
+                        s_pxo, s_pyo, s_pzo,
+                        s_pxoStr, s_pyoStr, s_pzoStr);
     s_lastBigUpdate = now;
     s_lastSeed = curSeed;
     s_lastRls = rls;
-
-    {
-        big_float o = rls->getBigWorldOffsetX();
-        s_bigOffXStr = o.str();
-    }
-    {
-        big_float o = rls->getBigWorldOffsetY();
-        s_bigOffYStr = o.str();
-    }
-    {
-        big_float o = rls->getBigWorldOffsetZ();
-        s_bigOffZStr = o.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleX();
-        s_bigSclXStr = s.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleY();
-        s_bigSclYStr = s.str();
-    }
-    {
-        big_float s = rls->getBigWorldScaleZ();
-        s_bigSclZStr = s.str();
-	} 
-    {
-        big_float r = big_float(px) * rls->getBigWorldScaleX()
-                    + rls->getBigWorldOffsetX() * rls->getBigWorldScaleX();
-        s_pxo = r.convert_to<double>();
-        s_pxoStr = r.str();
-    }
-    {
-        big_float r = big_float(py) * rls->getBigWorldScaleY()
-                    + rls->getBigWorldOffsetY() * rls->getBigWorldScaleY();
-        s_pyo = r.convert_to<double>();
-        s_pyoStr = r.str();
-    }
-    {
-        big_float r = big_float(pz) * rls->getBigWorldScaleZ()
-                    + rls->getBigWorldOffsetZ() * rls->getBigWorldScaleZ();
-        s_pzo = r.convert_to<double>();
-        s_pzoStr = r.str();
-    }
 }
-
+	
 if (rls) {
     bigOffXStr = s_bigOffXStr;
     bigOffYStr = s_bigOffYStr;
