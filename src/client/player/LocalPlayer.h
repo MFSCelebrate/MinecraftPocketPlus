@@ -28,7 +28,6 @@ public:
 
 WorldOrigin m_origin;
 const WorldOrigin& getWorldOrigin() const { return m_origin; }
-    void updateWorldOrigin() { m_origin.update(x, z); }
 
     void aiStep();
     void updateAi();
