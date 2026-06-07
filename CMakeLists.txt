@@ -313,15 +313,6 @@ if(UNIX)
     target_link_libraries("${PROJECT_NAME}-server" ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-# ⬇ 加在 add_executable(${PROJECT_NAME} ${CLIENT_SOURCES}) 之前
-include(FetchContent)
-FetchContent_Declare(
-    boost_mp
-    URL https://github.com/boostorg/multiprecision/archive/refs/tags/boost-1.83.0.tar.gz
-    SOURCE_SUBDIR ""
-)
-FetchContent_MakeAvailable(boost_mp)
-
 add_executable(${PROJECT_NAME} ${CLIENT_SOURCES})
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC ${PLATFORM_CPP})
@@ -332,7 +323,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     "${openal_SOURCE_DIR}/include"
     "${glfw_SOURCE_DIR}/include"
     "lib/include"
-    ${boost_mp_SOURCE_DIR}/include   # ⬅ 加这一行
 )
 
 if(${PLATFORM} MATCHES "Web")
