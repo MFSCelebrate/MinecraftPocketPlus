@@ -1,7 +1,6 @@
 #ifndef WORLDORIGIN_H__
 #define WORLDORIGIN_H__
 
-#include <cstdint>
 #include "WorldCoordinate.h"
 
 class WorldOrigin {
@@ -9,10 +8,7 @@ class WorldOrigin {
     BigWorldCoordinate m_originY = 0;
     BigWorldCoordinate m_originZ = 0;
 
-    static constexpr double STEP = BIG_THRESHOLD; // 2^48
-
 public:
-    // 绝对坐标
     BigWorldCoordinate absX(double localX) const {
         return m_originX + BigWorldCoordinate(localX);
     }
@@ -23,25 +19,21 @@ public:
         return m_originZ + BigWorldCoordinate(localZ);
     }
 
-    // 触发重置，返回需要从 local 坐标减去的整步长
-    double shiftOrigin(double& local, BigWorldCoordinate& origin) {
-        if (std::abs(local) < STEP) return 0.0;
-        int64_t step = (int64_t)(local / STEP);
-        double offset = step * STEP;
-        local -= offset;
-        origin += BigWorldCoordinate((int64_t)offset);
-        return offset;
+    // 手动偏移（存档加载时用）
+    void setOrigin(double ox, double oy, double oz) {
+        m_originX = BigWorldCoordinate(ox);
+        m_originY = BigWorldCoordinate(oy);
+        m_originZ = BigWorldCoordinate(oz);
     }
 
-    // 同时处理 X 和 Z
-    void update(double& px, double& pz) {
-        shiftOrigin(px, m_originX);
-        shiftOrigin(pz, m_originZ);
-    }
-
-    // 手动设置 Y 原点（传送时使用）
-    void updateY(double& py) {
-        shiftOrigin(py, m_originY);
+    // 玩家传送时更新原点（不修改 local）
+    void onTeleport(double oldLocal, double newLocal, BigWorldCoordinate& origin) {
+        double delta = newLocal - oldLocal;
+        double step = BIG_THRESHOLD;
+        if (std::abs(delta) > step) {
+            int64_t offset = (int64_t)(delta / step);
+            origin += BigWorldCoordinate(offset * step);
+        }
     }
 };
 
