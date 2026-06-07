@@ -1163,6 +1163,7 @@ if (rls) {
 
     glPopMatrix();
 }
+}
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
