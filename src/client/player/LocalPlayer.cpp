@@ -419,7 +419,6 @@ bool LocalPlayer::isSolidTile(int x, int y, int z) {
 void LocalPlayer::tick() {
 
 	super::tick();
-	updateWorldOrigin();
 	if(!useItem.isNull()) {
 		ItemInstance* item = inventory->getSelected();
 		if(item != NULL && *item == useItem) {
