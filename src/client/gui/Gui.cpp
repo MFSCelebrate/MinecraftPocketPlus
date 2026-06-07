@@ -816,9 +816,6 @@ if (rls) {
     BigWorldCoordinate bxo = computeWorldCoordBig(px, worldScaleX, terrainOffsetX);
     BigWorldCoordinate byo = computeWorldCoordBig(py, worldScaleY, terrainOffsetY);
     BigWorldCoordinate bzo = computeWorldCoordBig(pz, worldScaleZ, terrainOffsetZ);
-BigWorldCoordinate absX = p->m_origin.absX(estPxo);
-BigWorldCoordinate absY = p->m_origin.absY(estPyo);
-BigWorldCoordinate absZ = p->m_origin.absZ(estPzo);
     pxo = worldCoordBigToDouble(bxo);
     pyo = worldCoordBigToDouble(byo);
     pzo = worldCoordBigToDouble(bzo);
@@ -959,9 +956,9 @@ BigWorldCoordinate absZ = p->m_origin.absZ(estPzo);
 
     // 🔥 X/Y/Z(World) — 阈值分支显示
     if (showBig) {
-        snprintf(ln[5], sizeof(ln[5]), "X(World/BigWorldCoordinate): %s", worldCoordBigToString(absX).c_str());
-        snprintf(ln[6], sizeof(ln[6]), "Y(World/BigWorldCoordinate): %s", worldCoordBigToString(absY).c_str());
-        snprintf(ln[7], sizeof(ln[7]), "Z(World/BigWorldCoordinate): %s", worldCoordBigToString(absZ).c_str());
+        snprintf(ln[5], sizeof(ln[5]), "X(World/BigWorldCoordinate): %s", pxoBigStr.c_str());
+        snprintf(ln[6], sizeof(ln[6]), "Y(World/BigWorldCoordinate): %s", pyoBigStr.c_str());
+        snprintf(ln[7], sizeof(ln[7]), "Z(World/BigWorldCoordinate): %s", pzoBigStr.c_str());
     } else {
         sprintf(ln[5], "X(World): %.15f", pxo);
         sprintf(ln[6], "Y(World): %.15f", pyo);
