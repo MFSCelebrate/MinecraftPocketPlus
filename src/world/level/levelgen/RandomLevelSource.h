@@ -52,22 +52,6 @@ double getWorldScaleX()  const { return m_worldScaleX; }
 double getWorldScaleY()  const { return m_worldScaleY; }
 double getWorldScaleZ()  const { return m_worldScaleZ; }
 
-// ===== 新 getter（字符串，给调试屏幕） =====
-std::string getStrOffsetX() const { return worldCoordToString(m_worldOffsetX); }
-std::string getStrOffsetY() const { return worldCoordToString(m_worldOffsetY); }
-std::string getStrOffsetZ() const { return worldCoordToString(m_worldOffsetZ); }
-std::string getStrScaleX()  const { return worldCoordToString(m_worldScaleX); }
-std::string getStrScaleY()  const { return worldCoordToString(m_worldScaleY); }
-std::string getStrScaleZ()  const { return worldCoordToString(m_worldScaleZ); }
-
-// ===== 新 getter（裸值，给 cpp_int 计算路径） =====
-WorldCoordinate getRawOffsetX() const { return m_worldOffsetX; }
-WorldCoordinate getRawOffsetY() const { return m_worldOffsetY; }
-WorldCoordinate getRawOffsetZ() const { return m_worldOffsetZ; }
-WorldCoordinate getRawScaleX()  const { return m_worldScaleX; }
-WorldCoordinate getRawScaleY()  const { return m_worldScaleY; }
-WorldCoordinate getRawScaleZ()  const { return m_worldScaleZ; }
-
     void setWorldOffset(double ox, double oy, double oz) {
     // 把 double 转成定点存储
     m_worldOffsetX = (WorldCoordinate)(ox * FIXED_SCALE_D);
