@@ -57,38 +57,34 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
     if (Minecraft::instance) {
     std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
     if (!scaleXStr.empty()) {
-        m_worldScaleX = worldCoordFromString(scaleXStr);
+        m_worldScaleX = atof(scaleXStr.c_str());
     }
     std::string scaleYStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
 if (!scaleYStr.empty()) {
-    m_worldScaleY = worldCoordFromString(scaleYStr);
-    if (m_worldScaleY <= 0) m_worldScaleY = FIXED_SCALE;
+    m_worldScaleY = atof(scaleYStr.c_str());
 }
 std::string scaleZStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
 if (!scaleZStr.empty()) {
-    m_worldScaleZ = worldCoordFromString(scaleZStr);
-    if (m_worldScaleZ <= 0) m_worldScaleZ = FIXED_SCALE;
+    m_worldScaleZ = atof(scaleZStr.c_str());
 }
 
     std::string xStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
-    if (!xStr.empty()) { m_worldOffsetX = worldCoordFromString(xStr); }
+    if (!xStr.empty()) { m_worldOffsetX = atof(xStr.c_str()); }
     std::string yStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
-    if (!yStr.empty()) { m_worldOffsetY = worldCoordFromString(yStr); }
+    if (!yStr.empty()) { m_worldOffsetY = atof(yStr.c_str()); }
     std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-    if (!zStr.empty()) { m_worldOffsetZ = worldCoordFromString(zStr); }
+    if (!zStr.empty()) { m_worldOffsetZ = atof(zStr.c_str()); }
 
     // BiomeSource 传入时用 worldCoordToDouble()
     if (level) {
         BiomeSource* biomeSource = level->getBiomeSource();
         if (biomeSource) {
             biomeSource->setWorldTransform(
-                worldCoordToDouble(m_worldOffsetX),
-                worldCoordToDouble(m_worldOffsetZ),
-                worldCoordToDouble(m_worldScaleX),
-                worldCoordToDouble(m_worldScaleZ)
+                m_worldOffsetX, m_worldOffsetZ,
+                m_worldScaleX, m_worldScaleZ
             );
         }
-    }
+	}
 }
 }
 
