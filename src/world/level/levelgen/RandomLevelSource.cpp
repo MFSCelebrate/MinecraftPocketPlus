@@ -179,8 +179,8 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     if (waterHeight < 0) waterHeight = 0;
     if (waterHeight > 127) waterHeight = 127;
 
-        double sx = 684.412 * worldCoordToDouble(m_worldScaleX);
-    double sz = 684.412 * worldCoordToDouble(m_worldScaleZ);
+        double sx = 684.412 * m_worldScaleX;
+    double sz = 684.412 * m_worldScaleZ;
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
 
@@ -257,12 +257,12 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
 
 void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 {
-        double worldBlockX = xt * 16.0 + worldCoordToDouble(m_worldOffsetX);
-    double worldBlockZ = zt * 16.0 + worldCoordToDouble(m_worldOffsetZ);
+        double worldBlockX = xt * 16.0 + m_worldOffsetX;
+    double worldBlockZ = zt * 16.0 + m_worldOffsetZ;
     int xo = (int)worldBlockX;
     int zo = (int)worldBlockZ;
-    double transformedXo = (xo + worldCoordToDouble(m_worldScaleX)) * worldCoordToDouble(m_worldScaleX);
-    double transformedZo = (zo + worldCoordToDouble(m_worldScaleZ)) * worldCoordToDouble(m_worldScaleZ);
+    double transformedXo = (xo + m_worldScaleX) * m_worldScaleX;
+    double transformedZo = (zo + m_worldScaleZ) * m_worldScaleZ;
 	
     if (!level->hasChunk(xt - 1, zt - 1) || !level->hasChunk(xt, zt - 1) ||
         !level->hasChunk(xt - 1, zt) || !level->hasChunk(xt, zt)) {
@@ -552,9 +552,9 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
-        double sx = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleX);
-    double sy = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleY);
-    double sz = 684.412 * farlandsScale * worldCoordToDouble(m_worldScaleZ);
+        double sx = 684.412 * farlandsScale * m_worldScaleX;
+    double sy = 684.412 * farlandsScale * m_worldScaleY;
+    double sz = 684.412 * farlandsScale * m_worldScaleZ;
 
     const int size = xSize * ySize * zSize;
     if (size > MAX_BUFFER_SIZE) {
@@ -565,18 +565,18 @@ double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z,
     double* downfalls = level->getBiomeSource()->downfalls;
 
     double noiseX = x / 4.0;
-        double noiseY = (y + worldCoordToDouble(m_worldOffsetY)) / 8.0;
+        double noiseY = (y + m_worldOffsetY) / 8.0;
     double noiseZ = z / 4.0;
 
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
         sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
-                              1.121 * worldCoordToDouble(m_worldScaleX),
-                              1.121 * worldCoordToDouble(m_worldScaleZ), 0.5);
+                              1.121 * m_worldScaleX,
+                              1.121 * m_worldScaleZ, 0.5);
         dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
-                              200.0 * worldCoordToDouble(m_worldScaleX),
-                              200.0 * worldCoordToDouble(m_worldScaleZ), 0.5);
+                              200.0 * m_worldScaleX,
+                              200.0 * m_worldScaleZ, 0.5);
 	
     double xf = (double)noiseX;
     double yf = (double)noiseY;
@@ -656,8 +656,8 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z)
     LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
-        double worldBlockX = x * 16.0 + worldCoordToDouble(m_worldOffsetX);
-    double worldBlockZ = z * 16.0 + worldCoordToDouble(m_worldOffsetZ);
+        double worldBlockX = x * 16.0 + m_worldOffsetX;
+    double worldBlockZ = z * 16.0 + m_worldOffsetZ;
 
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
     double* temperatures = level->getBiomeSource()->temperatures;
@@ -727,3 +727,4 @@ LevelChunk* PerformanceTestChunkSource::create(int64_t x, int64_t z)
     levelChunk->recalcHeightmap();
     return levelChunk;
 }
+
