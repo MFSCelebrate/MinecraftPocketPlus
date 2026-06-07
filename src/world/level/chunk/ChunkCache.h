@@ -7,6 +7,7 @@
 #include "../Level.h"
 #include "../LevelConstants.h"
 #include <unordered_map>
+#include <set>
 // 在 ChunkCache.h 中，将 emptyChunk 改为 std::shared_ptr<LevelChunk>
 #include <memory>
 // 在 cpp 
@@ -30,17 +31,18 @@ public:
         // ... 其余初始化代码不变
     }
 
-    ~ChunkCache() {
-        delete source;
-        for (auto& pair : chunks) {
-            LevelChunk* p = pair.second;
-            if (p && p != emptyChunk) {
-                p->deleteBlockData();
-                delete p;
-            }
+    ~ChunkCache(){
+    delete source;
+    std::set<LevelChunk*> deleted;
+    for(auto& pair : chunks){
+        LevelChunk* p = pair.second;
+        if(p && p != emptyChunk && deleted.find(p) == deleted.end()){
+            deleted.insert(p);
+            p->deleteBlockData();
+            delete p;
         }
-        // emptyChunk 是静态单例，不删除
     }
+}
 
     bool fits(int64_t x, int64_t z) { return true; }
 
