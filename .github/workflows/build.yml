@@ -89,7 +89,16 @@ jobs:
           curl -L https://github.com/mstorsjo/llvm-mingw/releases/download/20260311/llvm-mingw-20260311-msvcrt-ubuntu-22.04-x86_64.tar.xz -o llvm-mingw.tar.xz
           tar -xf llvm-mingw.tar.xz
           mv llvm-mingw-* llvm-mingw
-    
+
+      - name: Setup Boost headers for Windows
+        run: |
+          mkdir -p lib/include
+          if [ ! -d "lib/include/boost" ]; then
+            curl -L https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.gz -o /tmp/boost.tar.gz
+            tar xf /tmp/boost.tar.gz -C /tmp
+            mv /tmp/boost_1_83_0/boost lib/include/
+          fi
+
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
@@ -107,9 +116,8 @@ jobs:
 
       - name: Build
         working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
+        run: cmake --build . --config $BUILD Minecraft
 
-      # 🧊 把 data 目录复制到构建输出，让 exe 能找到贴图/字体/声音
       - name: Copy data directory to build output
         run: |
           cp -r ${{github.workspace}}/data ${{github.workspace}}/build/data
@@ -172,9 +180,8 @@ jobs:
           path: ${{ github.workspace }}/android-ndk-r23c
           key: android-ndk-r23c
 
-      # ✅ 新 — r23c 下载地址 + 需要重命名解压目录
       - name: Install Android NDK r23c
-        if: steps.cache-android-ndk.outputs.cache-hit != 'true'
+        if: steps.cache-and 'true'
         run: |
           if [ ! -d "$ANDROID_NDK_PATH" ]; then
             curl -L -o ndk.zip "https://dl.google.com/android/repository/android-ndk-r23c-linux.zip"
@@ -200,7 +207,7 @@ jobs:
 
       - name: Validate environment
         run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+          echo "ANDROID_SDK_ROOTANDDK_ROOT"
           echo "ANDROID_NDK_PATH=$ANDROID_NDK_PATH"
           echo "JAVA_HOME=$JAVA_HOME"
           echo "MATRIX_ABI=$MATRIX_ABI"
@@ -232,10 +239,7 @@ jobs:
       - name: Declare Version Variables
         id: ref
         run: |
-          echo "version=$(cat VERSION | xargs)" >> $GITHUB_OUTPUT
-          echo "hash=$(git rev-parse --short "$GITHUB_SHA")" >> $GITHUB_OUTPUT
-
-      - name: Download Artifacts
+          echo "version=$(short:ifacts
         uses: actions/download-artifact@v4
 
       - name: Zip Windows Artifacts
@@ -247,8 +251,7 @@ jobs:
       - name: Zip Android arm64-v8a Artifact
         uses: vimtor/action-zip@v1.2
         with:
-          files: minecraftpe-apk-arm64-v8a/minecraftpe-*-debug.apk
-          dest: minecraftpe-${{ steps.ref.outputs.hash }}-android-arm64-v8a.zip
+          files: minecraftpe-apk-arm64-v8a/minecraftpe-*-debug.apcraft.hash }}-android-arm64-v8a.zip
 
       - name: Zip Android armeabi-v7a Artifact
         uses: vimtor/action-zip@v1.2
