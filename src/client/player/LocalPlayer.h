@@ -6,6 +6,7 @@
 #include "input/IMoveInput.h"
 #include "../../util/SmoothFloat.h"
 #include "../../world/entity/player/Player.h"
+#include "../../util/WorldOrigin.h"
 
 class Minecraft;
 class Stat;
@@ -24,6 +25,10 @@ public:
 
 	void tick();
     void move(float xa, float ya, float za);
+    WorldOrigin m_origin;
+const WorldOrigin& getWorldOrigin() const { return m_origin; }
+    void updateWorldOrigin() { m_origin.update(x, z); }
+};
 
     void aiStep();
     void updateAi();
