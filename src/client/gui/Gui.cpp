@@ -778,10 +778,6 @@ void Gui::renderDebugInfo() {
     // ── 偏移/缩放字符串（给 ln[8] 显示，无浮点舍入） ──
     std::string sOffX, sOffY, sOffZ, sSclX, sSclY, sSclZ;
 
-    // ── 裸定点值（给 cpp_int 计算路径） ──
-    WorldCoordinate rawOffX = 0, rawOffY = 0, rawOffZ = 0;
-    WorldCoordinate rawSclX = FIXED_SCALE, rawSclY = FIXED_SCALE, rawSclZ = FIXED_SCALE;
-
     // ── pxo/pyo/pzo ──
     double pxo = 0.0, pyo = 0.0, pzo = 0.0;
 bool showBig = false;
@@ -825,10 +821,6 @@ if (rls) {
     pxoBigStr = worldCoordBigToString(bxo);
     pyoBigStr = worldCoordBigToString(byo);
     pzoBigStr = worldCoordBigToString(bzo);
-} else {
-    pxo = estPxo;
-    pyo = estPyo;
-    pzo = estPzo;
 } else {
     pxo = estPxo;
     pyo = estPyo;
@@ -979,7 +971,7 @@ if (rls) {
             sOffX.c_str(), sOffY.c_str(), sOffZ.c_str(),
             sSclX.c_str(), sSclY.c_str(), sSclZ.c_str());
     } else {
-        sprintf(ln[8], sizeof(ln[8]),
+        snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
@@ -1111,8 +1103,8 @@ if (rls) {
         float yPos = MGN + 18 * LH;
 
         // BigCoord 步长：定点数最小精度 = 1 / FIXED_SCALE = 1e-12
-        double bigStep = 1.0 / FIXED_SCALE_D;
-
+        double bigStep = 1.0e-12;
+		
         char bufDouble[64], bufFloat[64], bufBig[64];
         snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
         snprintf(bufFloat, sizeof(bufFloat), "%.9f", floatStep);
