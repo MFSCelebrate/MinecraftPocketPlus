@@ -45,12 +45,12 @@ public:
     virtual bool shouldSave() override;
     virtual std::string gatherStats() override;
 
-    double getWorldOffsetX() const { return worldCoordToDouble(m_worldOffsetX); }
-double getWorldOffsetY() const { return worldCoordToDouble(m_worldOffsetY); }
-double getWorldOffsetZ() const { return worldCoordToDouble(m_worldOffsetZ); }
-double getWorldScaleX()  const { return worldCoordToDouble(m_worldScaleX); }
-double getWorldScaleY()  const { return worldCoordToDouble(m_worldScaleY); }
-double getWorldScaleZ()  const { return worldCoordToDouble(m_worldScaleZ); }
+    double getWorldOffsetX() const { return m_worldOffsetX; }
+double getWorldOffsetY() const { return m_worldOffsetY; }
+double getWorldOffsetZ() const { return m_worldOffsetZ; }
+double getWorldScaleX()  const { return m_worldScaleX; }
+double getWorldScaleY()  const { return m_worldScaleY; }
+double getWorldScaleZ()  const { return m_worldScaleZ; }
 
 // ===== 新 getter（字符串，给调试屏幕） =====
 std::string getStrOffsetX() const { return worldCoordToString(m_worldOffsetX); }
@@ -112,12 +112,12 @@ private:
     double* fi;
     double* fis;
 
-    WorldCoordinate m_worldOffsetX = 0;
-WorldCoordinate m_worldOffsetY = 0;
-WorldCoordinate m_worldOffsetZ = 0;
-WorldCoordinate m_worldScaleX = FIXED_SCALE;
-WorldCoordinate m_worldScaleY = FIXED_SCALE;
-WorldCoordinate m_worldScaleZ = FIXED_SCALE;
+    double m_worldOffsetX = 0.0;
+double m_worldOffsetY = 0.0;
+double m_worldOffsetZ = 0.0;
+double m_worldScaleX = 1.0;
+double m_worldScaleY = 1.0;
+double m_worldScaleZ = 1.0;
 
     int customSeaLevel;
 
