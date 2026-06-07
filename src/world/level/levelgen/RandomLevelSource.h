@@ -53,11 +53,10 @@ double getWorldScaleY()  const { return m_worldScaleY; }
 double getWorldScaleZ()  const { return m_worldScaleZ; }
 
     void setWorldOffset(double ox, double oy, double oz) {
-    // 把 double 转成定点存储
-    m_worldOffsetX = (WorldCoordinate)(ox * FIXED_SCALE_D);
-    m_worldOffsetY = (WorldCoordinate)(oy * FIXED_SCALE_D);
-    m_worldOffsetZ = (WorldCoordinate)(oz * FIXED_SCALE_D);
-    }
+    m_worldOffsetX = ox;
+    m_worldOffsetY = oy;
+    m_worldOffsetZ = oz;
+}
 
     int getSeaLevel() const { return customSeaLevel; }
 
