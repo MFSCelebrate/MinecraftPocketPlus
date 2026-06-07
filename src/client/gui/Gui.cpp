@@ -784,9 +784,9 @@ void Gui::renderDebugInfo() {
 
     // ── pxo/pyo/pzo ──
     double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-    bool showBig = false;
-    std::string pxoBigStr, pyoBigStr, pzoBigStr;
-
+bool showBig = false;
+std::string pxoBigStr, pyoBigStr, pzoBigStr;
+	
     // 玩家原始坐标
     double px = p->x;
     double py = p->y - p->heightOffset + 64;
@@ -794,67 +794,45 @@ void Gui::renderDebugInfo() {
     posTranslator.to(px, py, pz);
 
     RandomLevelSource* rls = nullptr;
-    if (lvl && lvl->getChunkSource()) {
-        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-        if (cache) {
-            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-            if (rls) {
-                terrainOffsetX = rls->getWorldOffsetX();
-                terrainOffsetY = rls->getWorldOffsetY();
-                terrainOffsetZ = rls->getWorldOffsetZ();
-                worldScaleX   = rls->getWorldScaleX();
-                worldScaleY   = rls->getWorldScaleY();
-                worldScaleZ   = rls->getWorldScaleZ();
-
-                sOffX = rls->getStrOffsetX();
-                sOffY = rls->getStrOffsetY();
-                sOffZ = rls->getStrOffsetZ();
-                sSclX = rls->getStrScaleX();
-                sSclY = rls->getStrScaleY();
-                sSclZ = rls->getStrScaleZ();
-
-                rawOffX = rls->getRawOffsetX();
-                rawOffY = rls->getRawOffsetY();
-                rawOffZ = rls->getRawOffsetZ();
-                rawSclX = rls->getRawScaleX();
-                rawSclY = rls->getRawScaleY();
-                rawSclZ = rls->getRawScaleZ();
-            }
+if (lvl && lvl->getChunkSource()) {
+    ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+    if (cache) {
+        rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+        if (rls) {
+            terrainOffsetX = rls->getWorldOffsetX();
+            terrainOffsetY = rls->getWorldOffsetY();
+            terrainOffsetZ = rls->getWorldOffsetZ();
+            worldScaleX   = rls->getWorldScaleX();
+            worldScaleY   = rls->getWorldScaleY();
+            worldScaleZ   = rls->getWorldScaleZ();
         }
     }
-
+}
     // ── 计算 pxo/pyo/pzo ──
     double estPxo = px * worldScaleX + terrainOffsetX * worldScaleX;
 double estPyo = py * worldScaleY + terrainOffsetY * worldScaleY;
 double estPzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-showBig = !std::isfinite(estPxo) || !std::isfinite(estPyo) || !std::isfinite(estPzo)
-       || std::abs(estPxo) >= BIG_THRESHOLD
-       || std::abs(estPyo) >= BIG_THRESHOLD
-       || std::abs(estPzo) >= BIG_THRESHOLD;
+showBig = needsBigWorldCoord(estPxo) || needsBigWorldCoord(estPyo) || needsBigWorldCoord(estPzo);
 	
 if (rls) {
     if (showBig) {
-        BigWorldCoordinate bpx = doubleToWorldCoordBig(px);
-        BigWorldCoordinate bpy = doubleToWorldCoordBig(py);
-        BigWorldCoordinate bpz = doubleToWorldCoordBig(pz);
-        BigWorldCoordinate bxo = computeWorldCoordBig(bpx, rawSclX, rawOffX);
-        BigWorldCoordinate byo = computeWorldCoordBig(bpy, rawSclY, rawOffY);
-        BigWorldCoordinate bzo = computeWorldCoordBig(bpz, rawSclZ, rawOffZ);
-        pxo = worldCoordBigToDouble(bxo);
-        pyo = worldCoordBigToDouble(byo);
-        pzo = worldCoordBigToDouble(bzo);
-        pxoBigStr = worldCoordBigToString(bxo);
-        pyoBigStr = worldCoordBigToString(byo);
-        pzoBigStr = worldCoordBigToString(bzo);
-    } else {
-        pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-        pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-        pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-    }
+    BigWorldCoordinate bxo = computeWorldCoordBig(px, worldScaleX, terrainOffsetX);
+    BigWorldCoordinate byo = computeWorldCoordBig(py, worldScaleY, terrainOffsetY);
+    BigWorldCoordinate bzo = computeWorldCoordBig(pz, worldScaleZ, terrainOffsetZ);
+    pxo = worldCoordBigToDouble(bxo);
+    pyo = worldCoordBigToDouble(byo);
+    pzo = worldCoordBigToDouble(bzo);
+    pxoBigStr = worldCoordBigToString(bxo);
+    pyoBigStr = worldCoordBigToString(byo);
+    pzoBigStr = worldCoordBigToString(bzo);
 } else {
-    pxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-    pyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-    pzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+    pxo = estPxo;
+    pyo = estPyo;
+    pzo = estPzo;
+} else {
+    pxo = estPxo;
+    pyo = estPyo;
+    pzo = estPzo;
 }
 
     // 获取海平面高度
@@ -1001,7 +979,7 @@ if (rls) {
             sOffX.c_str(), sOffY.c_str(), sOffZ.c_str(),
             sSclX.c_str(), sSclY.c_str(), sSclZ.c_str());
     } else {
-        snprintf(ln[8], sizeof(ln[8]),
+        sprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
             terrainOffsetX, terrainOffsetY, terrainOffsetZ,
             worldScaleX, worldScaleY, worldScaleZ);
