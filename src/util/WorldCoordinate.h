@@ -7,7 +7,9 @@
 #include <cstring>
 #include <cmath>
 #include <limits>
+// 第 10 行附近，cpp_dec_float.hpp 之后
 #include <boost/multiprecision/cpp_dec_float.hpp>
+#include <boost/multiprecision/cpp_int.hpp>   // <-- 加这一行
 
 // =====================================================================
 //  类型定义
