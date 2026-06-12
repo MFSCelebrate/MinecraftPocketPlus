@@ -419,6 +419,8 @@ bool LocalPlayer::isSolidTile(int x, int y, int z) {
 void LocalPlayer::tick() {
 
 	super::tick();
+	 // 每帧用 Big 精度重算原点，自动切换
+    m_origin.tick(this->x, this->y, this->z);
 	if(!useItem.isNull()) {
 		ItemInstance* item = inventory->getSelected();
 		if(item != NULL && *item == useItem) {
