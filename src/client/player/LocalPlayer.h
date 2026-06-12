@@ -29,6 +29,16 @@ public:
 WorldOrigin m_origin;
 const WorldOrigin& getWorldOrigin() const { return m_origin; }
 
+double getLocalFrameOriginX() const override {
+    return m_origin.originX().convert_to<double>();
+}
+double getLocalFrameOriginY() const override {
+    return m_origin.originY().convert_to<double>();
+}
+double getLocalFrameOriginZ() const override {
+    return m_origin.originZ().convert_to<double>();
+}
+
     void aiStep();
     void updateAi();
 
@@ -85,6 +95,9 @@ public:
 	bool autoJumpEnabled;
 protected:
 	Minecraft* minecraft;
+    virtual double getLocalFrameOriginX() const { return 0.0; }
+    virtual double getLocalFrameOriginY() const { return 0.0; }
+    virtual double getLocalFrameOriginZ() const { return 0.0; }
 	int jumpTriggerTime;
 	int ascendTriggerTime;
 	int descendTriggerTime;
