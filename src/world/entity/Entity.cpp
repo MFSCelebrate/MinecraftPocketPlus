@@ -199,10 +199,15 @@ void Entity::move(double xa, double ya, double za){
 
 		double bw = bbWidth / 2.0;
 		double bh = bbHeight;
-		double yBase = localCY - heightOffset + ySlideOffset;
+		double yBase = localCY - heightOffset;  // 步高偏移由碰撞检测自然处理。
 
 		bb.set(localCX - bw, yBase, localCZ - bw,
 		       localCX + bw, yBase + bh, localCZ + bw);
+
+		static BigWorldCoordinate lastBigOx = bigOx;
+	if(!(bigOx == lastBigOx)){
+		ySlideOffset = 0.0;
+		lastBigOx = bigOx;
 
 		// 不再用 bb.move(-ox, -oy, -oz) — Big 重建已覆盖
 	}
