@@ -87,7 +87,7 @@ void Entity::resetPos(bool clearMore) {
         if (level->getCubes(this, bb).size() == 0) break;
         y += 1;
     }
-    xd = yd = zd = 0;
+    setVelocity(BigWorldCoordinate(0.0), BigWorldCoordinate(0.0), BigWorldCoordinate(0.0));
     xRot = 0;
 }
 
@@ -224,7 +224,13 @@ void Entity::move(double xa, double ya, double za) {
     }
 
     // getCubes：构造绝对坐标 AABB 来查询
-    AABB absExpand = bb.expand(xa, ya, za);
+    // 用 Big 速度合成展开量，避免 double xa 在远距离精度丢失
+double bigXa = m_bigVx.convert_to<double>(); // 速度本身量级 ~0.1, double 保存精度够
+// 但入口 xa 是传参，改为用 Big 速度:
+double useXa = (m_bigVx != BigWorldCoordinate(0.0)) ? m_bigVx.convert_to<double>() : xa;
+double useYa = (m_bigVy != BigWorldCoordinate(0.0)) ? m_bigVy.convert_to<double>() : ya;
+double useZa = (m_bigVz != BigWorldCoordinate(0.0)) ? m_bigVz.convert_to<double>() : za;
+AABB absExpand = bb.expand(useXa, useYa, useZa);
     if (useLocal) absExpand.move(ox, oy, oz);
     std::vector<AABB>& aABBs = level->getCubes(this, absExpand);
 
@@ -333,10 +339,10 @@ void Entity::move(double xa, double ya, double za) {
     collision           = horizontalCollision || verticalCollision;
     checkFallDamage((float)ya, onGround);
 
-    if (xaOrg != xa) xd = 0;
-    if (yaOrg != ya) yd = 0;
-    if (zaOrg != za) zd = 0;
-
+    if(xaOrg != xa) setVelocity(BigWorldCoordinate(0.0), m_bigVy, m_bigVz);
+if(yaOrg != ya) setVelocity(m_bigVx, BigWorldCoordinate(0.0), m_bigVz);
+if(zaOrg != za) setVelocity(m_bigVx, m_bigVy, BigWorldCoordinate(0.0));
+	
     double xm = x - xo_;
     double zm = z - zo_;
 
@@ -594,10 +600,12 @@ void Entity::push(Entity* e) {
         e->push((float)xa, 0, (float)za);
     }
 }
-void Entity::push(float xa, float ya, float za) {
-    xd += xa; yd += ya; zd += za;
+void Entity::push(float xa, float ya, float za){
+    BigWorldCoordinate bxa(xa);
+    BigWorldCoordinate bya(ya);
+    BigWorldCoordinate bza(za);
+    setVelocity(m_bigVx + bxa, m_bigVy + bya, m_bigVz + bza);
 }
-
 void Entity::markHurt() { hurtMarked = true; }
 bool Entity::hurt(Entity* source, int damage) { markHurt(); return false; }
 void Entity::reset() { _init(); }
@@ -605,6 +613,7 @@ void Entity::_init() {
     xo = xOld = x;
     yo = yOld = y;
     zo = zOld = z;
+	setVelocity(BigWorldCoordinate(0.0), BigWorldCoordinate(0.0), BigWorldCoordinate(0.0));
     xRotO = xRot; yRotO = yRot;
     onFire = 0; removed = false; fallDistance = 0;
 }
@@ -635,8 +644,8 @@ void Entity::lerpTo(double x, double y, double z, float yRot, float xRot, int st
     setRot(yRot, xRot);
 }
 float Entity::getPickRadius() { return 0.1f; }
-void Entity::lerpMotion(double xd, double yd, double zd) {
-    this->xd = xd; this->yd = yd; this->zd = zd;
+void Entity::lerpMotion(double xd, double yd, double zd){
+    setVelocity(BigWorldCoordinate(xd), BigWorldCoordinate(yd), BigWorldCoordinate(zd));
 }
 void Entity::animateHurt() {}
 void Entity::setEquippedSlot(int slot, int item, int auxValue) {}
@@ -682,13 +691,14 @@ bool Entity::load(CompoundTag* tag) {
     ListTag* rotation = tag->getList("Rotation");
     setPos(0, 0, 0);
 
-    xd = motion->getDouble(0);
-    yd = motion->getDouble(1);
-    zd = motion->getDouble(2);
-    if (Mth::abs(xd) > 10.0) xd = 0;
-    if (Mth::abs(yd) > 10.0) yd = 0;
-    if (Mth::abs(zd) > 10.0) zd = 0;
-
+    double lxd = motion->getDouble(0);
+double lyd = motion->getDouble(1);
+double lzd = motion->getDouble(2);
+if(Mth::abs(lxd) > 10.0) lxd = 0;
+if(Mth::abs(lyd) > 10.0) lyd = 0;
+if(Mth::abs(lzd) > 10.0) lzd = 0;
+setVelocity(BigWorldCoordinate(lxd), BigWorldCoordinate(lyd), BigWorldCoordinate(lzd));
+	
     double xx = pos->getDouble(0);
     double yy = pos->getDouble(1);
     double zz = pos->getDouble(2);
