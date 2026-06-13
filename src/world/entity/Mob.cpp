@@ -311,10 +311,10 @@ void Mob::tick()
 	}
 
 	if (lSteps > 0) {
-    double xt = x + (lx - x) / (double)lSteps;   // 旧: float
-    double yt = y + (ly - y) / (double)lSteps;
-    double zt = z + (lz - z) / (double)lSteps;
-
+    if (!this->isLocalPlayer()) {  // 🔧 本地玩家不走插值
+        double xt = x + (lx - x) / (double)lSteps;
+        double yt = y + (ly - y) / (double)lSteps;
+        double zt = z + (lz - z) / (double)lSteps;
 		float yrd = lyr - yRot;
 		while (yrd < -180)
 			yrd += 360;
@@ -323,10 +323,13 @@ void Mob::tick()
 
 		yRot += (yrd) / lSteps;
 		xRot += (lxr - xRot) / lSteps;
-    // ... (角度保持 float 运算不变)
-    lSteps--;
-    this->setPos(xt, yt, zt);
-    this->setRot(yRot, xRot);
+        // ...
+        lSteps--;
+        this->setPos(xt, yt, zt);
+        this->setRot(yRot, xRot);
+    } else {
+        lSteps = 0;  // 丢弃本地玩家的插值
+    }
 	}
 	aiStep();
 
