@@ -932,17 +932,17 @@ void Level::removeListener(LevelListener* listener) {
 std::vector<AABB>& Level::getCubes(const Entity* source, const AABB& box_) {
 	boxes.clear();
 	const AABB* box = &box_;
-    int x0 = Mth::floor(box->x0);
-    int x1 = Mth::floor(box->x1 + 1);
-    int y0 = Mth::floor(box->y0);
-    int y1 = Mth::floor(box->y1 + 1);
-    int z0 = Mth::floor(box->z0);
-    int z1 = Mth::floor(box->z1 + 1);
+    int64_t x0 = Mth::floor64(box->x0);
+    int64_t x1 = Mth::floor64(box->x1 + 1);
+    int64_t y0 = Mth::floor64(box->y0);
+    int64_t y1 = Mth::floor64(box->y1 + 1);
+    int64_t z0 = Mth::floor64(box->z0);
+    int64_t z1 = Mth::floor64(box->z1 + 1);
 
-    for (int x = x0; x < x1; x++)
-        for (int z = z0; z < z1; z++) {
+    for (int64_t x = x0; x < x1; x++)
+        for (int64_t z = z0; z < z1; z++) {
             if (hasChunkAt(x, Level::DEPTH / 2, z)) {
-                for (int y = y0 - 1; y < y1; y++) {
+                for (int64_t y = y0 - 1; y < y1; y++) {
                     Tile* tile = Tile::tiles[getTile(x, y, z)];
                     if (tile != NULL) {
                         tile->addAABBs(this, x, y, z, box, boxes);
@@ -1288,11 +1288,11 @@ void Level::tick(Entity* e, bool actual) {
 	if (e->yRot != e->yRot) e->yRot = e->yRotO;
 
     // 用 Big 精确计算区块坐标 (e->getChunkX() 已通过 Entity.h 添加)
-int xcn = (int)(static_cast<int64_t>(
-    e->getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) >> 4);
-int ycn = Mth::floor(e->y / 16.0f);
-int zcn = (int)(static_cast<int64_t>(
-    e->getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) >> 4);
+int64_t xcn = static_cast<int64_t>(
+    e->getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) >> 4;
+int64_t ycn = Mth::floor64(e->y / 16.0);
+int64_t zcn = static_cast<int64_t>(
+    e->getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) >> 4;
 
     if (!e->inChunk || (e->xChunk != xcn || e->yChunk != ycn || e->zChunk != zcn)) {
         if (e->inChunk && hasChunk(e->xChunk, e->zChunk)) {
