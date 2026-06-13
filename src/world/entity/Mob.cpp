@@ -596,7 +596,7 @@ void Mob::causeFallDamage( float distance )
 	}
 }
 
-void Mob::travel( float xa, float ya )
+void Mob::travel(float xa, float ya)
 {
 	if (isInWater()) {
 		float yo = y;
@@ -604,26 +604,28 @@ void Mob::travel( float xa, float ya )
 		move(xd, yd, zd);
 
 		scaleVelocity(0.80);
-		yd -= 0.02f;
+		setVelocityY(m_bigVy - BigWorldCoordinate(0.02));
 
 		if (horizontalCollision && isFree(xd, yd + 0.6f - y + yo, zd)) {
-			yd = 0.3f;
+			setVelocityY(BigWorldCoordinate(0.3));
 		}
 	} else if (isInLava()) {
 		float yo = y;
 		moveRelative(xa, ya, 0.02f);
 		move(xd, yd, zd);
 		scaleVelocity(0.50);
-		yd -= 0.02f;
+		setVelocityY(m_bigVy - BigWorldCoordinate(0.02));
 
 		if (horizontalCollision && isFree(xd, yd + 0.6f - y + yo, zd)) {
-			yd = 0.3f;
+			setVelocityY(BigWorldCoordinate(0.3));
 		}
 	} else {
 		float friction = 0.91f;
 		if (onGround) {
 			friction = 0.6f * 0.91f;
-			int t = level->getTile(Mth::floor(x), Mth::floor(bb.y0 - 0.5f), Mth::floor(z));
+			int64_t bigX = static_cast<int64_t>(getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
+			int64_t bigZ = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
+			int t = level->getTile(bigX, Mth::floor(bb.y0 - 0.5f), bigZ);
 			if (t > 0) {
 				friction = Tile::tiles[t]->friction * 0.91f;
 			}
@@ -636,32 +638,40 @@ void Mob::travel( float xa, float ya )
 		if (onGround) {
 			friction = 0.6f * 0.91f;
 			int64_t bigX = static_cast<int64_t>(getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
-int64_t bigZ = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
-int t = level->getTile(bigX, Mth::floor(bb.y0 - 0.5f), bigZ);
+			int64_t bigZ = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
+			int t = level->getTile(bigX, Mth::floor(bb.y0 - 0.5f), bigZ);
 			if (t > 0) {
 				friction = Tile::tiles[t]->friction * 0.91f;
 			}
 		}
-		//@todo: make it easier to climb ladders
 		if (onLadder()) {
 			this->fallDistance = 0;
-			if (yd < -0.15) yd = -0.15f;
-			if (isSneaking() && yd < 0) yd = 0;
+			if (m_bigVy < BigWorldCoordinate(-0.15)) {
+				setVelocityY(BigWorldCoordinate(-0.15));
+			}
+			if (isSneaking() && m_bigVy < BigWorldCoordinate(0.0)) {
+				setVelocityY(BigWorldCoordinate(0.0));
+			}
 		}
 
 		move(xd, yd, zd);
 
-		//@todo: make it easier to climb ladders
 		if (horizontalCollision && onLadder()) {
-			yd = 0.2f;
+			setVelocityY(BigWorldCoordinate(0.2));
 		}
 
-		yd -= 0.08f;
-		scaleVelocity(friction);
-// Y 阻尼单独处理:
-setVelocityY(m_bigVy * BigWorldCoordinate(0.98));
-	}
+		// ====== 重力 → Y阻尼 → XZ摩擦 (严格按原版顺序) ======
+		// 1. 重力加速度
+		setVelocityY(m_bigVy - BigWorldCoordinate(0.08));
 
+		// 2. Y 轴阻尼 (仅 Y)
+		setVelocityY(m_bigVy * BigWorldCoordinate(0.98));
+
+		// 3. XZ 摩擦 (仅 XZ, 不动 Y)
+		BigWorldCoordinate bf(friction);
+		setVelocityX(m_bigVx * bf);
+		setVelocityZ(m_bigVz * bf);
+	}
 }
 
 void Mob::updateWalkAnim()
