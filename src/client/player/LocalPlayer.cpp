@@ -420,7 +420,8 @@ void LocalPlayer::tick() {
 
 	super::tick();
 	 // 每帧用 Big 精度重算原点，自动切换
-    m_origin.tick(this->x, this->y, this->z);
+    // 用 Big 绝对坐标推进 WorldOrigin（精度无限）
+m_origin.tickBig(m_bigAbsX, m_bigAbsY, m_bigAbsZ);
 	if(!useItem.isNull()) {
 		ItemInstance* item = inventory->getSelected();
 		if(item != NULL && *item == useItem) {
