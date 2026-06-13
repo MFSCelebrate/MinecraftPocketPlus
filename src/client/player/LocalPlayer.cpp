@@ -572,39 +572,255 @@ void LocalPlayer::closeContainer() {
 }
 
 //@Override
-void LocalPlayer::move(float xa, float ya, float za) {
-    if (this == minecraft->player && minecraft->options.getBooleanValue(OPTIONS_IS_FLYING)) {
-        noPhysics = true;
-        float tmp = walkDist;
-        // 飞行速度使用 flyingSpeed（默认 0.02f）
-        calculateFlight(xa, ya, za);
-        fallDistance = 0;
-        yd = 0;
-        super::move(flyX, flyY, flyZ);
-        onGround = true;
-        walkDist = tmp;
-    } else {
-        if (autoJumpTime > 0) {
-            autoJumpTime--;
-            input->jumping = true;
+void Entity::move(double xa, double ya, double za) {
+    if (noPhysics) {
+        bb.move(xa, ya, za);
+        this->x = (bb.x0 + bb.x1) / 2.0;
+        this->y = bb.y0 + heightOffset - ySlideOffset;
+        this->z = (bb.z0 + bb.z1) / 2.0;
+        return;
+    }
+
+    TIMER_PUSH("move");
+
+    // ═══════════════════════════════════════════════════════════
+    // 精度保护：获取 local 空间原点偏移
+    // 子类 (LocalPlayer) 覆写 getLocalFrameOrigin*() 返回原点
+    // 普通 Entity 返回 0，走原始路径
+    // ═══════════════════════════════════════════════════════════
+    double frameOx = getLocalFrameOriginX();
+    double frameOy = getLocalFrameOriginY();
+    double frameOz = getLocalFrameOriginZ();
+    bool useLocalFrame = (frameOx != 0.0 || frameOy != 0.0 || frameOz != 0.0);
+
+    if (useLocalFrame) {
+        // 切换到 local 坐标空间 — double 精度丝般顺滑
+        x  -= frameOx;  y  -= frameOy;  z  -= frameOz;
+        bb.move(-frameOx, -frameOy, -frameOz);
+        xo   -= frameOx;  zo   -= frameOz;
+        xOld -= frameOx;  zOld -= frameOz;
+    }
+
+    double xo_ = x;
+    double zo_ = z;
+
+    if (isStuckInWeb) {
+        isStuckInWeb = false;
+        xa *= .25;
+        ya *= .05;
+        za *= .25;
+        xd = 0.0;
+        yd = 0.0;
+        zd = 0.0;
+    }
+
+    double xaOrg = xa;
+    double yaOrg = ya;
+    double zaOrg = za;
+
+    AABB bbOrg = bb;
+
+    bool sneaking = onGround && isSneaking();
+
+    if (sneaking) {
+        float d = 0.05f;
+        while (xa != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, 0)).empty()) {
+            if (xa < d && xa >= -d) xa = 0;
+            else if (xa > 0) xa -= d;
+            else xa += d;
+            xaOrg = xa;
         }
-        float prevX = x, prevZ = z;
-        super::move(xa, ya, za);
-        float newX = x, newZ = z;
-        if (autoJumpTime <= 0 && minecraft->options.getBooleanValue(OPTIONS_AUTOJUMP)) {
-            bool jump = false;
-            if (Mth::floor(prevX * 2.0f) != Mth::floor(newX * 2.0f) || Mth::floor(prevZ * 2.0f) != Mth::floor(newZ * 2.0f)) {
-                float dist = Mth::sqrt(xa * xa + za * za);
-                const int xx = Mth::floor(x + xa / dist);
-                const int zz = Mth::floor(z + za / dist);
-                const int tileId = level->getTile(xx, (int)(y-1), zz);
-                jump = (isSolidTile(xx, (int)(y-1), zz)
-                    && !isSolidTile(xx, (int)y, zz) && !isSolidTile(xx, (int)(y+1), zz))
-                    && isJumpable(tileId);
-            }
-            if (jump) autoJumpTime = 1;
+        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0, za)).empty()) {
+            if (za < d && za >= -d) za = 0;
+            else if (za > 0) za -= d;
+            else za += d;
+            zaOrg = za;
+        }
+        while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, za)).empty()) {
+            if (xa < d && xa >= -d) xa = 0;
+            else if (xa > 0) xa -= d;
+            else xa += d;
+            if (za < d && za >= -d) za = 0;
+            else if (za > 0) za -= d;
+            else za += d;
+            xaOrg = xa;
+            zaOrg = za;
         }
     }
+
+    // getCubes 返回的 AABB 是绝对坐标，如果我们在 local 空间，
+    // 需要把每个碰撞盒也转成 local
+    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
+    if (useLocalFrame) {
+        for (unsigned int i = 0; i < aABBs.size(); i++)
+            aABBs[i].move(-frameOx, -frameOy, -frameOz);
+    }
+
+    for (unsigned int i = 0; i < aABBs.size(); i++)
+        ya = aABBs[i].clipYCollide(bb, ya);
+    bb.move(0, ya, 0);
+
+    if (!slide && yaOrg != ya) {
+        xa = ya = za = 0;
+    }
+
+    bool og = onGround || (yaOrg != ya && yaOrg < 0);
+
+    for (unsigned int i = 0; i < aABBs.size(); i++)
+        xa = aABBs[i].clipXCollide(bb, xa);
+    bb.move(xa, 0, 0);
+
+    if (!slide && xaOrg != xa) {
+        xa = ya = za = 0;
+    }
+
+    for (unsigned int i = 0; i < aABBs.size(); i++)
+        za = aABBs[i].clipZCollide(bb, za);
+    bb.move(0, 0, za);
+
+    if (!slide && zaOrg != za) {
+        xa = ya = za = 0;
+    }
+
+    // ── footSize / step-up 逻辑 ──
+    if (footSize > 0 && og && (ySlideOffset < 0.05f) && ((xaOrg != xa) || (zaOrg != za))) {
+        double xaN = xa;
+        double yaN = ya;
+        double zaN = za;
+        xa = xaOrg;
+        ya = footSize;
+        za = zaOrg;
+        AABB normal = bb;
+        bb.set(bbOrg);
+
+        std::vector<AABB>& aABBs2 = level->getCubes(this, bb.expand(xa, ya, za));
+        if (useLocalFrame) {
+            for (unsigned int i = 0; i < aABBs2.size(); i++)
+                aABBs2[i].move(-frameOx, -frameOy, -frameOz);
+        }
+
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            ya = aABBs2[i].clipYCollide(bb, ya);
+        bb.move(0, ya, 0);
+
+        if (!slide && yaOrg != ya) {
+            xa = ya = za = 0;
+        }
+
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            xa = aABBs2[i].clipXCollide(bb, xa);
+        bb.move(xa, 0, 0);
+
+        if (!slide && xaOrg != xa) {
+            xa = ya = za = 0;
+        }
+
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            za = aABBs2[i].clipZCollide(bb, za);
+        bb.move(0, 0, za);
+
+        if (!slide && zaOrg != za) {
+            xa = ya = za = 0;
+        }
+
+        if (xaN * xaN + zaN * zaN >= xa * xa + za * za) {
+            xa = xaN;
+            ya = yaN;
+            za = zaN;
+            bb.set(normal);
+        } else {
+            ySlideOffset += 0.5f;
+        }
+    }
+
+    TIMER_POP_PUSH("rest");
+
+    // ═══════════════════════════════════════════════════════════
+    // 从 bb 重建坐标，在 local 空间用 Big 精度合成
+    // ═══════════════════════════════════════════════════════════
+    if (useLocalFrame) {
+        // 用 Big 算术从 bb 合成绝对 x, z（绕过 double 对消误差）
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx)
+                               + BigWorldCoordinate(bb.x1 + frameOx))
+                               / BigWorldCoordinate(2.0);
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz)
+                               + BigWorldCoordinate(bb.z1 + frameOz))
+                               / BigWorldCoordinate(2.0);
+        this->x = bxc.convert_to<double>();
+        this->y = bb.y0 + frameOy + heightOffset - ySlideOffset;
+        this->z = bzc.convert_to<double>();
+
+        // 把 bb 也转回绝对坐标
+        bb.move(frameOx, frameOy, frameOz);
+        xo_ += frameOx;
+        zo_ += frameOz;
+    } else {
+        this->x = (bb.x0 + bb.x1) / 2.0;
+        this->y = bb.y0 + heightOffset - ySlideOffset;
+        this->z = (bb.z0 + bb.z1) / 2.0;
+    }
+
+    horizontalCollision = (xaOrg != xa) || (zaOrg != za);
+    verticalCollision   = (yaOrg != ya);
+    onGround            = yaOrg != ya && yaOrg < 0;
+    collision           = horizontalCollision || verticalCollision;
+    checkFallDamage((float)ya, onGround);
+
+    if (xaOrg != xa) xd = 0;
+    if (yaOrg != ya) yd = 0;
+    if (zaOrg != za) zd = 0;
+
+    double xm = x - xo_;
+    double zm = z - zo_;
+
+    if (makeStepSound && !sneaking) {
+        walkDist += (float)Mth::sqrt(xm * xm + zm * zm) * 0.6f;
+        int64_t xt = Mth::floor64(x);
+        int64_t yt = Mth::floor64(y - 0.2f - this->heightOffset);
+        int64_t zt = Mth::floor64(z);
+        int t = level->getTile(xt, yt, zt);
+        if (t == 0) {
+            int under = level->getTile(xt, yt - 1, zt);
+            if (Tile::fence->id == under || Tile::fenceGate->id == under) t = under;
+        }
+        if (walkDist > nextStep && t > 0) {
+            nextStep = ((int)walkDist) + 1;
+            playStepSound(xt, yt, zt, t);
+        }
+    }
+
+    int64_t x0 = Mth::floor64(bb.x0);
+    int64_t y0 = Mth::floor64(bb.y0);
+    int64_t z0 = Mth::floor64(bb.z0);
+    int64_t x1 = Mth::floor64(bb.x1);
+    int64_t y1 = Mth::floor64(bb.y1);
+    int64_t z1 = Mth::floor64(bb.z1);
+
+    if (level->hasChunksAt(x0, y0, z0, x1, y1, z1)) {
+        for (int64_t tx = x0; tx <= x1; tx++)
+            for (int64_t ty = y0; ty <= y1; ty++)
+                for (int64_t tz = z0; tz <= z1; tz++) {
+                    int t = level->getTile(tx, ty, tz);
+                    if (t > 0) Tile::tiles[t]->entityInside(level, (int)tx, (int)ty, (int)tz, this);
+                }
+    }
+
+    ySlideOffset *= 0.4f;
+
+    bool water = this->isInWater();
+    if (level->containsFireTile(bb)) {
+        burn(1);
+        if (!water) {
+            onFire++;
+            if (onFire == 0) onFire = 20 * 15;
+        }
+    } else {
+        if (onFire <= 0) onFire = -flameTime;
+    }
+
+    if (water && onFire > 0) onFire = -flameTime;
+
+    TIMER_POP();
 }
 
 void LocalPlayer::updateAi() {
