@@ -639,7 +639,9 @@ void Mob::travel( float xa, float ya )
 		friction = 0.91f;
 		if (onGround) {
 			friction = 0.6f * 0.91f;
-			int t = level->getTile(Mth::floor(x), Mth::floor(bb.y0 - 0.5f), Mth::floor(z));
+			int64_t bigX = static_cast<int64_t>(getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
+int64_t bigZ = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
+int t = level->getTile(bigX, Mth::floor(bb.y0 - 0.5f), bigZ);
 			if (t > 0) {
 				friction = Tile::tiles[t]->friction * 0.91f;
 			}
