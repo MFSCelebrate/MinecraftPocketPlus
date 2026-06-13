@@ -29,67 +29,63 @@ public:
 WorldOrigin m_origin;
 const WorldOrigin& getWorldOrigin() const { return m_origin; }
 
-// ====== 新增：BigWorldCoordinate 绝对位置存储 ======
-    BigWorldCoordinate m_bigAbsX{0};
-    BigWorldCoordinate m_bigAbsY{0};
-    BigWorldCoordinate m_bigAbsZ{0};
+// ====== BigWorldCoordinate 绝对位置 — 真无限 ======
+BigWorldCoordinate m_bigAbsX{0};
+BigWorldCoordinate m_bigAbsY{0};
+BigWorldCoordinate m_bigAbsZ{0};
 
-    virtual void storeAbsolutePosition(const BigWorldCoordinate& bx, 
-                                        const BigWorldCoordinate& by, 
-                                        const BigWorldCoordinate& bz) override {
-        m_bigAbsX = bx;
-        m_bigAbsY = by;
-        m_bigAbsZ = bz;
-        // 同步 double 缓存（渲染/物理兼容）
-        this->x = bx.convert_to<double>();
-        this->y = by.convert_to<double>();
-        this->z = bz.convert_to<double>();
-    }
+// 覆写 Big 访问器 (Entity 基类虚函数)
+virtual BigWorldCoordinate getBigAbsX() const override { return m_bigAbsX; }
+virtual BigWorldCoordinate getBigAbsY() const override { return m_bigAbsY; }
+virtual BigWorldCoordinate getBigAbsZ() const override { return m_bigAbsZ; }
 
-    // Big 位置 getter
-    const BigWorldCoordinate& bigX() const { return m_bigAbsX; }
-    const BigWorldCoordinate& bigY() const { return m_bigAbsY; }
-    const BigWorldCoordinate& bigZ() const { return m_bigAbsZ; }
+// 覆写 storeAbsolutePosition — 双写 Big + double 缓存
+virtual void storeAbsolutePosition(const BigWorldCoordinate& bx,
+                                    const BigWorldCoordinate& by,
+                                    const BigWorldCoordinate& bz) override {
+    m_bigAbsX = bx;
+    m_bigAbsY = by;
+    m_bigAbsZ = bz;
+    this->x = bx.convert_to<double>();
+    this->y = by.convert_to<double>();
+    this->z = bz.convert_to<double>();
+}
 
-    // 用 Big 坐标设置位置（精确版 setPos）
-    void setPosBig(const BigWorldCoordinate& bx, const BigWorldCoordinate& by, const BigWorldCoordinate& bz) {
-        m_bigAbsX = bx;
-        m_bigAbsY = by;
-        m_bigAbsZ = bz;
-        double dx = bx.convert_to<double>();
-        double dy = by.convert_to<double>();
-        double dz = bz.convert_to<double>();
-        this->x = dx; this->y = dy; this->z = dz;
-        float w = bbWidth / 2;
-        float h = bbHeight;
-        bb.set(dx - w, dy - heightOffset + ySlideOffset, dz - w,
-               dx + w, dy - heightOffset + ySlideOffset + h, dz + w);
-    }
+// 覆写 setPos — 保证 Big 同步
+virtual void setPos(double x, double y, double z) override {
+    m_bigAbsX = BigWorldCoordinate(x);
+    m_bigAbsY = BigWorldCoordinate(y);
+    m_bigAbsZ = BigWorldCoordinate(z);
+    this->x = x; this->y = y; this->z = z;
+    float w = bbWidth / 2; float h = bbHeight;
+    bb.set(x - w, y - heightOffset + ySlideOffset, z - w,
+           x + w, y - heightOffset + ySlideOffset + h, z + w);
+}
 
-    // 覆写 setPos（双写 Big + double）
-    virtual void setPos(double x, double y, double z) override {
-        m_bigAbsX = BigWorldCoordinate(x);
-        m_bigAbsY = BigWorldCoordinate(y);
-        m_bigAbsZ = BigWorldCoordinate(z);
-        this->x = x; this->y = y; this->z = z;
-        float w = bbWidth / 2;
-        float h = bbHeight;
-        bb.set(x - w, y - heightOffset + ySlideOffset, z - w,
-               x + w, y - heightOffset + ySlideOffset + h, z + w);
-    }
+// 覆写 moveTo — 传送时保证 Big 同步
+virtual void moveTo(double x, double y, double z, float yRot, float xRot) override {
+    this->xOld = this->xo = this->x = x;
+    this->yOld = this->yo = this->y = y + heightOffset;
+    this->zOld = this->zo = this->z = z;
+    this->yRot = this->yRotO = yRot;
+    this->xRot = this->xRotO = xRot;
+    m_bigAbsX = BigWorldCoordinate(x);
+    m_bigAbsY = BigWorldCoordinate(y + heightOffset);
+    m_bigAbsZ = BigWorldCoordinate(z);
+    this->setPos(x, y, z);
+}
 
-    // 覆写 moveTo
-    virtual void moveTo(double x, double y, double z, float yRot, float xRot) override {
-        this->xOld = this->xo = this->x = x;
-        this->yOld = this->yo = this->y = y + heightOffset;
-        this->zOld = this->zo = this->z = z;
-        this->yRot = this->yRotO = yRot;
-        this->xRot = this->xRotO = xRot;
-        m_bigAbsX = BigWorldCoordinate(x);
-        m_bigAbsY = BigWorldCoordinate(y + heightOffset);
-        m_bigAbsZ = BigWorldCoordinate(z);
-        this->setPos(x, y, z);
-    }
+// 精确传送 (Big 参数)
+void setPosBig(const BigWorldCoordinate& bx, const BigWorldCoordinate& by, const BigWorldCoordinate& bz) {
+    m_bigAbsX = bx; m_bigAbsY = by; m_bigAbsZ = bz;
+    double dx = bx.convert_to<double>();
+    double dy = by.convert_to<double>();
+    double dz = bz.convert_to<double>();
+    this->x = dx; this->y = dy; this->z = dz;
+    float w = bbWidth / 2; float h = bbHeight;
+    bb.set(dx - w, dy - heightOffset + ySlideOffset, dz - w,
+           dx + w, dy - heightOffset + ySlideOffset + h, dz + w);
+}
 
 // 精度保护：给 Entity::move() 提供 local 帧原点
     virtual double getLocalFrameOriginX() const override { return m_origin.originX().convert_to<double>(); }
