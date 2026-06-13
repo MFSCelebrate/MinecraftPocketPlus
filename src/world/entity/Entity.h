@@ -219,6 +219,11 @@ virtual double getLocalFrameOriginX() const { return 0.0; }
     virtual double getLocalFrameOriginY() const { return 0.0; }
     virtual double getLocalFrameOriginZ() const { return 0.0; }
 
+/// Big 格式的 local frame origin — LocalPlayer 覆写返回 m_origin 的 Big 值
+virtual BigWorldCoordinate getLocalFrameOriginBigX() const { return BigWorldCoordinate(0.0); }
+virtual BigWorldCoordinate getLocalFrameOriginBigY() const { return BigWorldCoordinate(0.0); }
+virtual BigWorldCoordinate getLocalFrameOriginBigZ() const { return BigWorldCoordinate(0.0); }
+
     int airCapacity;
     bool makeStepSound;
     bool wasInWater;
