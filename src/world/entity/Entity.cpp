@@ -211,6 +211,7 @@ void Entity::move(double xa, double ya, double za){
 
 		// 不再用 bb.move(-ox, -oy, -oz) — Big 重建已覆盖
 	}
+	}
 
     if (isStuckInWeb) {
         isStuckInWeb = false;
