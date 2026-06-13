@@ -53,9 +53,15 @@ virtual void storeAbsolutePosition(const BigWorldCoordinate& bx,
 
 // 覆写 setPos — 保证 Big 同步
 virtual void setPos(double x, double y, double z) override {
-    m_bigAbsX = BigWorldCoordinate(x);
-    m_bigAbsY = BigWorldCoordinate(y);
-    m_bigAbsZ = BigWorldCoordinate(z);
+    double ox = m_origin.originX().convert_to<double>();
+    double oy = m_origin.originY().convert_to<double>();
+    double oz = m_origin.originZ().convert_to<double>();
+    
+    // x ≈ ox + offset，offset 是小数，double 精度高
+    m_bigAbsX = m_origin.originX() + BigWorldCoordinate(x - ox);
+    m_bigAbsY = m_origin.originY() + BigWorldCoordinate(y - oy);
+    m_bigAbsZ = m_origin.originZ() + BigWorldCoordinate(z - oz);
+    
     this->x = x; this->y = y; this->z = z;
     float w = bbWidth / 2; float h = bbHeight;
     bb.set(x - w, y - heightOffset + ySlideOffset, z - w,
@@ -69,10 +75,16 @@ virtual void moveTo(double x, double y, double z, float yRot, float xRot) overri
     this->zOld = this->zo = this->z = z;
     this->yRot = this->yRotO = yRot;
     this->xRot = this->xRotO = xRot;
-    m_bigAbsX = BigWorldCoordinate(x);
-    m_bigAbsY = BigWorldCoordinate(y + heightOffset);
-    m_bigAbsZ = BigWorldCoordinate(z);
-    this->setPos(x, y, z);
+    
+    // 🔧 用 origin 差分代替直接 BigWorldCoordinate(x)
+    double ox = m_origin.originX().convert_to<double>();
+    double oy = m_origin.originY().convert_to<double>();
+    double oz = m_origin.originZ().convert_to<double>();
+    m_bigAbsX = m_origin.originX() + BigWorldCoordinate(x - ox);
+    m_bigAbsY = m_origin.originY() + BigWorldCoordinate(y + heightOffset - oy);
+    m_bigAbsZ = m_origin.originZ() + BigWorldCoordinate(z - oz);
+    
+    this->setPos(x, y, z);  // 现在 setPos 也用了差分，不会重复覆写
 }
 
 // 精确传送 (Big 参数)
