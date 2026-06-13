@@ -16,6 +16,8 @@ class CompoundTag;
 #include "../../SharedConstants.h"
 #include "../../util/Mth.h"
 #include "../../util/Random.h"
+// 在现有 include 之后添加：
+#include "../../util/WorldCoordinate.h"
 
 class SynchedEntityData;
 
@@ -199,7 +201,14 @@ public:
     bool reallyRemoveIfPlayer;
 
 protected:
-    void updatePositionFromBB();
+    virtual void updatePositionFromBB();
+virtual void storeAbsolutePosition(const BigWorldCoordinate& bx, 
+                                    const BigWorldCoordinate& by, 
+                                    const BigWorldCoordinate& bz) {
+    this->x = bx.convert_to<double>();
+    this->y = by.convert_to<double>();
+    this->z = bz.convert_to<double>();
+}
     static Random sharedRandom;
 virtual double getLocalFrameOriginX() const { return 0.0; }
     virtual double getLocalFrameOriginY() const { return 0.0; }
