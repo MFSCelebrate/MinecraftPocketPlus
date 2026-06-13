@@ -75,6 +75,10 @@ if (!scaleZStr.empty()) {
     std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
     if (!zStr.empty()) { m_worldOffsetZ = atof(zStr.c_str()); }
 
+if (Minecraft::instance) {
+    m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
+}
+
     // BiomeSource 传入时用 worldCoordToDouble()
     if (level) {
         BiomeSource* biomeSource = level->getBiomeSource();
