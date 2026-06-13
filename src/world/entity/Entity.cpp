@@ -112,19 +112,60 @@ bool Entity::isFree(float xa, float ya, float za) {
     return true;
 }
 
+// src/world/entity/Entity.cpp
+// 加在 Entity::move() 之前
+
+void Entity::updatePositionFromBB() {
+    double frameOx = getLocalFrameOriginX();
+    double frameOz = getLocalFrameOriginZ();
+
+    if (frameOx != 0.0 || frameOz != 0.0) {
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx)
+                               + BigWorldCoordinate(bb.x1 + frameOx))
+                               / BigWorldCoordinate(2.0);
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz)
+                               + BigWorldCoordinate(bb.z1 + frameOz))
+                               / BigWorldCoordinate(2.0);
+        this->x = bxc.convert_to<double>();
+        this->z = bzc.convert_to<double>();
+    } else {
+        this->x = (bb.x0 + bb.x1) / 2.0;
+        this->z = (bb.z0 + bb.z1) / 2.0;
+    }
+    this->y = bb.y0 + heightOffset - ySlideOffset;
+}
+
 void Entity::move(double xa, double ya, double za) {
     if (noPhysics) {
         bb.move(xa, ya, za);
-        x = (bb.x0 + bb.x1) / 2.0;
-        y = bb.y0 + heightOffset - ySlideOffset;
-        z = (bb.z0 + bb.z1) / 2.0;
+        this->x = (bb.x0 + bb.x1) / 2.0;
+        this->y = bb.y0 + heightOffset - ySlideOffset;
+        this->z = (bb.z0 + bb.z1) / 2.0;
         return;
     }
 
     TIMER_PUSH("move");
 
-    double xo = x;
-    double zo = z;
+    // ═══════════════════════════════════════════════════════════
+    // 精度保护：获取 local 空间原点偏移
+    // 子类 (LocalPlayer) 覆写 getLocalFrameOrigin*() 返回原点
+    // 普通 Entity 返回 0，走原始路径
+    // ═══════════════════════════════════════════════════════════
+    double frameOx = getLocalFrameOriginX();
+    double frameOy = getLocalFrameOriginY();
+    double frameOz = getLocalFrameOriginZ();
+    bool useLocalFrame = (frameOx != 0.0 || frameOy != 0.0 || frameOz != 0.0);
+
+    if (useLocalFrame) {
+        // 切换到 local 坐标空间 — double 精度丝般顺滑
+        x  -= frameOx;  y  -= frameOy;  z  -= frameOz;
+        bb.move(-frameOx, -frameOy, -frameOz);
+        xo   -= frameOx;  zo   -= frameOz;
+        xOld -= frameOx;  zOld -= frameOz;
+    }
+
+    double xo_ = x;
+    double zo_ = z;
 
     if (isStuckInWeb) {
         isStuckInWeb = false;
@@ -170,7 +211,13 @@ void Entity::move(double xa, double ya, double za) {
         }
     }
 
+    // getCubes 返回的 AABB 是绝对坐标，如果我们在 local 空间，
+    // 需要把每个碰撞盒也转成 local
     std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
+    if (useLocalFrame) {
+        for (unsigned int i = 0; i < aABBs.size(); i++)
+            aABBs[i].move(-frameOx, -frameOy, -frameOz);
+    }
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
         ya = aABBs[i].clipYCollide(bb, ya);
@@ -198,6 +245,7 @@ void Entity::move(double xa, double ya, double za) {
         xa = ya = za = 0;
     }
 
+    // ── footSize / step-up 逻辑 ──
     if (footSize > 0 && og && (ySlideOffset < 0.05f) && ((xaOrg != xa) || (zaOrg != za))) {
         double xaN = xa;
         double yaN = ya;
@@ -207,26 +255,31 @@ void Entity::move(double xa, double ya, double za) {
         za = zaOrg;
         AABB normal = bb;
         bb.set(bbOrg);
-        aABBs = level->getCubes(this, bb.expand(xa, ya, za));
 
-        for (unsigned int i = 0; i < aABBs.size(); i++)
-            ya = aABBs[i].clipYCollide(bb, ya);
+        std::vector<AABB>& aABBs2 = level->getCubes(this, bb.expand(xa, ya, za));
+        if (useLocalFrame) {
+            for (unsigned int i = 0; i < aABBs2.size(); i++)
+                aABBs2[i].move(-frameOx, -frameOy, -frameOz);
+        }
+
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            ya = aABBs2[i].clipYCollide(bb, ya);
         bb.move(0, ya, 0);
 
         if (!slide && yaOrg != ya) {
             xa = ya = za = 0;
         }
 
-        for (unsigned int i = 0; i < aABBs.size(); i++)
-            xa = aABBs[i].clipXCollide(bb, xa);
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            xa = aABBs2[i].clipXCollide(bb, xa);
         bb.move(xa, 0, 0);
 
         if (!slide && xaOrg != xa) {
             xa = ya = za = 0;
         }
 
-        for (unsigned int i = 0; i < aABBs.size(); i++)
-            za = aABBs[i].clipZCollide(bb, za);
+        for (unsigned int i = 0; i < aABBs2.size(); i++)
+            za = aABBs2[i].clipZCollide(bb, za);
         bb.move(0, 0, za);
 
         if (!slide && zaOrg != za) {
@@ -245,22 +298,43 @@ void Entity::move(double xa, double ya, double za) {
 
     TIMER_POP_PUSH("rest");
 
-    x = (bb.x0 + bb.x1) / 2.0;
-    y = bb.y0 + heightOffset - ySlideOffset;
-    z = (bb.z0 + bb.z1) / 2.0;
+    // ═══════════════════════════════════════════════════════════
+    // 从 bb 重建坐标，在 local 空间用 Big 精度合成
+    // ═══════════════════════════════════════════════════════════
+    if (useLocalFrame) {
+        // 用 Big 算术从 bb 合成绝对 x, z（绕过 double 对消误差）
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx)
+                               + BigWorldCoordinate(bb.x1 + frameOx))
+                               / BigWorldCoordinate(2.0);
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz)
+                               + BigWorldCoordinate(bb.z1 + frameOz))
+                               / BigWorldCoordinate(2.0);
+        this->x = bxc.convert_to<double>();
+        this->y = bb.y0 + frameOy + heightOffset - ySlideOffset;
+        this->z = bzc.convert_to<double>();
+
+        // 把 bb 也转回绝对坐标
+        bb.move(frameOx, frameOy, frameOz);
+        xo_ += frameOx;
+        zo_ += frameOz;
+    } else {
+        this->x = (bb.x0 + bb.x1) / 2.0;
+        this->y = bb.y0 + heightOffset - ySlideOffset;
+        this->z = (bb.z0 + bb.z1) / 2.0;
+    }
 
     horizontalCollision = (xaOrg != xa) || (zaOrg != za);
-    verticalCollision = (yaOrg != ya);
-    onGround = yaOrg != ya && yaOrg < 0;
-    collision = horizontalCollision || verticalCollision;
+    verticalCollision   = (yaOrg != ya);
+    onGround            = yaOrg != ya && yaOrg < 0;
+    collision           = horizontalCollision || verticalCollision;
     checkFallDamage((float)ya, onGround);
 
     if (xaOrg != xa) xd = 0;
     if (yaOrg != ya) yd = 0;
     if (zaOrg != za) zd = 0;
 
-    double xm = x - xo;
-    double zm = z - zo;
+    double xm = x - xo_;
+    double zm = z - zo_;
 
     if (makeStepSound && !sneaking) {
         walkDist += (float)Mth::sqrt(xm * xm + zm * zm) * 0.6f;
@@ -269,7 +343,7 @@ void Entity::move(double xa, double ya, double za) {
         int64_t zt = Mth::floor64(z);
         int t = level->getTile(xt, yt, zt);
         if (t == 0) {
-            int under = level->getTile(xt, yt-1, zt);
+            int under = level->getTile(xt, yt - 1, zt);
             if (Tile::fence->id == under || Tile::fenceGate->id == under) t = under;
         }
         if (walkDist > nextStep && t > 0) {
@@ -286,11 +360,11 @@ void Entity::move(double xa, double ya, double za) {
     int64_t z1 = Mth::floor64(bb.z1);
 
     if (level->hasChunksAt(x0, y0, z0, x1, y1, z1)) {
-        for (int64_t x = x0; x <= x1; x++)
-            for (int64_t y = y0; y <= y1; y++)
-                for (int64_t z = z0; z <= z1; z++) {
-                    int t = level->getTile(x, y, z);
-                    if (t > 0) Tile::tiles[t]->entityInside(level, (int)x, (int)y, (int)z, this);
+        for (int64_t tx = x0; tx <= x1; tx++)
+            for (int64_t ty = y0; ty <= y1; ty++)
+                for (int64_t tz = z0; tz <= z1; tz++) {
+                    int t = level->getTile(tx, ty, tz);
+                    if (t > 0) Tile::tiles[t]->entityInside(level, (int)tx, (int)ty, (int)tz, this);
                 }
     }
 
@@ -311,7 +385,6 @@ void Entity::move(double xa, double ya, double za) {
 
     TIMER_POP();
 }
-
 void Entity::makeStuckInWeb() {
     isStuckInWeb = true;
     fallDistance = 0;
