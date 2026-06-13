@@ -1287,9 +1287,12 @@ void Level::tick(Entity* e, bool actual) {
 	if (e->xRot != e->xRot) e->xRot = e->xRotO;
 	if (e->yRot != e->yRot) e->yRot = e->yRotO;
 
-    int xcn = Mth::floor(e->x / 16.0f);
-    int ycn = Mth::floor(e->y / 16.0f);
-    int zcn = Mth::floor(e->z / 16.0f);
+    // 用 Big 精确计算区块坐标 (e->getChunkX() 已通过 Entity.h 添加)
+int xcn = (int)(static_cast<int64_t>(
+    e->getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) >> 4);
+int ycn = Mth::floor(e->y / 16.0f);
+int zcn = (int)(static_cast<int64_t>(
+    e->getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) >> 4);
 
     if (!e->inChunk || (e->xChunk != xcn || e->yChunk != ycn || e->zChunk != zcn)) {
         if (e->inChunk && hasChunk(e->xChunk, e->zChunk)) {
