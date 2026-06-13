@@ -123,12 +123,18 @@ void Entity::updatePositionFromBB(){
 	double frameOz = getLocalFrameOriginZ();
 
 	if(frameOx != 0.0 || frameOz != 0.0){
-		BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx) 
-			+ BigWorldCoordinate(bb.x1 + frameOx)) 
-			/ BigWorldCoordinate(2.0);
-		BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz) 
-			+ BigWorldCoordinate(bb.z1 + frameOz)) 
-			/ BigWorldCoordinate(2.0);
+		// ====== 纯 Big 算术 (frame origin 用 Big 版本) ======
+		BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
+		BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
+
+		BigWorldCoordinate bx0 = BigWorldCoordinate(bb.x0) + bigOx;
+		BigWorldCoordinate bx1 = BigWorldCoordinate(bb.x1) + bigOx;
+		BigWorldCoordinate bxc = (bx0 + bx1) / BigWorldCoordinate(2.0);
+
+		BigWorldCoordinate bz0 = BigWorldCoordinate(bb.z0) + bigOz;
+		BigWorldCoordinate bz1 = BigWorldCoordinate(bb.z1) + bigOz;
+		BigWorldCoordinate bzc = (bz0 + bz1) / BigWorldCoordinate(2.0);
+
 		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
 		storeAbsolutePosition(bxc, byc, bzc);
 	} else {
@@ -291,21 +297,33 @@ void Entity::move(double xa, double ya, double za) {
     // 转回绝对空间 + Big 精度位置合成
     // ═══════════════════════════════════════════════════
     if(useLocal){
-    BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0+ox)
-                           + BigWorldCoordinate(bb.x1+ox))
-                           / BigWorldCoordinate(2.0);
-    BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0+oz)
-                           + BigWorldCoordinate(bb.z1+oz))
-                           / BigWorldCoordinate(2.0);
-    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + oy + heightOffset - ySlideOffset);
-    storeAbsolutePosition(bxc, byc, bzc);
-    bb.move(ox, oy, oz);
+	// ====== 纯 Big 算术合成绝对位置 (无 double 精度损失) ======
+	BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
+	BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
+	BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
+
+	// X: 分别转 Big 再相加
+	BigWorldCoordinate bx0 = BigWorldCoordinate(bb.x0) + bigOx;
+	BigWorldCoordinate bx1 = BigWorldCoordinate(bb.x1) + bigOx;
+	BigWorldCoordinate bxc = (bx0 + bx1) / BigWorldCoordinate(2.0);
+
+	// Z: 同样处理
+	BigWorldCoordinate bz0 = BigWorldCoordinate(bb.z0) + bigOz;
+	BigWorldCoordinate bz1 = BigWorldCoordinate(bb.z1) + bigOz;
+	BigWorldCoordinate bzc = (bz0 + bz1) / BigWorldCoordinate(2.0);
+
+	// Y: 精度要求较低，但也用 Big 保证一致性
+	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0) + bigOy 
+	                       + BigWorldCoordinate(heightOffset - ySlideOffset);
+
+	storeAbsolutePosition(bxc, byc, bzc);
+	bb.move(ox, oy, oz);
 } else {
-    BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
-    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-    BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
-    storeAbsolutePosition(bxc, byc, bzc);
-}
+	BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+	BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+	storeAbsolutePosition(bxc, byc, bzc);
+	}
     
     TIMER_POP_PUSH("rest");
 
