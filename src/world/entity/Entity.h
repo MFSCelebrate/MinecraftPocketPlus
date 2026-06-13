@@ -176,6 +176,7 @@ virtual BigWorldCoordinate getBigAbsZ() const { return BigWorldCoordinate(this->
         BigWorldCoordinate bf(friction);
         setVelocity(m_bigVx * bf, m_bigVy * bf, m_bigVz * bf);
     }
+    virtual bool isLocalPlayer() const { return false; }
 
 protected:
     virtual void setRot(float yRot, float xRot);
