@@ -643,7 +643,11 @@ void Entity::_init() {
     xo = xOld = x;
     yo = yOld = y;
     zo = zOld = z;
-	setVelocity(BigWorldCoordinate(0.0), BigWorldCoordinate(0.0), BigWorldCoordinate(0.0));
+	// 改：
+m_bigVx = BigWorldCoordinate(0.0);
+m_bigVy = BigWorldCoordinate(0.0);
+m_bigVz = BigWorldCoordinate(0.0);
+this->xd = this->yd = this->zd = 0.0;
     xRotO = xRot; yRotO = yRot;
     onFire = 0; removed = false; fallDistance = 0;
 }
