@@ -144,11 +144,13 @@ void Entity::updatePositionFromBB(){
 		BigWorldCoordinate bz1 = BigWorldCoordinate(bb.z1) + bigOz;
 		BigWorldCoordinate bzc = (bz0 + bz1) / BigWorldCoordinate(2.0);
 
-		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 +, bzc);
+		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+		storeAbsolutePosition(bxc, byc, bzc);
 	} else {
 		BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-		BigWorldCoordinate bzc = BigWorldCoordinate(()AbsolutePosition(bxc, byc, bzc);
+		BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+		storeAbsolutePosition(bxc, byc, bzc);
 	}
 }
 
@@ -329,11 +331,11 @@ AABB absExpand = bb.expand(useXa, useYa, useZa);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0) + bigOy 
 		                       + BigWorldCoordinate(heightOffset - ySlideOffset);
 
-	//绝对空间 (double 加法, 误差 ~0.03 格, 可接受)
-	double ox_d = bigOx.convert_to<double>();
-	double oy_d = bigOy.convert_to<double>();
-	double oz_d = bigOz.convert_to<double>();
-	bb.move(ox_d, oy_d, oz_d);
+	// useLocal 分支末尾：
+double ox_d = bigOx.convert_to<double>();
+double oy_d = bigOy.convert_to<double>();
+double oz_d = bigOz.convert_to<double>();
+bb.move(ox_d, oy_d, oz_d);
 } else {
 	BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
