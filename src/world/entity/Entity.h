@@ -201,6 +201,9 @@ public:
 protected:
     void updatePositionFromBB();
     static Random sharedRandom;
+virtual double getLocalFrameOriginX() const { return 0.0; }
+    virtual double getLocalFrameOriginY() const { return 0.0; }
+    virtual double getLocalFrameOriginZ() const { return 0.0; }
     int airCapacity;
     bool makeStepSound;
     bool wasInWater;
