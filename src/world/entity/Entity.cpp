@@ -352,6 +352,7 @@ BigWorldCoordinate bigLocalZ = getBigAbsZ() - getLocalFrameOriginBigZ();
                localCenterX + bw,
                localY + bh,
                localCenterZ + bw);
+		bb.move(ox, oy, oz);
 } else {
 	BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
