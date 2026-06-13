@@ -243,7 +243,8 @@ public:
 	float renderOffset;
 
 	int lSteps;
-	float lx, ly, lz, lyr, lxr;
+	double lx, ly, lz;
+    float lyr, lxr;  // 角度保持 float OK
 	int lastHurt;
     int dmgSpill;
 
