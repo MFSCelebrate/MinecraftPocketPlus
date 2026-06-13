@@ -18,11 +18,14 @@ public:
     // 每帧调用 — 用 Big 精度重算 local，超阈值自动切换原点
     // entityX/Y/Z 是 Entity 当前的绝对坐标 (double)
     // ═══════════════════════════════════════════
-    void tick(double entityX, double entityY, double entityZ) {
-        recomputeLocal(entityX, m_localX, m_originX);
-        recomputeLocal(entityY, m_localY, m_originY);
-        recomputeLocal(entityZ, m_localZ, m_originZ);
-    }
+    // BigWorldCoordinate 版 tick — 无限精度
+void tickBig(const BigWorldCoordinate& absX, 
+             const BigWorldCoordinate& absY, 
+             const BigWorldCoordinate& absZ) {
+    recomputeLocalBig(absX, m_localX, m_originX);
+    recomputeLocalBig(absY, m_localY, m_originY);
+    recomputeLocalBig(absZ, m_localZ, m_originZ);
+}
 
     // 获取精确的绝对坐标 (Big)
     BigWorldCoordinate absX() const { return m_originX + BigWorldCoordinate(m_localX); }
@@ -57,25 +60,22 @@ public:
 private:
     static constexpr double ORIGIN_SHIFT = 281474976710656.0; // 2^48
 
-    void recomputeLocal(double absCoord, double& local, BigWorldCoordinate& origin) {
-        // 用 Big 精确算出 local = abs - origin
-        BigWorldCoordinate babs(absCoord);
-        BigWorldCoordinate bloc = babs - origin;
-        local = bloc.convert_to<double>();
-
-        // 如果 local 超出 2^48，迁移原点
-        if (std::abs(local) >= ORIGIN_SHIFT) {
-            double sign = (local > 0.0) ? 1.0 : -1.0;
-            double steps = std::floor(std::abs(local) / ORIGIN_SHIFT);
-            double shift = steps * ORIGIN_SHIFT * sign;
-
-            // 用 Big 精确计算新的 local（避免 double 对消误差）
-            BigWorldCoordinate bshift(shift);
-            BigWorldCoordinate bnewLocal = bloc - bshift;
-            local = bnewLocal.convert_to<double>();
-            origin += bshift;
-        }
+    // Big 版 recalculate — 无精度损失
+void recomputeLocalBig(const BigWorldCoordinate& absCoord, 
+                       double& local, 
+                       BigWorldCoordinate& origin) {
+    BigWorldCoordinate bloc = absCoord - origin;
+    local = bloc.convert_to<double>();
+    if (std::abs(local) >= ORIGIN_SHIFT) {
+        double sign = (local > 0.0) ? 1.0 : -1.0;
+        double steps = std::floor(std::abs(local) / ORIGIN_SHIFT);
+        double shift = steps * ORIGIN_SHIFT * sign;
+        BigWorldCoordinate bshift(shift);
+        BigWorldCoordinate bnewLocal = bloc - bshift;
+        local = bnewLocal.convert_to<double>();
+        origin += bshift;
     }
+}
 };
 
 #endif
