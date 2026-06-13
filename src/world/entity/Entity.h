@@ -213,6 +213,11 @@ virtual void storeAbsolutePosition(const BigWorldCoordinate& bx,
 virtual double getLocalFrameOriginX() const { return 0.0; }
     virtual double getLocalFrameOriginY() const { return 0.0; }
     virtual double getLocalFrameOriginZ() const { return 0.0; }
+
+virtual BigWorldCoordinate getBigAbsX() const { return BigWorldCoordinate(this->x); }
+virtual BigWorldCoordinate getBigAbsY() const { return BigWorldCoordinate(this->y); }
+virtual BigWorldCoordinate getBigAbsZ() const { return BigWorldCoordinate(this->z); }
+
     int airCapacity;
     bool makeStepSound;
     bool wasInWater;
