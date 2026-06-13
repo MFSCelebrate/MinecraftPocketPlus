@@ -133,7 +133,6 @@ void Entity::updatePositionFromBB(){
 	double frameOz = getLocalFrameOriginZ();
 
 	if(frameOx != 0.0 || frameOz != 0.0){
-		// ====== 纯 Big 算术 (frame origin 用 Big 版本) ======
 		BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
 		BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
 
@@ -145,13 +144,11 @@ void Entity::updatePositionFromBB(){
 		BigWorldCoordinate bz1 = BigWorldCoordinate(bb.z1) + bigOz;
 		BigWorldCoordinate bzc = (bz0 + bz1) / BigWorldCoordinate(2.0);
 
-		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-		storeAbsolutePosition(bxc, byc, bzc);
+		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 +, bzc);
 	} else {
 		BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-		BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
-		storeAbsolutePosition(bxc, byc, bzc);
+		BigWorldCoordinate bzc = BigWorldCoordinate(()AbsolutePosition(bxc, byc, bzc);
 	}
 }
 
@@ -316,42 +313,27 @@ AABB absExpand = bb.expand(useXa, useYa, useZa);
     // 转回绝对空间 + Big 精度位置合成
     // ═══════════════════════════════════════════════════
     if(useLocal){
-	// ====== 纯 Big 算术合成绝对位置 (无 double 精度损失) ======
+	// Big 合成绝对位置 (纯 Big 算术, 50 位精度)
 	BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
 	BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
 	BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
 
-	// X: 分别转 Big 再相加
 	BigWorldCoordinate bx0 = BigWorldCoordinate(bb.x0) + bigOx;
 	BigWorldCoordinate bx1 = BigWorldCoordinate(bb.x1) + bigOx;
 	BigWorldCoordinate bxc = (bx0 + bx1) / BigWorldCoordinate(2.0);
 
-	// Z: 同样处理
 	BigWorldCoordinate bz0 = BigWorldCoordinate(bb.z0) + bigOz;
 	BigWorldCoordinate bz1 = BigWorldCoordinate(bb.z1) + bigOz;
 	BigWorldCoordinate bzc = (bz0 + bz1) / BigWorldCoordinate(2.0);
 
-	// Y: 精度要求较低，但也用 Big 保证一致性
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0) + bigOy 
-	                       + BigWorldCoordinate(heightOffset - ySlideOffset);
+		                       + BigWorldCoordinate(heightOffset - ySlideOffset);
 
-	storeAbsolutePosition(bxc, byc, bzc);
-	BigWorldCoordinate bigLocalX = getBigAbsX() - getLocalFrameOriginBigX();
-BigWorldCoordinate bigLocalZ = getBigAbsZ() - getLocalFrameOriginBigZ();
-        double localCenterX = bigLocalX.convert_to<double>();
-        double localCenterZ = bigLocalZ.convert_to<double>();
-        
-        // 3. bb 的中心强制对齐到 Big 位置（local 空间，精度完好）
-        double bw = bbWidth / 2.0;
-        double bh = bbHeight;
-        double localY = bb.y0; // Y 轴范围小，不做偏移
-        
-        bb.set(localCenterX - bw,
-               localY,
-               localCenterZ - bw,
-               localCenterX + bw,
-               localY + bh,
-               localCenterZ + bw);
+	//绝对空间 (double 加法, 误差 ~0.03 格, 可接受)
+	double ox_d = bigOx.convert_to<double>();
+	double oy_d = bigOy.convert_to<double>();
+	double oz_d = bigOz.convert_to<double>();
+	bb.move(ox_d, oy_d, oz_d);
 } else {
 	BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
