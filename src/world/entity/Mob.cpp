@@ -310,11 +310,14 @@ void Mob::tick()
 		}
 	}
 
-	if (lSteps > 0) {
-		float xt = x + (lx - x) / lSteps;
-		float yt = y + (ly - y) / lSteps;
-		float zt = z + (lz - z) / lSteps;
-
+	// Mob::tick()
+if (lSteps > 0){
+    // 🔧 添加：本地玩家自身不走插值（它自己控制移动）
+    if (!this->isLocalPlayer()) {
+        double xt = x + (lx - x) / (double)lSteps;
+        double yt = y + (ly - y) / (double)lSteps;
+        double zt = z + (lz - z) / (double)lSteps;
+        // ... yRot/xRot 插值 ...
 		float yrd = lyr - yRot;
 		while (yrd < -180)
 			yrd += 360;
@@ -323,11 +326,14 @@ void Mob::tick()
 
 		yRot += (yrd) / lSteps;
 		xRot += (lxr - xRot) / lSteps;
-
-		lSteps--;
-		this->setPos(xt, yt, zt);
-		this->setRot(yRot, xRot);
-	}
+		
+        lSteps--;
+        this->setPos(xt, yt, zt);
+        this->setRot(yRot, xRot);
+    } else {
+        lSteps = 0;  // 丢弃本地玩家的插值
+    }
+}
 
 	aiStep();
 
