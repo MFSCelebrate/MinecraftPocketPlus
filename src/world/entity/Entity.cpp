@@ -136,6 +136,9 @@ void Entity::updatePositionFromBB() {
     this->y = bb.y0 + heightOffset - ySlideOffset;
 }
 
+// src/world/entity/Entity.cpp
+// 替换整个函数：
+
 void Entity::move(double xa, double ya, double za) {
     if (noPhysics) {
         bb.move(xa, ya, za);
@@ -149,6 +152,18 @@ void Entity::move(double xa, double ya, double za) {
 
     double xo_ = x;
     double zo_ = z;
+
+    // ═══════════════════════════════════════════════════
+    // 精度保护：计算 local 空间原点偏移
+    // 用 floor 取整到最近基点，避免浮点残余
+    // ═══════════════════════════════════════════════════
+    double ox = getLocalFrameOriginX();
+    double oy = getLocalFrameOriginY();
+    double oz = getLocalFrameOriginZ();
+    bool useLocal = (ox != 0.0 || oy != 0.0 || oz != 0.0);
+
+    // bb 转到 local 空间
+    if (useLocal) bb.move(-ox, -oy, -oz);
 
     if (isStuckInWeb) {
         isStuckInWeb = false;
@@ -168,21 +183,25 @@ void Entity::move(double xa, double ya, double za) {
 
     bool sneaking = onGround && isSneaking();
 
+    // ── sneaking 逻辑：getCubes 需要传绝对坐标 AABB ──
     if (sneaking) {
         float d = 0.05f;
-        while (xa != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, 0)).empty()) {
+        AABB absBB_ = bb; if (useLocal) absBB_.move(ox, oy, oz);
+        while (xa != 0 && level->getCubes(this, absBB_.cloneMove(xa, -1.0, 0)).empty()) {
             if (xa < d && xa >= -d) xa = 0;
             else if (xa > 0) xa -= d;
             else xa += d;
             xaOrg = xa;
         }
-        while (za != 0 && level->getCubes(this, bb.cloneMove(0, -1.0, za)).empty()) {
+        AABB absBB_2 = bb; if (useLocal) absBB_2.move(ox, oy, oz);
+        while (za != 0 && level->getCubes(this, absBB_2.cloneMove(0, -1.0, za)).empty()) {
             if (za < d && za >= -d) za = 0;
             else if (za > 0) za -= d;
             else za += d;
             zaOrg = za;
         }
-        while (xa != 0 && za != 0 && level->getCubes(this, bb.cloneMove(xa, -1.0, za)).empty()) {
+        AABB absBB_3 = bb; if (useLocal) absBB_3.move(ox, oy, oz);
+        while (xa != 0 && za != 0 && level->getCubes(this, absBB_3.cloneMove(xa, -1.0, za)).empty()) {
             if (xa < d && xa >= -d) xa = 0;
             else if (xa > 0) xa -= d;
             else xa += d;
@@ -194,15 +213,23 @@ void Entity::move(double xa, double ya, double za) {
         }
     }
 
-    std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
+    // getCubes：构造绝对坐标 AABB 来查询
+    AABB absExpand = bb.expand(xa, ya, za);
+    if (useLocal) absExpand.move(ox, oy, oz);
+    std::vector<AABB>& aABBs = level->getCubes(this, absExpand);
 
+    // 返回的碰撞盒 shift 到 local
+    if (useLocal) {
+        for (unsigned int i = 0; i < aABBs.size(); i++)
+            aABBs[i].move(-ox, -oy, -oz);
+    }
+
+    // ── 碰撞（local 空间） ──
     for (unsigned int i = 0; i < aABBs.size(); i++)
         ya = aABBs[i].clipYCollide(bb, ya);
     bb.move(0, ya, 0);
 
-    if (!slide && yaOrg != ya) {
-        xa = ya = za = 0;
-    }
+    if (!slide && yaOrg != ya) { xa = ya = za = 0; }
 
     bool og = onGround || (yaOrg != ya && yaOrg < 0);
 
@@ -210,86 +237,74 @@ void Entity::move(double xa, double ya, double za) {
         xa = aABBs[i].clipXCollide(bb, xa);
     bb.move(xa, 0, 0);
 
-    if (!slide && xaOrg != xa) {
-        xa = ya = za = 0;
-    }
+    if (!slide && xaOrg != xa) { xa = ya = za = 0; }
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
         za = aABBs[i].clipZCollide(bb, za);
     bb.move(0, 0, za);
 
-    if (!slide && zaOrg != za) {
-        xa = ya = za = 0;
-    }
+    if (!slide && zaOrg != za) { xa = ya = za = 0; }
 
-    // ── footSize / step-up 逻辑 ──
+    // ── step-up（同 local + 绝对 getCubes） ──
     if (footSize > 0 && og && (ySlideOffset < 0.05f) && ((xaOrg != xa) || (zaOrg != za))) {
-        double xaN = xa;
-        double yaN = ya;
-        double zaN = za;
-        xa = xaOrg;
-        ya = footSize;
-        za = zaOrg;
+        double xaN = xa, yaN = ya, zaN = za;
+        xa = xaOrg; ya = footSize; za = zaOrg;
         AABB normal = bb;
         bb.set(bbOrg);
 
-        std::vector<AABB>& aABBs2 = level->getCubes(this, bb.expand(xa, ya, za));
+        AABB absExpand2 = bb.expand(xa, ya, za);
+        if (useLocal) absExpand2.move(ox, oy, oz);
+        std::vector<AABB>& aABBs2 = level->getCubes(this, absExpand2);
+        if (useLocal) {
+            for (unsigned int i = 0; i < aABBs2.size(); i++)
+                aABBs2[i].move(-ox, -oy, -oz);
+        }
 
         for (unsigned int i = 0; i < aABBs2.size(); i++)
             ya = aABBs2[i].clipYCollide(bb, ya);
         bb.move(0, ya, 0);
-
-        if (!slide && yaOrg != ya) {
-            xa = ya = za = 0;
-        }
+        if (!slide && yaOrg != ya) { xa = ya = za = 0; }
 
         for (unsigned int i = 0; i < aABBs2.size(); i++)
             xa = aABBs2[i].clipXCollide(bb, xa);
         bb.move(xa, 0, 0);
-
-        if (!slide && xaOrg != xa) {
-            xa = ya = za = 0;
-        }
+        if (!slide && xaOrg != xa) { xa = ya = za = 0; }
 
         for (unsigned int i = 0; i < aABBs2.size(); i++)
             za = aABBs2[i].clipZCollide(bb, za);
         bb.move(0, 0, za);
-
-        if (!slide && zaOrg != za) {
-            xa = ya = za = 0;
-        }
+        if (!slide && zaOrg != za) { xa = ya = za = 0; }
 
         if (xaN * xaN + zaN * zaN >= xa * xa + za * za) {
-            xa = xaN;
-            ya = yaN;
-            za = zaN;
+            xa = xaN; ya = yaN; za = zaN;
             bb.set(normal);
         } else {
             ySlideOffset += 0.5f;
         }
     }
 
-    TIMER_POP_PUSH("rest");
-
-    // ═══════════════════════════════════════════════════════════════
-    // 精度保护：用 Big 算术合成最终绝对坐标
-    // bb 在绝对空间，但 bb.x0+x1 在 2^53 距离下会丢精度
-    // 走 Big 路径绕过 double 对消误差
-    // ═══════════════════════════════════════════════════════════════
-    bool useBigPos = needsBigWorldCoord(bb.x0) || needsBigWorldCoord(bb.x1)
-                  || needsBigWorldCoord(bb.z0) || needsBigWorldCoord(bb.z1);
-    if (useBigPos) {
-        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0) + BigWorldCoordinate(bb.x1))
+    // ═══════════════════════════════════════════════════
+    // 转回绝对空间 + Big 精度位置合成
+    // ═══════════════════════════════════════════════════
+    if (useLocal) {
+        // 用 Big 算术安全合成绝对坐标
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + ox)
+                               + BigWorldCoordinate(bb.x1 + ox))
                                / BigWorldCoordinate(2.0);
-        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0) + BigWorldCoordinate(bb.z1))
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + oz)
+                               + BigWorldCoordinate(bb.z1 + oz))
                                / BigWorldCoordinate(2.0);
         this->x = bxc.convert_to<double>();
+        this->y = bb.y0 + oy + heightOffset - ySlideOffset;
         this->z = bzc.convert_to<double>();
+        bb.move(ox, oy, oz);
     } else {
         this->x = (bb.x0 + bb.x1) / 2.0;
+        this->y = bb.y0 + heightOffset - ySlideOffset;
         this->z = (bb.z0 + bb.z1) / 2.0;
     }
-    this->y = bb.y0 + heightOffset - ySlideOffset;
+
+    TIMER_POP_PUSH("rest");
 
     horizontalCollision = (xaOrg != xa) || (zaOrg != za);
     verticalCollision   = (yaOrg != ya);
