@@ -92,11 +92,21 @@ void Entity::resetPos(bool clearMore) {
 }
 
 bool Entity::isInWater() {
-    return level->checkAndHandleWater(bb.grow(0, -0.4f, 0), Material::water, this);
+	int64_t bx = static_cast<int64_t>(getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
+int64_t bz = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
+return level->checkAndHandleWater(
+    AABB((double)bx - bbWidth/2, bb.y0, (double)bz - bbWidth/2,
+         (double)bx + bbWidth/2, bb.y1, (double)bz + bbWidth/2),
+    Material::water);
 }
 
 bool Entity::isInLava() {
-    return level->containsMaterial(bb.grow(-0.1f, -0.4f, -0.1f), Material::lava);
+    int64_t bx = static_cast<int64_t>(getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
+int64_t bz = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
+return level->containsMaterial(
+    AABB((double)bx - bbWidth/2, bb.y0, (double)bz - bbWidth/2,
+         (double)bx + bbWidth/2, bb.y1, (double)bz + bbWidth/2),
+    Material::lava);
 }
 
 bool Entity::isFree(float xa, float ya, float za, float grow) {
@@ -167,10 +177,13 @@ void Entity::move(double xa, double ya, double za) {
     // 精度保护：计算 local 空间原点偏移
     // 用 floor 取整到最近基点，避免浮点残余
     // ═══════════════════════════════════════════════════
-    double ox = getLocalFrameOriginX();
-    double oy = getLocalFrameOriginY();
-    double oz = getLocalFrameOriginZ();
-    bool useLocal = (ox != 0.0 || oy != 0.0 || oz != 0.0);
+    BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
+    BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
+    BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
+    double ox = bigOx.convert_to<double>();  // 仅用于 isInWater 等容错操作
+    double oy = bigOy.convert_to<double>();
+    double oz = bigOz.convert_to<double>();
+    bool useLocal = !bigOx.is_zero() || !bigOy.is_zero() || !bigOz.is_zero();
 
     // bb 转到 local 空间
     if (useLocal) bb.move(-ox, -oy, -oz);
@@ -323,7 +336,22 @@ AABB absExpand = bb.expand(useXa, useYa, useZa);
 	                       + BigWorldCoordinate(heightOffset - ySlideOffset);
 
 	storeAbsolutePosition(bxc, byc, bzc);
-	bb.move(ox, oy, oz);
+	BigWorldCoordinate bigLocalX = m_bigAbsX - getLocalFrameOriginBigX();
+        BigWorldCoordinate bigLocalZ = m_bigAbsZ - getLocalFrameOriginBigZ();
+        double localCenterX = bigLocalX.convert_to<double>();
+        double localCenterZ = bigLocalZ.convert_to<double>();
+        
+        // 3. bb 的中心强制对齐到 Big 位置（local 空间，精度完好）
+        double bw = bbWidth / 2.0;
+        double bh = bbHeight;
+        double localY = bb.y0; // Y 轴范围小，不做偏移
+        
+        bb.set(localCenterX - bw,
+               localY,
+               localCenterZ - bw,
+               localCenterX + bw,
+               localY + bh,
+               localCenterZ + bw);
 } else {
 	BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
