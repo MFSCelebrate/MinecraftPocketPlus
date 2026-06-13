@@ -92,6 +92,10 @@ void setPosBig(const BigWorldCoordinate& bx, const BigWorldCoordinate& by, const
     virtual double getLocalFrameOriginY() const override { return m_origin.originY().convert_to<double>(); }
     virtual double getLocalFrameOriginZ() const override { return m_origin.originZ().convert_to<double>(); }
 
+virtual BigWorldCoordinate getLocalFrameOriginBigX() const override { return m_origin.originX(); }
+virtual BigWorldCoordinate getLocalFrameOriginBigY() const override { return m_origin.originY(); }
+virtual BigWorldCoordinate getLocalFrameOriginBigZ() const override { return m_origin.originZ(); }
+
     void aiStep();
     void updateAi();
 
