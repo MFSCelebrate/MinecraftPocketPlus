@@ -24,7 +24,7 @@ public:
 	virtual void reset();
 
 	void tick();
-    void move(float xa, float ya, float za);
+    void move(double xa, double ya, double za);
 
 WorldOrigin m_origin;
 const WorldOrigin& getWorldOrigin() const { return m_origin; }
