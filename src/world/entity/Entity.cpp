@@ -170,12 +170,16 @@ void Entity::move(double xa, double ya, double za) {
 	TIMER_PUSH("move");
 
 	double xo_ = x;
-	double zo_ = z;
+double zo_ = z;
 
 	// ====== 从 Big 绝对位置直接重建 local bb (免疫 origin 切换) ======
 	BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
 	BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
 	BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
+
+	double ox = bigOx.convert_to<double>();
+double oy = bigOy.convert_to<double>();
+double oz = bigOz.convert_to<double>();
 
 	BigWorldCoordinate bigLocalX = getBigAbsX() - bigOx;
 	BigWorldCoordinate bigLocalY = getBigAbsY() - bigOy;
@@ -195,7 +199,21 @@ void Entity::move(double xa, double ya, double za) {
 	bool useLocal = !bigOx.is_zero() || !bigOy.is_zero() || !bigOz.is_zero();
 
     // bb 转到 local 空间
-    if (useLocal) bb.move(-ox, -oy, -oz);
+    if (useLocal) {
+	// 先做一次增量移动（供后续 absExpand 参考）
+	bb.move(-ox, -oy, -oz);
+
+	// 再直接重建 local bb（修复 origin 切换时的撕裂）
+	BigWorldCoordinate bigLocalX = getBigAbsX() - bigOx;
+	BigWorldCoordinate bigLocalZ = getBigAbsZ() - bigOz;
+	double localCenterX = bigLocalX.convert_to<double>();
+	double localCenterZ = bigLocalZ.convert_to<double>();
+	double bw = bbWidth / 2.0;
+	double bh = bbHeight;
+	double yBase = bb.y0; // Y 轴保持不变
+	bb.set(localCenterX - bw, yBase, localCenterZ - bw,
+	       localCenterX + bw, yBase + bh, localCenterZ + bw);
+	}
 
     if (isStuckInWeb) {
         isStuckInWeb = false;
