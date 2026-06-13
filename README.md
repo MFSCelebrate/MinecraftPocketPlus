@@ -52,7 +52,7 @@
 | 7 | `depthNoise` | 2D | 16 | 1/200 | ~43M |
 | 8 | `forestNoise` | 2D | 8 | 0.5 | ~4.29e9 |
 
-> 选择器 32 位溢出 ≈ 10 亿格 = 经典条纹之地（Far Lands）  
+> 选择器 32 位溢出 ≈ 10 亿格 = 经典遥远之地（Farther Lands）  
 > Double 精度条纹在 2^53 ≈ 9e15（已用 WorldOrigin 动态原点修复）
 
 ### WorldOrigin 自动切换系统
