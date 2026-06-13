@@ -136,7 +136,46 @@ public:
 virtual BigWorldCoordinate getBigAbsX() const { return BigWorldCoordinate(this->x); }
 virtual BigWorldCoordinate getBigAbsY() const { return BigWorldCoordinate(this->y); }
 virtual BigWorldCoordinate getBigAbsZ() const { return BigWorldCoordinate(this->z); }
+// ====== Big 速度 (真无限精度) ======
+    BigWorldCoordinate m_bigVx{0};
+    BigWorldCoordinate m_bigVy{0};
+    BigWorldCoordinate m_bigVz{0};
 
+    /// 统一的速度设置入口 — 所有改 velocity 的地方都应走此函数
+    virtual void setVelocity(const BigWorldCoordinate& vx,
+                             const BigWorldCoordinate& vy,
+                             const BigWorldCoordinate& vz) {
+        m_bigVx = vx;
+        m_bigVy = vy;
+        m_bigVz = vz;
+        this->xd = vx.convert_to<double>();
+        this->yd = vy.convert_to<double>();
+        this->zd = vz.convert_to<double>();
+    }
+
+    /// 设置 X 分速度 (链式清零常用)
+    virtual void setVelocityX(const BigWorldCoordinate& vx) {
+        m_bigVx = vx;
+        this->xd = vx.convert_to<double>();
+    }
+
+    /// 设置 Y 分速度
+    virtual void setVelocityY(const BigWorldCoordinate& vy) {
+        m_bigVy = vy;
+        this->yd = vy.convert_to<double>();
+    }
+
+    /// 设置 Z 分速度
+    virtual void setVelocityZ(const BigWorldCoordinate& vz) {
+        m_bigVz = vz;
+        this->zd = vz.convert_to<double>();
+    }
+
+    /// 乘以摩擦系数 (Big 精确)
+    void scaleVelocity(double friction) {
+        BigWorldCoordinate bf(friction);
+        setVelocity(m_bigVx * bf, m_bigVy * bf, m_bigVz * bf);
+    }
 
 protected:
     virtual void setRot(float yRot, float xRot);
