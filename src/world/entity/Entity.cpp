@@ -97,7 +97,7 @@ int64_t bz = static_cast<int64_t>(getBigAbsZ().convert_to<BigWorldCoordinate_Int
 return level->checkAndHandleWater(
     AABB((double)bx - bbWidth/2, bb.y0, (double)bz - bbWidth/2,
          (double)bx + bbWidth/2, bb.y1, (double)bz + bbWidth/2),
-    Material::water);
+    Material::water, this);
 }
 
 bool Entity::isInLava() {
@@ -336,8 +336,8 @@ AABB absExpand = bb.expand(useXa, useYa, useZa);
 	                       + BigWorldCoordinate(heightOffset - ySlideOffset);
 
 	storeAbsolutePosition(bxc, byc, bzc);
-	BigWorldCoordinate bigLocalX = m_bigAbsX - getLocalFrameOriginBigX();
-        BigWorldCoordinate bigLocalZ = m_bigAbsZ - getLocalFrameOriginBigZ();
+	BigWorldCoordinate bigLocalX = getBigAbsX() - getLocalFrameOriginBigX();
+BigWorldCoordinate bigLocalZ = getBigAbsZ() - getLocalFrameOriginBigZ();
         double localCenterX = bigLocalX.convert_to<double>();
         double localCenterZ = bigLocalZ.convert_to<double>();
         
