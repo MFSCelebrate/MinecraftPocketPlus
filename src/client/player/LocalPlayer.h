@@ -108,6 +108,8 @@ virtual BigWorldCoordinate getLocalFrameOriginBigX() const override { return m_o
 virtual BigWorldCoordinate getLocalFrameOriginBigY() const override { return m_origin.originY(); }
 virtual BigWorldCoordinate getLocalFrameOriginBigZ() const override { return m_origin.originZ(); }
 
+virtual bool isLocalPlayer() const override { return true; }
+
     void aiStep();
     void updateAi();
 
