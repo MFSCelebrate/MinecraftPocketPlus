@@ -116,36 +116,38 @@ bool Entity::isFree(float xa, float ya, float za) {
 // src/world/entity/Entity.cpp
 // 加在 Entity::move() 之前
 
-void Entity::updatePositionFromBB() {
+void Entity::updatePositionFromBB(){
     double frameOx = getLocalFrameOriginX();
     double frameOz = getLocalFrameOriginZ();
 
-    if (frameOx != 0.0 || frameOz != 0.0) {
-        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx)
-                               + BigWorldCoordinate(bb.x1 + frameOx))
+    if(frameOx != 0.0 || frameOz != 0.0){
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0+frameOx) 
+                               + BigWorldCoordinate(bb.x1+frameOx)) 
                                / BigWorldCoordinate(2.0);
-        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz)
-                               + BigWorldCoordinate(bb.z1 + frameOz))
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0+frameOz) 
+                               + BigWorldCoordinate(bb.z1+frameOz)) 
                                / BigWorldCoordinate(2.0);
-        this->x = bxc.convert_to<double>();
-        this->z = bzc.convert_to<double>();
+        BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+        storeAbsolutePosition(bxc, byc, bzc);
     } else {
-        this->x = (bb.x0 + bb.x1) / 2.0;
-        this->z = (bb.z0 + bb.z1) / 2.0;
+        BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+        BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+        BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+        storeAbsolutePosition(bxc, byc, bzc);
     }
-    this->y = bb.y0 + heightOffset - ySlideOffset;
 }
 
 // src/world/entity/Entity.cpp
 // 替换整个函数：
 
 void Entity::move(double xa, double ya, double za) {
-    if (noPhysics) {
-        bb.move(xa, ya, za);
-        this->x = (bb.x0 + bb.x1) / 2.0;
-        this->y = bb.y0 + heightOffset - ySlideOffset;
-        this->z = (bb.z0 + bb.z1) / 2.0;
-        return;
+    if(noPhysics){
+    bb.move(xa, ya, za);
+    BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+    BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+    storeAbsolutePosition(bxc, byc, bzc);
+    return;
     }
 
     TIMER_PUSH("move");
@@ -286,24 +288,23 @@ void Entity::move(double xa, double ya, double za) {
     // ═══════════════════════════════════════════════════
     // 转回绝对空间 + Big 精度位置合成
     // ═══════════════════════════════════════════════════
-    if (useLocal) {
-        // 用 Big 算术安全合成绝对坐标
-        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + ox)
-                               + BigWorldCoordinate(bb.x1 + ox))
-                               / BigWorldCoordinate(2.0);
-        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + oz)
-                               + BigWorldCoordinate(bb.z1 + oz))
-                               / BigWorldCoordinate(2.0);
-        this->x = bxc.convert_to<double>();
-        this->y = bb.y0 + oy + heightOffset - ySlideOffset;
-        this->z = bzc.convert_to<double>();
-        bb.move(ox, oy, oz);
-    } else {
-        this->x = (bb.x0 + bb.x1) / 2.0;
-        this->y = bb.y0 + heightOffset - ySlideOffset;
-        this->z = (bb.z0 + bb.z1) / 2.0;
+    if(useLocal){
+    BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0+ox)
+                           + BigWorldCoordinate(bb.x1+ox))
+                           / BigWorldCoordinate(2.0);
+    BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0+oz)
+                           + BigWorldCoordinate(bb.z1+oz))
+                           / BigWorldCoordinate(2.0);
+    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + oy + heightOffset - ySlideOffset);
+    storeAbsolutePosition(bxc, byc, bzc);  // ← 替换原来的 this->x = ...; this->y = ...; this->z = ...;
+    bb.move(ox, oy, oz);
+} else {
+    BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+    BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+    storeAbsolutePosition(bxc, byc, bzc);  // ← 替换原来的 this->x = ...; this->y = ...; this->z = ...;
     }
-
+    
     TIMER_POP_PUSH("rest");
 
     horizontalCollision = (xaOrg != xa) || (zaOrg != za);
