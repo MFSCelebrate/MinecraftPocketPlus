@@ -550,8 +550,10 @@ void Entity::moveRelative(float xa, float za, float speed) {
     xa *= dist; za *= dist;
     float sin_ = (float)sin(yRot * Mth::PI / 180);
     float cos_ = (float)cos(yRot * Mth::PI / 180);
-    xd += xa * cos_ - za * sin_;
-    zd += za * cos_ + xa * sin_;
+    BigWorldCoordinate bxa(xa), bza(za);
+BigWorldCoordinate bcos(cos_), bsin(sin_);
+setVelocityX(m_bigVx + bxa * bcos - bza * bsin);
+setVelocityZ(m_bigVz + bza * bcos + bxa * bsin);
 }
 
 void Entity::setLevel(Level* level) { this->level = level; }
