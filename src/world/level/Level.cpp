@@ -1287,9 +1287,9 @@ void Level::tick(Entity* e, bool actual) {
 	if (e->xRot != e->xRot) e->xRot = e->xRotO;
 	if (e->yRot != e->yRot) e->yRot = e->yRotO;
 
-    int xcn = Mth::floor(e->x / 16.0f);
-    int ycn = Mth::floor(e->y / 16.0f);
-    int zcn = Mth::floor(e->z / 16.0f);
+    int xcn = (int)Mth::floor(e->getBigX().convert_to<double>() / 16.0);
+    int ycn = (int)Mth::floor(e->getBigY().convert_to<double>() / 16.0);
+    int zcn = (int)Mth::floor(e->getBigZ().convert_to<double>() / 16.0);
 
     if (!e->inChunk || (e->xChunk != xcn || e->yChunk != ycn || e->zChunk != zcn)) {
         if (e->inChunk && hasChunk(e->xChunk, e->zChunk)) {
