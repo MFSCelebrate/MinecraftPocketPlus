@@ -159,30 +159,40 @@ void Entity::updatePositionFromBB(){
 
 void Entity::move(double xa, double ya, double za) {
     if(noPhysics){
-    bb.move(xa, ya, za);
-    BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
-    BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-    BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
-    storeAbsolutePosition(bxc, byc, bzc);
-    return;
-    }
-    
-    TIMER_PUSH("move");
+		bb.move(xa, ya, za);
+		BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+		BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+		storeAbsolutePosition(bxc, byc, bzc);
+		return;
+	}
 
-    double xo_ = x;
-    double zo_ = z;
+	TIMER_PUSH("move");
 
-    // ═══════════════════════════════════════════════════
-    // 精度保护：计算 local 空间原点偏移
-    // 用 floor 取整到最近基点，避免浮点残余
-    // ═══════════════════════════════════════════════════
-    BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
-    BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
-    BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
-    double ox = bigOx.convert_to<double>();  // 仅用于 isInWater 等容错操作
-    double oy = bigOy.convert_to<double>();
-    double oz = bigOz.convert_to<double>();
-    bool useLocal = !bigOx.is_zero() || !bigOy.is_zero() || !bigOz.is_zero();
+	double xo_ = x;
+	double zo_ = z;
+
+	// ====== 从 Big 绝对位置直接重建 local bb (免疫 origin 切换) ======
+	BigWorldCoordinate bigOx = getLocalFrameOriginBigX();
+	BigWorldCoordinate bigOy = getLocalFrameOriginBigY();
+	BigWorldCoordinate bigOz = getLocalFrameOriginBigZ();
+
+	BigWorldCoordinate bigLocalX = getBigAbsX() - bigOx;
+	BigWorldCoordinate bigLocalY = getBigAbsY() - bigOy;
+	BigWorldCoordinate bigLocalZ = getBigAbsZ() - bigOz;
+
+	double localCenterX = bigLocalX.convert_to<double>();
+	double localCenterY = bigLocalY.convert_to<double>();
+	double localCenterZ = bigLocalZ.convert_to<double>();
+
+	double bw = bbWidth / 2.0;
+	double bh = bbHeight;
+	double yBase = localCenterY - heightOffset + ySlideOffset;
+
+	bb.set(localCenterX - bw, yBase, localCenterZ - bw,
+	       localCenterX + bw, yBase + bh, localCenterZ + bw);
+
+	bool useLocal = !bigOx.is_zero() || !bigOy.is_zero() || !bigOz.is_zero();
 
     // bb 转到 local 空间
     if (useLocal) bb.move(-ox, -oy, -oz);
