@@ -71,10 +71,12 @@ Entity::~Entity() {}
 SynchedEntityData* Entity::getEntityData() { return NULL; }
 const SynchedEntityData* Entity::getEntityData() const { return NULL; }
 
-bool Entity::isInWall() {
-    int64_t xt = Mth::floor64(x);
+bool Entity::isInWall(){
+    int64_t xt = static_cast<int64_t>(
+        getBigAbsX().convert_to<BigWorldCoordinate_Integer>());
     int64_t yt = Mth::floor64(y + getHeadHeight());
-    int64_t zt = Mth::floor64(z);
+    int64_t zt = static_cast<int64_t>(
+        getBigAbsZ().convert_to<BigWorldCoordinate_Integer>());
     return level->isSolidBlockingTile(xt, yt, zt);
 }
 
@@ -117,24 +119,24 @@ bool Entity::isFree(float xa, float ya, float za) {
 // 加在 Entity::move() 之前
 
 void Entity::updatePositionFromBB(){
-    double frameOx = getLocalFrameOriginX();
-    double frameOz = getLocalFrameOriginZ();
+	double frameOx = getLocalFrameOriginX();
+	double frameOz = getLocalFrameOriginZ();
 
-    if(frameOx != 0.0 || frameOz != 0.0){
-        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0+frameOx) 
-                               + BigWorldCoordinate(bb.x1+frameOx)) 
-                               / BigWorldCoordinate(2.0);
-        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0+frameOz) 
-                               + BigWorldCoordinate(bb.z1+frameOz)) 
-                               / BigWorldCoordinate(2.0);
-        BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-        storeAbsolutePosition(bxc, byc, bzc);
-    } else {
-        BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
-        BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
-        BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
-        storeAbsolutePosition(bxc, byc, bzc);
-    }
+	if(frameOx != 0.0 || frameOz != 0.0){
+		BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx) 
+			+ BigWorldCoordinate(bb.x1 + frameOx)) 
+			/ BigWorldCoordinate(2.0);
+		BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz) 
+			+ BigWorldCoordinate(bb.z1 + frameOz)) 
+			/ BigWorldCoordinate(2.0);
+		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+		storeAbsolutePosition(bxc, byc, bzc);
+	} else {
+		BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
+		BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
+		BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
+		storeAbsolutePosition(bxc, byc, bzc);
+	}
 }
 
 // src/world/entity/Entity.cpp
@@ -149,7 +151,7 @@ void Entity::move(double xa, double ya, double za) {
     storeAbsolutePosition(bxc, byc, bzc);
     return;
     }
-
+    
     TIMER_PUSH("move");
 
     double xo_ = x;
@@ -296,14 +298,14 @@ void Entity::move(double xa, double ya, double za) {
                            + BigWorldCoordinate(bb.z1+oz))
                            / BigWorldCoordinate(2.0);
     BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + oy + heightOffset - ySlideOffset);
-    storeAbsolutePosition(bxc, byc, bzc);  // ← 替换原来的 this->x = ...; this->y = ...; this->z = ...;
+    storeAbsolutePosition(bxc, byc, bzc);
     bb.move(ox, oy, oz);
 } else {
     BigWorldCoordinate bxc = BigWorldCoordinate((bb.x0 + bb.x1) / 2.0);
     BigWorldCoordinate byc = BigWorldCoordinate(bb.y0 + heightOffset - ySlideOffset);
     BigWorldCoordinate bzc = BigWorldCoordinate((bb.z0 + bb.z1) / 2.0);
-    storeAbsolutePosition(bxc, byc, bzc);  // ← 替换原来的 this->x = ...; this->y = ...; this->z = ...;
-    }
+    storeAbsolutePosition(bxc, byc, bzc);
+}
     
     TIMER_POP_PUSH("rest");
 
@@ -336,14 +338,21 @@ void Entity::move(double xa, double ya, double za) {
         }
     }
 
-    int64_t x0 = Mth::floor64(bb.x0);
-    int64_t y0 = Mth::floor64(bb.y0);
-    int64_t z0 = Mth::floor64(bb.z0);
-    int64_t x1 = Mth::floor64(bb.x1);
-    int64_t y1 = Mth::floor64(bb.y1);
-    int64_t z1 = Mth::floor64(bb.z1);
+    // 用 BigWorldCoordinate_Integer 精确 floor XZ 坐标
+BigWorldCoordinate_Integer bx0 = static_cast<BigWorldCoordinate_Integer>(
+    getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) - 1;
+BigWorldCoordinate_Integer bx1 = bx0 + 2;
+BigWorldCoordinate_Integer bz0 = static_cast<BigWorldCoordinate_Integer>(
+    getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) - 1;
+BigWorldCoordinate_Integer bz1 = bz0 + 2;
+int64_t x0 = static_cast<int64_t>(bx0);
+int64_t x1 = static_cast<int64_t>(bx1);
+int64_t z0 = static_cast<int64_t>(bz0);
+int64_t z1 = static_cast<int64_t>(bz1);
+int64_t y0 = Mth::floor64(bb.y0);
+int64_t y1 = Mth::floor64(bb.y1);
 
-    if (level->hasChunksAt(x0, y0, z0, x1, y1, z1)) {
+if(level->hasChunksAt(x0, y0, z0, x1, y1, z1)){
         for (int64_t tx = x0; tx <= x1; tx++)
             for (int64_t ty = y0; ty <= y1; ty++)
                 for (int64_t tz = z0; tz <= z1; tz++) {
