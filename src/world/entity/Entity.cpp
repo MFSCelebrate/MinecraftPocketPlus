@@ -147,24 +147,6 @@ void Entity::move(double xa, double ya, double za) {
 
     TIMER_PUSH("move");
 
-    // ═══════════════════════════════════════════════════════════
-    // 精度保护：获取 local 空间原点偏移
-    // 子类 (LocalPlayer) 覆写 getLocalFrameOrigin*() 返回原点
-    // 普通 Entity 返回 0，走原始路径
-    // ═══════════════════════════════════════════════════════════
-    double frameOx = getLocalFrameOriginX();
-    double frameOy = getLocalFrameOriginY();
-    double frameOz = getLocalFrameOriginZ();
-    bool useLocalFrame = (frameOx != 0.0 || frameOy != 0.0 || frameOz != 0.0);
-
-    if (useLocalFrame) {
-        // 切换到 local 坐标空间 — double 精度丝般顺滑
-        x  -= frameOx;  y  -= frameOy;  z  -= frameOz;
-        bb.move(-frameOx, -frameOy, -frameOz);
-        xo   -= frameOx;  zo   -= frameOz;
-        xOld -= frameOx;  zOld -= frameOz;
-    }
-
     double xo_ = x;
     double zo_ = z;
 
@@ -212,13 +194,7 @@ void Entity::move(double xa, double ya, double za) {
         }
     }
 
-    // getCubes 返回的 AABB 是绝对坐标，如果我们在 local 空间，
-    // 需要把每个碰撞盒也转成 local
     std::vector<AABB>& aABBs = level->getCubes(this, bb.expand(xa, ya, za));
-    if (useLocalFrame) {
-        for (unsigned int i = 0; i < aABBs.size(); i++)
-            aABBs[i].move(-frameOx, -frameOy, -frameOz);
-    }
 
     for (unsigned int i = 0; i < aABBs.size(); i++)
         ya = aABBs[i].clipYCollide(bb, ya);
@@ -258,10 +234,6 @@ void Entity::move(double xa, double ya, double za) {
         bb.set(bbOrg);
 
         std::vector<AABB>& aABBs2 = level->getCubes(this, bb.expand(xa, ya, za));
-        if (useLocalFrame) {
-            for (unsigned int i = 0; i < aABBs2.size(); i++)
-                aABBs2[i].move(-frameOx, -frameOy, -frameOz);
-        }
 
         for (unsigned int i = 0; i < aABBs2.size(); i++)
             ya = aABBs2[i].clipYCollide(bb, ya);
@@ -299,30 +271,25 @@ void Entity::move(double xa, double ya, double za) {
 
     TIMER_POP_PUSH("rest");
 
-    // ═══════════════════════════════════════════════════════════
-    // 从 bb 重建坐标，在 local 空间用 Big 精度合成
-    // ═══════════════════════════════════════════════════════════
-    if (useLocalFrame) {
-        // 用 Big 算术从 bb 合成绝对 x, z（绕过 double 对消误差）
-        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0 + frameOx)
-                               + BigWorldCoordinate(bb.x1 + frameOx))
+    // ═══════════════════════════════════════════════════════════════
+    // 精度保护：用 Big 算术合成最终绝对坐标
+    // bb 在绝对空间，但 bb.x0+x1 在 2^53 距离下会丢精度
+    // 走 Big 路径绕过 double 对消误差
+    // ═══════════════════════════════════════════════════════════════
+    bool useBigPos = needsBigWorldCoord(bb.x0) || needsBigWorldCoord(bb.x1)
+                  || needsBigWorldCoord(bb.z0) || needsBigWorldCoord(bb.z1);
+    if (useBigPos) {
+        BigWorldCoordinate bxc = (BigWorldCoordinate(bb.x0) + BigWorldCoordinate(bb.x1))
                                / BigWorldCoordinate(2.0);
-        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0 + frameOz)
-                               + BigWorldCoordinate(bb.z1 + frameOz))
+        BigWorldCoordinate bzc = (BigWorldCoordinate(bb.z0) + BigWorldCoordinate(bb.z1))
                                / BigWorldCoordinate(2.0);
         this->x = bxc.convert_to<double>();
-        this->y = bb.y0 + frameOy + heightOffset - ySlideOffset;
         this->z = bzc.convert_to<double>();
-
-        // 把 bb 也转回绝对坐标
-        bb.move(frameOx, frameOy, frameOz);
-        xo_ += frameOx;
-        zo_ += frameOz;
     } else {
         this->x = (bb.x0 + bb.x1) / 2.0;
-        this->y = bb.y0 + heightOffset - ySlideOffset;
         this->z = (bb.z0 + bb.z1) / 2.0;
     }
+    this->y = bb.y0 + heightOffset - ySlideOffset;
 
     horizontalCollision = (xaOrg != xa) || (zaOrg != za);
     verticalCollision   = (yaOrg != ya);
@@ -386,6 +353,7 @@ void Entity::move(double xa, double ya, double za) {
 
     TIMER_POP();
 }
+
 void Entity::makeStuckInWeb() {
     isStuckInWeb = true;
     fallDistance = 0;
