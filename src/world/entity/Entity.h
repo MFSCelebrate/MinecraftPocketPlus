@@ -199,6 +199,7 @@ public:
     bool reallyRemoveIfPlayer;
 
 protected:
+    void updatePositionFromBB();
     static Random sharedRandom;
     int airCapacity;
     bool makeStepSound;
