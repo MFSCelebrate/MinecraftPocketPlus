@@ -126,6 +126,17 @@ public:
     virtual bool isHangingEntity();
 
     virtual int getAuxData();
+    virtual void storeAbsolutePosition(const BigWorldCoordinate& bx, 
+                                    const BigWorldCoordinate& by, 
+                                    const BigWorldCoordinate& bz) {
+    this->x = bx.convert_to<double>();
+    this->y = by.convert_to<double>();
+    this->z = bz.convert_to<double>();
+}
+virtual BigWorldCoordinate getBigAbsX() const { return BigWorldCoordinate(this->x); }
+virtual BigWorldCoordinate getBigAbsY() const { return BigWorldCoordinate(this->y); }
+virtual BigWorldCoordinate getBigAbsZ() const { return BigWorldCoordinate(this->z); }
+
 
 protected:
     virtual void setRot(float yRot, float xRot);
@@ -202,21 +213,11 @@ public:
 
 protected:
     virtual void updatePositionFromBB();
-virtual void storeAbsolutePosition(const BigWorldCoordinate& bx, 
-                                    const BigWorldCoordinate& by, 
-                                    const BigWorldCoordinate& bz) {
-    this->x = bx.convert_to<double>();
-    this->y = by.convert_to<double>();
-    this->z = bz.convert_to<double>();
-}
+
     static Random sharedRandom;
 virtual double getLocalFrameOriginX() const { return 0.0; }
     virtual double getLocalFrameOriginY() const { return 0.0; }
     virtual double getLocalFrameOriginZ() const { return 0.0; }
-
-virtual BigWorldCoordinate getBigAbsX() const { return BigWorldCoordinate(this->x); }
-virtual BigWorldCoordinate getBigAbsY() const { return BigWorldCoordinate(this->y); }
-virtual BigWorldCoordinate getBigAbsZ() const { return BigWorldCoordinate(this->z); }
 
     int airCapacity;
     bool makeStepSound;
