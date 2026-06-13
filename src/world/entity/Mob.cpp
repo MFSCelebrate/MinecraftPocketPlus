@@ -603,9 +603,7 @@ void Mob::travel( float xa, float ya )
 		moveRelative(xa, ya, 0.02f);
 		move(xd, yd, zd);
 
-		xd *= 0.80f;
-		yd *= 0.80f;
-		zd *= 0.80f;
+		scaleVelocity(0.80);
 		yd -= 0.02f;
 
 		if (horizontalCollision && isFree(xd, yd + 0.6f - y + yo, zd)) {
@@ -615,9 +613,7 @@ void Mob::travel( float xa, float ya )
 		float yo = y;
 		moveRelative(xa, ya, 0.02f);
 		move(xd, yd, zd);
-		xd *= 0.50f;
-		yd *= 0.50f;
-		zd *= 0.50f;
+		scaleVelocity(0.50);
 		yd -= 0.02f;
 
 		if (horizontalCollision && isFree(xd, yd + 0.6f - y + yo, zd)) {
@@ -661,9 +657,9 @@ int t = level->getTile(bigX, Mth::floor(bb.y0 - 0.5f), bigZ);
 		}
 
 		yd -= 0.08f;
-		yd *= 0.98f;
-		xd *= friction;
-		zd *= friction;
+		scaleVelocity(friction);
+// Y 阻尼单独处理:
+setVelocityY(m_bigVy * BigWorldCoordinate(0.98));
 	}
 
 }
