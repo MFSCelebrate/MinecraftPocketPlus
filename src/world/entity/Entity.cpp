@@ -6,6 +6,7 @@
 #include "../item/ItemInstance.h"
 #include "../../nbt/CompoundTag.h"
 #include "../../util/PerfTimer.h"
+#include "../../util/WorldCoordinate.h"
 
 int Entity::entityCounter = 0;
 Random Entity::sharedRandom(getEpochTimeS());
