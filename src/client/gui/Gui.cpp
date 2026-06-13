@@ -789,6 +789,13 @@ std::string pxoBigStr, pyoBigStr, pzoBigStr;
     double pz = p->z;
     posTranslator.to(px, py, pz);
 
+	BigWorldCoordinate bigPX = p->getBigAbsX();
+BigWorldCoordinate bigPY = p->getBigAbsY();
+BigWorldCoordinate bigPZ = p->getBigAbsZ();
+std::string bigPXStr = worldCoordBigToString(bigPX);
+std::string bigPYStr = worldCoordBigToString(bigPY);
+std::string bigPZStr = worldCoordBigToString(bigPZ);
+
     RandomLevelSource* rls = nullptr;
 if (lvl && lvl->getChunkSource()) {
     ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
@@ -952,8 +959,10 @@ if (rls) {
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
-    sprintf(ln[4], "XYZ: %.3f / %.5f / %.3f", px, py, pz);
-
+    snprintf(ln[4], sizeof(ln[4]),
+         "XYZ: %.3f / %.5f / %.3f [BigWorldCoordinate: %s / %s / %s]",
+         px, py, pz,
+         bigPXStr.c_str(), bigPYStr.c_str(), bigPZStr.c_str());
     // 🔥 X/Y/Z(World) — 阈值分支显示
     if (showBig) {
         snprintf(ln[5], sizeof(ln[5]), "X(World/BigWorldCoordinate): %s", pxoBigStr.c_str());
