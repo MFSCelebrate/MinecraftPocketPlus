@@ -751,6 +751,7 @@ void LocalPlayer::_init() {
 	descending	= false;
 	sentX = sentY = sentZ = 0.0;
     sentRotX = sentRotY = 0.0f;
+	autoSendPosRot = false;  // 🔧 本地玩家不发送网络位置包
 
 	ItemInstance* item = inventory->getSelected();
 	sentInventoryItemId = item? item->id : 0;
