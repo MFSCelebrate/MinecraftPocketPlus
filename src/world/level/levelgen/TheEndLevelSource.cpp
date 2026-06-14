@@ -183,15 +183,26 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
 // ========== ChunkSource interface ==========
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
-    // 🔧 自己分配 blocks，用第二个构造函数
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    LevelChunk* chunk = new LevelChunk(level, blocks, x, z);
+    LevelChunk* chunk = new LevelChunk( blocks, x, z);
     
     prepareHeights(x, z, blocks);
-    chunk->recalcHeightmap();
+    
+    // 🔧 不调 recalcHeightmap（会触发 lightGaps → 无限递归）
+    // 末地没有光照系统，直接填 heightmap 为 0（虚空）
+    memset(chunk->heightmap, 0, CHUNK_COLUMNS);
+    
+    // 可选：如果有陆地，遍历填一下 heightmap
+    for (int bx = 0; bx < 16; bx++)
+        for (int bz = 0; bz < 16; bz++)
+            for (int by = 127; by >= 0; by--)
+                if (blocks[(bx << 11) | (bz << 7) | by] == Tile::endStone->id) {
+                    chunk->heightmap[bx + bz * 16] = (char)by;
+                    break;
+                }
+    
     return chunk;
 }
-
 LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
     int64_t key = (x << 32) ^ (z & 0xffffffff);
     auto it = chunkMap.find(key);
