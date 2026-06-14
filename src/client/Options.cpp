@@ -94,6 +94,7 @@ OptionInt keyMenuCancel("key.menu.cancel", 8);
 OptionBool firstLaunch("firstLaunch", true);
 OptionString worldScaleY("world_scale_y", "1.0");
 OptionString worldOffsetY("world_offset_y", "0");
+static OptionBool endGenerator("end_generator", false);
 
 OptionString lastIp("lastip");
 
@@ -200,6 +201,7 @@ void Options::initTable() {
 	m_options[OPTIONS_DISABLE_SKYGRID] = &disableSkygrid;
 	m_options[OPTIONS_WORLD_SCALE_Y] = &worldScaleY;
     m_options[OPTIONS_WORLD_OFFSET_Y] = &worldOffsetY;
+	m_options[OPTIONS_END_GENERATOR] = &endGenerator;
 }
 
 void Options::set(OptionId key, const std::string& value) {
