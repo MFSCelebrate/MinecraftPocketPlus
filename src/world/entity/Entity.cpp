@@ -357,6 +357,8 @@ AABB absExpand = bb.expand(useXa, useYa, useZa);
 	BigWorldCoordinate byc = BigWorldCoordinate(bb.y0) + bigOy 
 		                       + BigWorldCoordinate(heightOffset - ySlideOffset);
 
+	storeAbsolutePosition(bxc, byc, bzc);  // ← 🔧 就这一行
+
 	// useLocal 分支末尾：
 double ox_d = bigOx.convert_to<double>();
 double oy_d = bigOy.convert_to<double>();
