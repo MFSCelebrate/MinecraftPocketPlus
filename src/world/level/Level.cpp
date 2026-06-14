@@ -28,6 +28,7 @@
 #include "../inventory/BaseContainerMenu.h"
 #include "../Difficulty.h"
 #include "../../network/packet/ExplodePacket.h"
+#include "levelgen/TheEndLevelSource.h"
 
 Level::Level(LevelStorage* levelStorage, const std::string& levelName, const LevelSettings& settings, int generatorVersion, Dimension* fixedDimension /* = NULL */)
 :	levelStorage(levelStorage),
@@ -109,16 +110,28 @@ void Level::_init(const std::string& levelName, const LevelSettings& settings, i
 }
 
 /*protected*/
-ChunkSource* Level::createChunkSource() {
-	if (!levelStorage) {
-		printf("no level data, calling dimension->createRandomLevelSource\n");
-		return dimension->createRandomLevelSource();
-	}
+ChunkSource* Level::createChunkSource(){
+#ifndef STANDALONE_SERVER
+    bool useEnd = Minecraft::instance &&
+        Minecraft::instance->options.getBooleanValue(OPTIONS_END_GENERATOR);
+#else
+    bool useEnd = false;
+#endif
 
-	ChunkStorage* chunkStorage = levelStorage->createChunkStorage(dimension);
-	return new ChunkCache(this, chunkStorage, dimension->createRandomLevelSource());
+    if(!levelStorage){
+        if(useEnd) return new TheEndLevelSource(this, levelData.getSeed());
+        return dimension->createRandomLevelSource();
+    }
+
+    ChunkStorage* chunkStorage = levelStorage->createChunkStorage(dimension);
+    
+    if(useEnd){
+        TheEndLevelSource* endSource = new TheEndLevelSource(this, levelData.getSeed());
+        return new ChunkCache(this, chunkStorage, endSource);
+    }
+    
+    return new ChunkCache(this, chunkStorage, dimension->createRandomLevelSource());
 }
-
 /*public*/
 bool Level::checkAndHandleWater(const AABB& box, const Material* material, Entity* e) {
     int x0 = Mth::floor(box.x0);
