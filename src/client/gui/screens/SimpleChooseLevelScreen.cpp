@@ -71,12 +71,16 @@ void SimpleChooseLevelScreen::init()
     Options& opts = minecraft->options;
     bool is64 = opts.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
     bool isDouble = opts.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
+	bool isTheEnd = opts.getBooleanValue(OPTIONS_END_GENERATOR);
     if (isDouble) {
         noiseMode = 2;
         bNoiseMode->msg = "Noise mode: Double";
     } else if (is64) {
         noiseMode = 1;
         bNoiseMode->msg = "Noise mode: 64-bit";
+    } else if (isTheEnd) {
+        noiseMode = 3;
+        bNoiseMode->msg = "Noise mode: The End";
     } else {
         noiseMode = 0;
         bNoiseMode->msg = "Noise mode: 32-bit";
@@ -183,10 +187,11 @@ void SimpleChooseLevelScreen::render( int xm, int ym, float a )
     // 噪声模式描述
     const char* noiseDesc = NULL;
     switch (noiseMode) {
-        case 0: noiseDesc = "32-bit int (Default)"; break;
-        case 1: noiseDesc = "64-bit int (64-bit Generation)"; break;
-        case 2: noiseDesc = "Double (Imitate Java Edition)"; break;
-    }
+    case 0: noiseDesc = "32-bit int (Original)"; break;
+    case 1: noiseDesc = "64-bit int (64-bit Generation)"; break;
+    case 2: noiseDesc = "Double (Imitate Java Edition)"; break;
+    case 3: noiseDesc = "End stone islands in the void"; break;  // 🔧 新增
+	}
     if (noiseDesc) {
        drawCenteredString(minecraft->font, noiseDesc, width / 2, bNoiseMode->y + bNoiseMode->height + 20, 0xffcccccc);
 	}
@@ -252,15 +257,15 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
     }
 
     if (button == bNoiseMode) {
-        noiseMode = (noiseMode + 1) % 3;
-        switch (noiseMode) {
-            case 0: bNoiseMode->msg = "Noise mode: 32-bit"; break;
-            case 1: bNoiseMode->msg = "Noise mode: 64-bit"; break;
-            case 2: bNoiseMode->msg = "Noise mode: Double"; break;
-        }
-        return;
+    noiseMode = (noiseMode + 1) % 4;  // 🔧 3 → 4
+    switch (noiseMode) {
+        case 0: bNoiseMode->msg = "Noise mode: 32-bit";  break;
+        case 1: bNoiseMode->msg = "Noise mode: 64-bit";  break;
+        case 2: bNoiseMode->msg = "Noise mode: Double";  break;
+        case 3: bNoiseMode->msg = "Noise mode: The End"; break;  // 🔧 新增
     }
-
+    return;
+	}
     if (button == bCreate && !tLevelName.text.empty()) {
         int seed = getEpochTimeS();
         if (!tSeed.text.empty()) {
@@ -279,6 +284,7 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
         Options& opts = minecraft->options;
         opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
         opts.set(OPTIONS_DOUBLE_FARLANDS, (noiseMode == 2));
+		opts.set(OPTIONS_END_GENERATOR,    (noiseMode == 3));  // 🔧 新增
 
         minecraft->selectLevel(levelId, levelId, settings);
         minecraft->hostMultiplayer();
