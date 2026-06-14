@@ -183,9 +183,9 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
 // ========== ChunkSource interface ==========
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
-    unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    LevelChunk* chunk = new LevelChunk(level, blocks, x, z);
-    
+    LevelChunk* chunk = new LevelChunk(level, x, z);  // 内部自分配 blocks
+    unsigned char* blocks = chunk->getBlockData();
+    if (!blocks) { delete chunk; return nullptr; }
     prepareHeights(x, z, blocks);
     chunk->recalcHeightmap();
     return chunk;
