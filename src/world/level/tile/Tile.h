@@ -167,6 +167,7 @@ public:
     static Tile* obsidian;
     static Tile* torch;
     static FireTile* fire;
+    static Tile* endStone;
     static Tile* mobSpawner;
     static Tile* stairs_wood;
     static Tile* chest;
