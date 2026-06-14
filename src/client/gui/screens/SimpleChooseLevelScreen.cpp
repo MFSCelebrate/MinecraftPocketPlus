@@ -286,6 +286,7 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
     Options& opts = minecraft->options;
     opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
     opts.set(OPTIONS_DOUBLE_FARLANDS,  (noiseMode == 2));
+	opts.set(OPTIONS_END_GENERATOR, (noiseMode == 3));
 
     minecraft->selectLevel(levelId, levelId, settings);
     minecraft->hostMultiplayer();
