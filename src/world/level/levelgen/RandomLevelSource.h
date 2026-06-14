@@ -7,7 +7,7 @@
 #include "synth/PerlinNoise.h"
 #include "../../../SharedConstants.h"
 
-#include "../../util/WorldCoordinate.h"
+#include "../../../util/WorldCoordinate.h"
 
 class Biome;
 class Level;
