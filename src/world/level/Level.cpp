@@ -126,10 +126,9 @@ ChunkSource* Level::createChunkSource(){
 
     ChunkStorage* chunkStorage = levelStorage->createChunkStorage(dimension);
     
-    if(useEnd){
-        TheEndLevelSource* endSource = new TheEndLevelSource(this, levelData.getSeed());
-        return new ChunkCache(this, chunkStorage, endSource);
-    }
+    if (useEnd) {
+    return new TheEndLevelSource(this, levelData.getSeed());
+	}
     
     return new ChunkCache(this, chunkStorage, dimension->createRandomLevelSource());
 }
