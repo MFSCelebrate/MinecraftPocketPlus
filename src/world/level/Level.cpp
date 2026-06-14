@@ -1263,8 +1263,8 @@ void Level::tick(Entity* e) {
 }
 
 void Level::tick(Entity* e, bool actual) {
-    int xc = Mth::floor(e->x);
-    int zc = Mth::floor(e->z);
+    int64_t xc = Mth::floor64(e->x);
+int64_t zc = Mth::floor64(e->z);
     int r = 32;
     if (actual && !hasChunksAt(xc - r, 0, zc - r, xc + r, 128, zc + r)) {
         return;
@@ -1288,11 +1288,11 @@ void Level::tick(Entity* e, bool actual) {
 	if (e->yRot != e->yRot) e->yRot = e->yRotO;
 
     // 用 Big 精确计算区块坐标 (e->getChunkX() 已通过 Entity.h 添加)
-int xcn = (int)(static_cast<int64_t>(
-    e->getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) >> 4);
-int ycn = Mth::floor(e->y / 16.0f);
-int zcn = (int)(static_cast<int64_t>(
-    e->getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) >> 4);
+int64_t xcn = static_cast<int64_t>(
+    e->getBigAbsX().convert_to<BigWorldCoordinate_Integer>()) >> 4;
+int64_t ycn = Mth::floor64(e->y / 16.0);
+int64_t zcn = static_cast<int64_t>(
+    e->getBigAbsZ().convert_to<BigWorldCoordinate_Integer>()) >> 4;
 
     if (!e->inChunk || (e->xChunk != xcn || e->yChunk != ycn || e->zChunk != zcn)) {
         if (e->inChunk && hasChunk(e->xChunk, e->zChunk)) {
