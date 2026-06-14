@@ -14,7 +14,7 @@ namespace GameType {
 class LevelSettings
 {
 public:
-    LevelSettings(long seed, int gameType, bool allowCheats = false)
+    LevelSettings(long seed, int gameType, bool allowCheats = false, bool useEndGenerator = false)
     :   seed(seed),
         gameType(gameType),
         allowCheats(allowCheats),
