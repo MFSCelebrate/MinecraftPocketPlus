@@ -61,7 +61,7 @@ virtual void setPos(double x, double y, double z) override {
     m_bigAbsY = m_origin.originY() + BigWorldCoordinate(y - oy);
     m_bigAbsZ = m_origin.originZ() + BigWorldCoordinate(z - oz);
     
-    // 🔧 关键：teleport 后重新对齐 origin
+    // 🔧 teleport 后重新对齐 origin
     m_origin.tickBig(m_bigAbsX, m_bigAbsY, m_bigAbsZ);
     
     this->x = x; this->y = y; this->z = z;
