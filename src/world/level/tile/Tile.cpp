@@ -22,6 +22,7 @@
 #include "../../item/StoneSlabTileItem.h"
 #include "../../item/SaplingTileItem.h"
 #include "../../item/ItemCategory.h"
+#include "EndStoneTile.h"
 #include "HellSandTile.h"
 
 const int Tile::RENDERLAYER_OPAQUE          = 0;
