@@ -184,7 +184,8 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z); // ← 这行没了
+LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);  // 🔧 补这行
+chunkMap.insert(std::make_pair(hashedPos, levelChunk));
     
     prepareHeights(x, z, blocks);
     
