@@ -28,6 +28,7 @@
 #include "LadderTile.h"
 #include "LeafTile.h"
 #include "LightGemTile.h"
+#include "EndStoneTile.h"
 #include "LiquidTileDynamic.h"
 #include "LiquidTileStatic.h"
 #include "MelonTile.h"
