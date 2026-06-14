@@ -123,12 +123,13 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mcpe-windows
-          path: |
-            ${{github.workspace}}/build/MinecraftPE.exe/16.dll
-            ${{github.workspace}}/build/OpenAL32.dll
-            ${{github.workspace}}/build/libz.dll
-            ${{github.workspace}}/build/data/**
+            name: mcpe-windows
+            path: |
+                /home/runner/work/MCRe-NoiseFarlands/MCRe-NoiseFarlands/build/MinecraftPE.exe
+                /home/runner/work/MCRe-NoiseFarlands/MCRe-NoiseFarlands/build/16.dll
+                /home/runner/work/MCRe-NoiseFarlands/MCRe-NoiseFarlands/build/OpenAL32.dll
+                /home/runner/work/MCRe-NoiseFarlands/MCRe-NoiseFarlands/build/libz.dll
+                /home/runner/work/MCRe-NoiseFarlands/MCRe-NoiseFarlands/build/data/**
 
   build-android:
     name: Build Android (${{ matrix.abi }})
