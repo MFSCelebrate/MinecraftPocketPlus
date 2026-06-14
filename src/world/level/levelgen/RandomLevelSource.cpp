@@ -657,8 +657,8 @@ LevelChunk* RandomLevelSource::create(int64_t x, int64_t z)
     random.setSeed((long)(x * 341872712l + z * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-    LevelChunk* chunk = new LevelChunk(level, blocks, x, z);
-    chunkMap.insert(std::make_pair(hashedPos, levelChunk));
+LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);  // 🔧 补这行
+chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
         double worldBlockX = x * 16.0 + m_worldOffsetX;
     double worldBlockZ = z * 16.0 + m_worldOffsetZ;
