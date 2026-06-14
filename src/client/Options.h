@@ -104,6 +104,7 @@ enum OptionId {
     OPTIONS_DISABLE_SKYGRID,
     OPTIONS_WORLD_SCALE_Y,   // 新增：Y 轴缩放
     OPTIONS_WORLD_OFFSET_Y,  // 新增：Y 轴偏移
+    OPTIONS_END_GENERATOR,
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
