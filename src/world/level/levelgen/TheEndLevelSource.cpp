@@ -183,18 +183,24 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
 // ========== ChunkSource interface ==========
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
-    LevelChunk* chunk = new LevelChunk(level, x, z);  // 内部自分配 blocks
-    unsigned char* blocks = chunk->getBlockData();
-    if (!blocks) { delete chunk; return nullptr; }
+    // 🔧 自己分配 blocks，用第二个构造函数
+    unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
+    LevelChunk* chunk = new LevelChunk(level, blocks, x, z);
+    
     prepareHeights(x, z, blocks);
     chunk->recalcHeightmap();
     return chunk;
 }
 
 LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
-    return create(x, z);
+    int64_t key = (x << 32) ^ (z & 0xffffffff);
+    auto it = chunkMap.find(key);
+    if (it != chunkMap.end()) return it->second;
+    
+    LevelChunk* c = create(x, z);
+    chunkMap[key] = c;
+    return c;
 }
-
 bool TheEndLevelSource::hasChunk(int64_t x, int64_t z) {
     return true;
 }
