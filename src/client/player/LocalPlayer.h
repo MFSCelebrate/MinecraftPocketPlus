@@ -57,10 +57,12 @@ virtual void setPos(double x, double y, double z) override {
     double oy = m_origin.originY().convert_to<double>();
     double oz = m_origin.originZ().convert_to<double>();
     
-    // x ≈ ox + offset，offset 是小数，double 精度高
     m_bigAbsX = m_origin.originX() + BigWorldCoordinate(x - ox);
     m_bigAbsY = m_origin.originY() + BigWorldCoordinate(y - oy);
     m_bigAbsZ = m_origin.originZ() + BigWorldCoordinate(z - oz);
+    
+    // 🔧 关键：teleport 后重新对齐 origin
+    m_origin.tickBig(m_bigAbsX, m_bigAbsY, m_bigAbsZ);
     
     this->x = x; this->y = y; this->z = z;
     float w = bbWidth / 2; float h = bbHeight;
@@ -76,7 +78,6 @@ virtual void moveTo(double x, double y, double z, float yRot, float xRot) overri
     this->yRot = this->yRotO = yRot;
     this->xRot = this->xRotO = xRot;
     
-    // 🔧 用 origin 差分代替直接 BigWorldCoordinate(x)
     double ox = m_origin.originX().convert_to<double>();
     double oy = m_origin.originY().convert_to<double>();
     double oz = m_origin.originZ().convert_to<double>();
@@ -84,7 +85,9 @@ virtual void moveTo(double x, double y, double z, float yRot, float xRot) overri
     m_bigAbsY = m_origin.originY() + BigWorldCoordinate(y + heightOffset - oy);
     m_bigAbsZ = m_origin.originZ() + BigWorldCoordinate(z - oz);
     
-    this->setPos(x, y, z);  // 现在 setPos 也用了差分，不会重复覆写
+    m_origin.tickBig(m_bigAbsX, m_bigAbsY, m_bigAbsZ);  // 🔧 对齐 origin
+    
+    this->setPos(x, y, z);
 }
 
 // 精确传送 (Big 参数)
