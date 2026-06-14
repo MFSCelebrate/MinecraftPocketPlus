@@ -267,31 +267,32 @@ void SimpleChooseLevelScreen::buttonClicked( Button* button )
     return;
 	}
     if (button == bCreate && !tLevelName.text.empty()) {
-        int seed = getEpochTimeS();
-        if (!tSeed.text.empty()) {
-            std::string seedString = Util::stringTrim(tSeed.text);
-            int tmpSeed;
-            if (sscanf(seedString.c_str(), "%d", &tmpSeed) > 0) {
-                seed = tmpSeed;
-            } else {
-                seed = Util::hashCode(seedString);
-            }
+    int seed = getEpochTimeS();
+    if (!tSeed.text.empty()) {
+        std::string seedString = Util::stringTrim(tSeed.text);
+        int tmpSeed;
+        if (sscanf(seedString.c_str(), "%d", &tmpSeed) > 0) {
+            seed = tmpSeed;
+        } else {
+            seed = Util::hashCode(seedString);
         }
-        std::string levelId = getUniqueLevelName(tLevelName.text);
-        LevelSettings settings(seed, gamemode, cheatsEnabled);
-
-        // 根据选择的噪声模式设置全局选项（使用 bool 版本）
-        Options& opts = minecraft->options;
-        opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
-        opts.set(OPTIONS_DOUBLE_FARLANDS, (noiseMode == 2));
-		opts.set(OPTIONS_END_GENERATOR,    (noiseMode == 3));  // 🔧 新增
-
-        minecraft->selectLevel(levelId, levelId, settings);
-        minecraft->hostMultiplayer();
-        minecraft->setScreen(new ProgressScreen());
-        hasChosen = true;
-        return;
     }
+    std::string levelId = getUniqueLevelName(tLevelName.text);
+
+    // 🔧 useEndGenerator 通过 LevelSettings 传入
+    LevelSettings settings(seed, gamemode, cheatsEnabled, (noiseMode == 3));
+
+    // 根据选择的噪声模式设置全局选项（32/64/Double，不影响 The End）
+    Options& opts = minecraft->options;
+    opts.set(OPTIONS_SIXTYFOUR_FARLANDS, (noiseMode == 1));
+    opts.set(OPTIONS_DOUBLE_FARLANDS,  (noiseMode == 2));
+
+    minecraft->selectLevel(levelId, levelId, settings);
+    minecraft->hostMultiplayer();
+    minecraft->setScreen(new ProgressScreen());
+    hasChosen = true;
+    return;
+	}
 
     if (button == bBack) {
         minecraft->screenChooser.setScreen(SCREEN_STARTMENU);
