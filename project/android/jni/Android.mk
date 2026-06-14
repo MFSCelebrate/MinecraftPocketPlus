@@ -223,6 +223,7 @@ LOCAL_SRC_FILES := ../../../src/main.cpp \
 ../../../src/world/level/levelgen/LargeCaveFeature.cpp \
 ../../../src/world/level/levelgen/LargeFeature.cpp \
 ../../../src/world/level/levelgen/RandomLevelSource.cpp \
+../../../src/world/level/levelgen/TheEndLevelSource.cpp \
 ../../../src/world/level/levelgen/feature/Feature.cpp \
 ../../../src/world/level/levelgen/synth/ImprovedNoise.cpp \
 ../../../src/world/level/levelgen/synth/PerlinNoise.cpp \
