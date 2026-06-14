@@ -17,11 +17,12 @@ public:
     LevelSettings(long seed, int gameType, bool allowCheats = false)
     :   seed(seed),
         gameType(gameType),
-        allowCheats(allowCheats)
+        allowCheats(allowCheats),
+        useEndGenerator(useEndGenerator)
     {
     }
 	static LevelSettings None() {
-		return LevelSettings(-1,-1,false);
+        return LevelSettings(-1, -1, false, false);
 	}
 
     long getSeed() const {
@@ -35,6 +36,8 @@ public:
     bool getAllowCheats() const {
         return allowCheats;
     }
+
+bool getUseEndGenerator() const { return useEndGenerator; }  // 🔧 新增
 
 	//
 	// Those two should actually not be here
@@ -59,6 +62,7 @@ private:
     const long seed;
     const int gameType;
     const bool allowCheats;
+    const bool useEndGenerator;  // 🔧 新增
 };
 
 #endif /*NET_MINECRAFT_WORLD_LEVEL__LevelSettings_H__*/
