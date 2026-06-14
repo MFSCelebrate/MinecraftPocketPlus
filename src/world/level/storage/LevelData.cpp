@@ -30,7 +30,7 @@ LevelData::LevelData( const LevelSettings& settings, const std::string& levelNam
 	dimension(Dimension::NORMAL),
 	playerDataVersion(-1),
 	loadedPlayerTag(NULL),
-    m_useEndGenerator(settings.getUseEndGenerator()),  // 🔧
+    m_useEndGenerator(settings.getUseEndGenerator())  // 🔧
 {
 	//LOGI("ctor 2: %p\n", this);
 
