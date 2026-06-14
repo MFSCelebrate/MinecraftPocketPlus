@@ -29,6 +29,7 @@
 #include "../Difficulty.h"
 #include "../../network/packet/ExplodePacket.h"
 #include "levelgen/TheEndLevelSource.h"
+#include "../../client/Minecraft.h"       // 🔧 for Minecraft::instance
 
 Level::Level(LevelStorage* levelStorage, const std::string& levelName, const LevelSettings& settings, int generatorVersion, Dimension* fixedDimension /* = NULL */)
 :	levelStorage(levelStorage),
