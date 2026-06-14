@@ -22,6 +22,8 @@ public:
 	LevelData(const LevelData& rhs);
 	LevelData& operator=(const LevelData& rhs);
 	~LevelData();
+    bool getUseEndGenerator() const { return m_useEndGenerator; }
+    void setUseEndGenerator(bool val) { m_useEndGenerator = val; }
 
 	void		v1_write(RakNet::BitStream& bitStream);
 	void		v1_read(RakNet::BitStream& bitStream, int storageVersion);
@@ -81,6 +83,7 @@ public:
 	std::string levelName;
 private:
 	long seed;
+    bool m_useEndGenerator = false;  // 🔧 新增
 	int xSpawn;
 	int ySpawn;
 	int zSpawn;
