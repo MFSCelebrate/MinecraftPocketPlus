@@ -3,6 +3,7 @@
 
 #include "../chunk/ChunkSource.h"
 #include "synth/PerlinNoise.h"
+#include <map>  // 文件顶部
 
 class Level;
 class LevelChunk;
@@ -25,6 +26,7 @@ private:
     void prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned char* blocks);
     void generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density);
     double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
+    std::map<int64_t, LevelChunk*> chunkMap;
 
     Level* level;
     Random random;
