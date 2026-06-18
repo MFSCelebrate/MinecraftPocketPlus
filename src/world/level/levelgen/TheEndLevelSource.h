@@ -36,7 +36,7 @@ private:
     PerlinNoise sNoise1;   // 4 octaves, 2D — 外岛检测
     double* densityBuffer;
     static const int DENSITY_X = 3;
-    static const int DENSITY_Y = 17;  // 128/8 + 1
+    static const int DENSITY_Y = 33;  // 128/8 + 1
     static const int DENSITY_Z = 3;
 };
 
