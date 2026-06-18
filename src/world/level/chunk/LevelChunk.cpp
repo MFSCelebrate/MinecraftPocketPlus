@@ -68,7 +68,7 @@ bool LevelChunk::setTileAndData(int x, int y, int z, int tile_, int data_) {
     level->updateLight(LightLayer::Block, (int)xOffs, y, (int)zOffs, (int)xOffs, y, (int)zOffs);
     lightGaps(x, z);
 
-    if (!level->isClientSide && tile != 0) {
+    if (!level->isClientSide && tile != 0 && Tile::tiles[tile] != nullptr) {
         Tile::tiles[tile]->onPlace(level, (int)xOffs, y, (int)zOffs);
     }
 
@@ -100,10 +100,10 @@ bool LevelChunk::setTile(int x, int y, int z, int tile_) {
     level->updateLight(LightLayer::Block, (int)xOffs, y, (int)zOffs, (int)xOffs, y, (int)zOffs);
     lightGaps(x, z);
 
-    if (tile_ != 0) {
+    if (tile_ != 0 && Tile::tiles[tile_] != nullptr) {
         if (!level->isClientSide) Tile::tiles[tile_]->onPlace(level, (int)xOffs, y, (int)zOffs);
     }
-
+    
     unsaved = true;
     updateMap[x | (z << 4)] |= (1 << (y >> UpdateMapBitShift));
     return true;
