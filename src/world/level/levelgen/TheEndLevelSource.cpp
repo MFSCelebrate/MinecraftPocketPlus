@@ -144,7 +144,7 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
                 // JS: for zCL in 0..7, xCL in 0..7, yCL in 0..3
                 for (int zCL = 0; zCL < 8; zCL++) {
                     double fz = zCL / 8.0;
-                    int zP = zCH *  +CL;
+                    int zP = zCH * 8 + zCL
 
                     // Z 方向双线性插值 (Y=yCH 和 Y=yCH+1)
                     double z0_y0 = c000 + (c001 - c000) * fz;
