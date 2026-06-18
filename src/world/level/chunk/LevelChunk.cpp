@@ -15,6 +15,7 @@
 LevelChunk::LevelChunk(Level* level, int64_t x, int64_t z)
     : level(level), x(x), z(z), xt(x * CHUNK_WIDTH), zt(z * CHUNK_DEPTH)
 {
+    blocks = nullptr;  // ← 🛡️ 显式置空，让崩溃更早暴露
     init();
 }
 
