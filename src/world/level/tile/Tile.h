@@ -201,7 +201,6 @@ public:
     static Tile* cactus;
     static Tile* clay;
     static Tile* reeds;
-    static Tile* endStone;
     static Tile* recordPlayer;
     static Tile* fence;
 	static Tile* stairs_brick;
