@@ -55,7 +55,9 @@ public:
                 case Facing::DOWN:  y--; break;
                 case Facing::UP:    y++; break;
                 case Facing::NORTH: z--; break;
-                case Facing::SOUTHacingW F break;
+                case Facing::SOUTH: z++; break;
+                case Facing::WEST:  x--; break;
+                case Facing::EAST:  x++; break;
             }
         }
 
