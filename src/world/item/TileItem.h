@@ -35,7 +35,7 @@ public:
 
     bool useOn(ItemInstance* instance, Player* player, Level* level, int x, int y, int z, int face, float clickX, float clickY, float clickZ) {
 		if (level->adventureSettings.immutableWorld) {
-			const Tile* tile = Tile::tiles[tileId];
+			const Tile* tile = Tile::tiles[tileId - 256];  // ← 🛡️
 			if (tileId != ((Tile*)Tile::leaves)->id
 				&& tile->material != Material::plant) {
 					return false;
@@ -76,12 +76,16 @@ public:
         return false;
     }
 
+    // 🛡️ 修复 getDescriptionId() const
     std::string getDescriptionId(const ItemInstance* instance) const {
-        return Tile::tiles[tileId]->getDescriptionId();
+        // 修改前：return Tile::tiles[tileId]->getDescriptionId();
+        return Tile::tiles[tileId - 256]->getDescriptionId();
     }
 
+    // 🛡️ 修复 getDescriptionId()
     std::string getDescriptionId() const {
-        return Tile::tiles[tileId]->getDescriptionId();
+        // 修改前：return Tile::tiles[tileId]->getDescriptionId();
+        return Tile::tiles[tileId - 256]->getDescriptionId();
     }
 };
 
