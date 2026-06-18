@@ -20,13 +20,14 @@ class TileItem: public Item
 
 	int tileId;
 public:
-    TileItem(int id_)
-	:	super(id_)
-	{
-		setStackedByData(true);
-        this->tileId = id_ + 256;
-        this->setIcon(Tile::tiles[id_ + 256]->getTexture(2));
+    TileItem(int id_) : super(id_) {
+    setStackedByData(true);
+    this->tileId = id_ + 256;
+    int blockId = this->tileId - 256;  // 正确的 tiles 索引
+    if (blockId >= 0 && blockId < Tile::NUM_BLOCK_TYPES && Tile::tiles[blockId] != nullptr) {
+        this->setIcon(Tile::tiles[blockId]->getTexture(2));
     }
+	}
 
     int getTileId() {
         return tileId;
