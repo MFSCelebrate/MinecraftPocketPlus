@@ -162,6 +162,11 @@ Tile* Tile::stairs_quartz   = NULL;
 
 /*static*/
 void Tile::initTiles() {
+	tiles[0] = (new Tile(0, Material::air))
+        ->setDescriptionId("tile.air")
+        ->setLightBlock(0);
+    // 空气：不渲染、不碰撞、透光
+    translucent[0] = true;
 	rock        = (new StoneTile(1, 1))->init()->setDestroyTime(1.5f)->setExplodeable(10)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("stone");
 	grass       = (GrassTile*) (new GrassTile(2))->init()->setDestroyTime(0.6f)->setSoundType(SOUND_GRASS)->setCategory(ItemCategory::Structures)->setDescriptionId("grass");
 	dirt        = (new DirtTile(3, 2))->init()->setDestroyTime(0.5f)->setSoundType(SOUND_GRAVEL)->setCategory(ItemCategory::Structures)->setDescriptionId("dirt");
