@@ -193,27 +193,18 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     prepareHeights(x, z, blocks);
 
     // 手动填 heightmap
-    memset(levelChunk->heightmap, 0, CHUNK_COLUMNS);
-    for (int bx = 0; bx < 16; bx++)
-        for (int bz = 0; bz < 16; bz++)
-            for (int by = 127; by >= 0; by--)
-                if (blocks[(bx << 11) | (bz << 7) | by] == Tile::endStone->id) {
-                    levelChunk->heightmap[bx + bz * 16] = (char)by;
-                    break;
-                }
+    levelChunk->recalcHeightmapOnly();  // ← 🛡️ 替代手动填 heightmap
 
     return levelChunk;
 }
 
 LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
-    int64_t key = (x << 32) ^ (z & 0xffffffff);
-    auto it = chunkMap.find(key);
+    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
+    auto it = chunkMap.find(hashedPos);
     if (it != chunkMap.end()) return it->second;
-    
-    LevelChunk* c = create(x, z);
-    chunkMap[key] = c;
-    return c;
+    return create(x, z);  // create 已插入 chunkMap，直接返回
 }
+
 bool TheEndLevelSource::hasChunk(int64_t x, int64_t z) {
     return true;
 }
