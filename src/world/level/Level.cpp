@@ -1633,9 +1633,9 @@ void Level::animateTick(int64_t xt, int yt, int64_t zt) {
         int y = yt + random.nextInt(r) - random.nextInt(r);
         int z = (int)(zt + random.nextInt(r) - random.nextInt(r));
         int t = getTile(x, y, z);
-        if (t > 0) {
-            Tile::tiles[t]->animateTick(this, x, y, z, &animateRandom);
-        }
+         if (t > 0 && t < Tile::NUM_BLOCK_TYPES && Tile::tiles[t] != nullptr) {
+            Tile::tiles[t]->animateTick(this, x);
+		}
     }
 }
 
