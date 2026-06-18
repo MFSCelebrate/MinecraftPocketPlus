@@ -49,124 +49,123 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
 
 // ========== Density Cells ==========
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
-    const double SX = 1368.824;   // 684.412 * 2
+    const double SX = 1368.824;
     const double SY = 684.412;
     const double SZ = 1368.824;
-    const double S_SMALL = 17.1103; // SX / 80
+    const double S_SMALL = 17.1103;
+    const double S_SMALL_Y = 4.277575;
 
     double originX = (double)(chunkX * 2);
     double originZ = (double)(chunkZ * 2);
 
-    // 获取三组噪声
-    double* n1 = pNoise1.getRegion(nullptr,
-        originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z,
-        SX, SY, SZ);
-    double* n2 = pNoise2.getRegion(nullptr,
-        originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z,
-        SX, SY, SZ);
-    double* n3 = pNoise3.getRegion(nullptr,
-        originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z,
-        S_SMALL, S_SMALL / 4.0, S_SMALL);
+    double* n1 = pNoise1.getRegion(nullptr, originX, 0.0, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, SX, SY, SZ);
+    double* n2 = pNoise2.getRegion(nullptr, originX, 0.0, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, SX, SY, SZ);
+    double* n3 = pNoise3.getRegion(nullptr, originX, 0.0, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, S_SMALL, S_SMALL_Y, S_SMALL);
 
-    int idx = 0;
     for (int xC = 0; xC < DENSITY_X; xC++) {
         for (int zC = 0; zC < DENSITY_Z; zC++) {
             double hV = getIslandHeightValue(chunkX, chunkZ, xC, zC);
-            double v23 = 7.0; // y 从顶部向下
+            double v23 = 7.0;
+            
+            // JS: for (var yC = 0, v23 = 7; yC < 33; yC += 3, v23 -= 3)
+            for (int yC = 0; yC < DENSITY_Y; yC += 3, v23 -= 3.0) {
+                int idx = yC + DENSITY_Y * (zC + DENSITY_Z * xC);
 
-            for (int yC = 0; yC < DENSITY_Y; yC++, v23 -= 1.0) {
-                // 中=64(索引8), 底=0(索引0), 顶=128(索引16)
-                // 索引0→y=0~7, 索引8→y=64~71, 索引16→y=128~135
-                double yInChunk = yC * 8; // 实际 y 坐标
+                // JS: 三个连续密度值 (ind, ind+1, ind+2)，各自独立计算
+                for (int d = 0; d < 3; d++) {
+                    int ind = idx + d;
+                    // JS: s = clamp(n3/20 + 0.5, 0, 1)
+                    double s = Mth::clamp(n3[ind] / 20.0 + 0.5, 0.0, 1.0);
+                    // JS: clampedLerp(selector, lowNoise1, lowNoise2)
+                    double terrainNoise = n1[ind] / 512.0 + 
+                        (n2[ind] / 512.0 - n1[ind] / 512.0) * s;
+                    double v4 = terrainNoise + hV - 8.0;
+                    double v6;
 
-                // 选择器: clampedLerp
-                double s = Mth::clamp(n3[idx] / 20.0 + 0.5, 0.0, 1.0);
-                double terrainNoise = n1[idx] / 512.0 + (n2[idx] / 512.0 - n1[idx] / 512.0) * s;
-                
-                double v4 = terrainNoise + hV - 8.0;
-                double v6;
-
-                if (yInChunk < 64) {
-                    // 岛的下半部
-                    v6 = v4;
-                    if (yInChunk < 32) {
-                        // 岛底: 向下收缩
-                        double t = (v23 + 1.0) / 7.0; // v23 从 7 递减
+                    // JS: if (yC < 14) — 中部/底部
+                    if (yC < 14) {
+                        v6 = v4;
+                        // JS: if (yC < 9) — 底部渐变
+                        if (yC < 9) {
+                            // JS: t = (v23 + 1) / 7
+                            double t = (v23 + 1.0) / 7.0;
+                            if (t < 0.0) t = 0.0;
+                            if (t > 1.0) t = 1.0;
+                            v6 = (1.0 - t) * v4 - t * 30.0;
+                        }
+                    } else {
+                        // JS: t = (yC - 14) / (33 - 14) → 顶部渐变
+                        double t = (double)(yC - 14) / (double)(DENSITY_Y - 14);
                         if (t < 0.0) t = 0.0;
                         if (t > 1.0) t = 1.0;
-                        v6 = (1.0 - t) * v4 - t * 30.0;
+                        v6 = (1.0 - t) * v4 - t * 3000.0;
                     }
-                } else {
-                    // 岛顶: 向上收缩
-                    double t = (yInChunk - 64.0) / 64.0;
-                    if (t < 0.0) t = 0.0;
-                    if (t > 1.0) t = 1.0;
-                    v6 = (1.0 - t) * v4 - t * 3000.0;
-                }
 
-                density[idx] = v6;
-                idx++;
+                    density[ind] = v6;
+                }
             }
         }
     }
 
-    delete[] n1; delete[] n2; delete[] n3;
+    delete[] n1;
+    delete[] n2;
+    delete[] n3;
 }
 
 // ========== Prepare Heights ==========
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned char* blocks) {
     generateDensityCells(chunkX, chunkZ, densityBuffer);
-
-    // 清空区块
     memset(blocks, 0, LevelChunk::ChunkBlockCount);
 
-    // 对每个 8×4×8 的 cell 做三线性插值
-    for (int xCH = 0; xCH < 2; xCH++) {       // 2 cells in X per chunk
-        for (int zCH = 0; zCH < 2; zCH++) {   // 2 cells in Z per chunk
-            int baseIdx = DENSITY_Y * (zCH + DENSITY_Z * xCH);
-            
-            for (int yCH = 0; yCH < DENSITY_Y - 1; yCH++) { // each Y cell
-                int idx000 = baseIdx + yCH;
-                int idx001 = baseIdx + yCH + DENSITY_Y;
-                int idx010 = baseIdx + yCH + DENSITY_Y * DENSITY_Z;
-                int idx011 = baseIdx + yCH + DENSITY_Y + DENSITY_Y * DENSITY_Z;
+    // JS: for xCH in 0..1, zCH in 0..1, yCH in 0..31
+    for (int xCH = 0; xCH < 2; xCH++) {
+        for (int zCH = 0; zCH < 2; zCH++) {
+            for (int yCH = 0; yCH < 32; yCH++) {
+                // v23 = yCH + 33*(zCH + 3*xCH)
+                int baseIdx = yCH + DENSITY_Y * (zCH + DENSITY_Z * xCH);
 
-                double d000 = densityBuffer[idx000];
-                double d001 = densityBuffer[idx000 + 1];
-                double d010 = densityBuffer[idx001];
-                double d011 = densityBuffer[idx001 + 1];
-                double d100 = densityBuffer[idx010];
-                double d101 = densityBuffer[idx010 + 1];
-                double d110 = densityBuffer[idx011];
-                double d111 = densityBuffer[idx011 + 1];
+                // 8 个角: Y=yCH 面 4 个 + Y=yCH+1 面 4 个
+                double c000 = densityBuffer[baseIdx];
+                double c001 = densityBuffer[baseIdx + DENSITY_Y];
+                double c010 = densityBuffer[baseIdx + DENSITY_Y * DENSITY_Z];
+                double c011 = densityBuffer[baseIdx + DENSITY_Y + DENSITY_Y * DENSITY_Z];
+                double c100 = densityBuffer[baseIdx + 1];
+                double c101 = densityBuffer[baseIdx + 1 + DENSITY_Y];
+                double c110 = densityBuffer[baseIdx + 1 + DENSITY_Y * DENSITY_Z];
+                double c111 = densityBuffer[baseIdx + 1 + DENSITY_Y + DENSITY_Y * DENSITY_Z];
 
-                for (int zL = 0; zL < 8; zL++) {
-                    double fz = zL / 8.0;
-                    double dz00 = d000 + (d010 - d000) * fz;
-                    double dz01 = d001 + (d011 - d001) * fz;
-                    double dz10 = d100 + (d110 - d100) * fz;
-                    double dz11 = d101 + (d111 - d101) * fz;
+                // JS: for zCL in 0..7, xCL in 0..7, yCL in 0..3
+                for (int zCL = 0; zCL < 8; zCL++) {
+                    double fz = zCL / 8.0;
+                    int zP = zCH *  +CL;
 
-                    int zP = zCH * 8 + zL;
+                    // Z 方向双线性插值 (Y=yCH 和 Y=yCH+1)
+                    double z0_y0 = c000 + (c001 - c000) * fz;
+                    double z1_y0 = c010 + (c011 - c010) * fz;
+                    double z0_y1 = c100 + (c101 - c100) * fz;
+                    double z1_y1 = c110 + (c111 - c110) * fz;
 
-                    for (int xL = 0; xL < 8; xL++) {
-                        double fx = xL / 8.0;
-                        double vx0 = dz00 + (dz10 - dz00) * fx;
-                        double vx1 = dz01 + (dz11 - dz01) * fx;
+                    for (int xCL = 0; xCL < 8; xCL++) {
+                        double fx = xCL / 8.0;
+                        int xP = xCH * 8 + xCL;
 
-                        int xP = xCH * 8 + xL;
+                        // X 方向插值
+                        double val_y0 = z0_y0 + (z1_y0 - z0_y0) * fx;
+                        double val_y1 = z0_y1 + (z1_y1 - z0_y1) * fx;
 
-                        for (int yL = 0; yL < 8; yL++) {
-                            double fy = yL / 8.0;
-                            double val = vx0 + (vx1 - vx0) * fy;
+                        for (int yCL = 0; yCL < 4; yCL++) {
+                            double fy = yCL / 4.0;
+                            double val = val_y0 + (val_y1 - val_y0) * fy;
 
                             if (val > 0.0) {
-                                int yP = yCH * 8 + yL;
+                                int yP = yCH * 4 + yCL;
                                 if (yP >= 0 && yP < 128) {
                                     int offs = (xP << 11) | (zP << 7) | yP;
                                     blocks[offs] = (unsigned char)Tile::endStone->id;
@@ -179,21 +178,18 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
         }
     }
 }
-
 // ========== ChunkSource interface ==========
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
-
     LevelChunk* levelChunk = new LevelChunk(level, blocks, x, z);
 
-    int64_t hashedPos = (x << 32) | (z & 0xffffffff);  // 🔧 自己算 hash
+    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
     prepareHeights(x, z, blocks);
-
-    // 手动填 heightmap
-    levelChunk->recalcHeightmapOnly();  // ← 🛡️ 替代手动填 heightmap
+    levelChunk->recalcHeightmapOnly();  // ← 🛡️ 替代手动循环
 
     return levelChunk;
 }
@@ -202,7 +198,7 @@ LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
     int64_t hashedPos = (x << 32) | (z & 0xffffffff);
     auto it = chunkMap.find(hashedPos);
     if (it != chunkMap.end()) return it->second;
-    return create(x, z);  // create 已插入 chunkMap，直接返回
+    return create(x, z);  // ← create 已 insert，直接返回
 }
 
 bool TheEndLevelSource::hasChunk(int64_t x, int64_t z) {
