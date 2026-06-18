@@ -72,10 +72,6 @@ int Region::getRawBrightness(int64_t x, int y, int64_t z) {
 }
 
 int Region::getRawBrightness(int64_t x, int y, int64_t z, bool propagate) {
-    // 外部边界检查保留
-    if (x < -Level::MAX_LEVEL_SIZE || z < -Level::MAX_LEVEL_SIZE || x >= Level::MAX_LEVEL_SIZE || z > Level::MAX_LEVEL_SIZE) {
-        return Level::MAX_BRIGHTNESS;
-    }
 
     if (propagate) {
         int id = getTile(x, y, z);
