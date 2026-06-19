@@ -180,7 +180,6 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
 }
 // ========== ChunkSource interface ==========
 
-// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp → create()
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
@@ -192,9 +191,8 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
 
     prepareHeights(x, z, blocks);
 
-    // 🛡️ 使用完整版 recalcHeightmap（而非 recalcHeightmapOnly）
-    // 这会正确初始化 skyLight 全高度，避免后续 updateLights 反复重算
-    levelChunk->recalcHeightmap();
+    // 🛡️ 只算 heightmap，不触发 lightGaps → getHeightmap → create 无限递归！
+    levelChunk->recalcHeightmapOnly();
 
     return levelChunk;
 }
