@@ -51,12 +51,12 @@ public:
             face = 0;
         } else {
             switch (face) {
-                case Facing::DOWN:  y--; break;
-                case Facing::UP:    y break;
---; break;
-                case Facing::SOUTH: z++; break;
-                case Facing::WEST:  x--; break;
-                case Facing::EAST:  x++; break;
+                case Facing::DOWN : y--; break;
+				case Facing::UP   : y++; break;
+				case Facing::NORTH: z--; break;
+				case Facing::SOUTH: z++; break;
+				case Facing::WEST : x--; break;
+				case Facing::EAST : x++; break;
             }
         }
 
