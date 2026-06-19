@@ -268,7 +268,8 @@ optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
 		.addOptionItem(OPTIONS_SEA_LEVEL, minecraft)
 		.addOptionItem(OPTIONS_STRIPE_REPAIR, minecraft)
 		.addOptionItem(OPTIONS_TELEPORT, minecraft)
-		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft);
+		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft)
+	    .addOptionItem(OPTIONS_END_CIRCLES, minecraft);  // 🛡️ 新增
 
 	// 收集所有 TextOption 到 textBoxes，以便基类 lostFocus 自动保存
 }
