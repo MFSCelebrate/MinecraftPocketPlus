@@ -16,6 +16,7 @@ options.world_scale_z=World Scale Z
 options.disable_skygrid=Disable Skygrid
 options.world_scale_y=World Scale Y
 options.world_offset_y=World Offset Y
+options.end_circles=Enabled End Circles (MCJava 1.14+)
 
 language.name=English
 language.region=US
