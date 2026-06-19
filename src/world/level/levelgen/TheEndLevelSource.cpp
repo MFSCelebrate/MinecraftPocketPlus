@@ -50,82 +50,79 @@ TheEndLevelSource::~TheEndLevelSource() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    // 🛡️ 应用偏移后换算世界坐标（影响岛屿位置）
-    double offX = (double)chunkX + m_worldOffsetX / 16.0;
-    double offZ = (double)chunkZ + m_worldOffsetZ / 16.0;
+    // 🛡️ 偏移后的 chunk 坐标（影响岛屿在 XZ 平面的位置）
+    double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
+    double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
-    // 中央岛高度 — 使用偏移后的坐标
-    double cx = (double)(zC + 2 * offZ);
-    double cz = (double)(xC + 2 * offX);
+    // 中央岛
+    double cx = (double)(zC + 2 * chZ);
+    double cz = (double)(xC + 2 * chX);
     double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // 外岛检测 — 使用偏移后的世界坐标
-    int wX_start = (int)(offX - 12.0);
-    int wZ_start = (int)(offZ - 12.0);
+    // 外岛
+    int wX_start = (int)(chX - 12.0);
+    int wZ_start = (int)(chZ - 12.0);
     int v28_start = xC + 24;
     int v17_start = zC + 24;
 
     for (int i = 0; i < 25; i++) {
         int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
-
         for (int j = 0; j < 25; j++) {
             int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
-
             if ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096) {
                 if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
-                    int multiplier = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
-                    double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)multiplier;
+                    int mul = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
+                    double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
                     v9 = Mth::Max(v20, v9);
                 }
             }
         }
     }
-
     return v9;
 }
-
 // ========== Density Cells ==========
 
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
-    // 🛡️ 应用偏移和缩放后计算噪声坐标（模仿 RandomLevelSource::getHeights）
-    double worldX = (double)(chunkX * 2) + m_worldOffsetX / 8.0;  // chunk*2 = 半chunk
-    double worldZ = (double)(chunkZ * 2) + m_worldOffsetZ / 8.0;
+    // 🛡️ 噪声原点：世界块坐标 × 缩放 + 偏移 × 缩放 → 除以 8（半chunk）
+    //   origin = (chunk*16 * scale + offset * scale) / 8
+    //          = chunk*2 * scale + offset * scale / 8
+    double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
+    double originY = m_worldOffsetY * m_worldScaleY / 8.0;
+    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ / 8.0;
 
-    // 噪声采样原点偏移（XZ）+ Y 偏移
-    double originX = worldX;
-    double originY = m_worldOffsetY / 8.0;
-    double originZ = worldZ;
+    // 🛡️ 噪声频率：基础值 × 各轴独立缩放
+    const double B_XZ  = 1368.824;
+    const double B_Y   = 684.412;
+    const double BS_XZ = 17.1103;
+    const double BS_Y  = 4.277575;
 
-    //  噪声频率缩放（模仿 684.412 的模式）
-    const double BASE_XZ = 1368.824 * m_worldScaleX;
-    const double BASE_Y  = 684.412  * m_worldScaleY;
-    const double BASE_SMALL_XZ = 17.1103 * m_worldScaleX;
-    const double BASE_SMALL_Y  = 4.277575 * m_worldScaleY;
+    double sx  = B_XZ  * m_worldScaleX;
+    double sy  = B_Y   * m_worldScaleY;
+    double sz  = B_XZ  * m_worldScaleZ;
+    double ssx = BS_XZ * m_worldScaleX;
+    double ssy = BS_Y  * m_worldScaleY;
+    double ssz = BS_XZ * m_worldScaleZ;
 
     double* n1 = pNoise1.getRegion(nullptr, originX, originY, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_XZ, BASE_Y, BASE_XZ);
+        DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
     double* n2 = pNoise2.getRegion(nullptr, originX, originY, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_XZ, BASE_Y, BASE_XZ);
+        DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
     double* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_SMALL_XZ, BASE_SMALL_Y, BASE_SMALL_XZ);
-
-    // ... 后续密度计算不变 ...
+        DENSITY_X, DENSITY_Y, DENSITY_Z, ssx, ssy, ssz);
 
     for (int xC = 0; xC < DENSITY_X; xC++) {
         for (int zC = 0; zC < DENSITY_Z; zC++) {
             double hV = getIslandHeightValue(chunkX, chunkZ, xC, zC);
             double v23 = 7.0;
 
-            // JS: for (yC = 0, v23 = 7; yC < 33; yC += 3, v23 -= 3)
             for (int yC = 0; yC < DENSITY_Y; yC += 3, v23 -= 3.0) {
                 int idx = yC + DENSITY_Y * (zC + DENSITY_Z * xC);
 
-                // 3 个连续 Y 采样点
                 for (int d = 0; d < 3; d++) {
                     int ind = idx + d;
 
@@ -138,14 +135,12 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
                     if (yC < 14) {
                         v6 = v4;
                         if (yC < 9) {
-                            // 🛡️ JS: Vec3(v23+1, v23, v23-1).scale(1/7) → per-point t
                             double t = (v23 + 1.0 - (double)d) / 7.0;
                             if (t < 0.0) t = 0.0;
                             if (t > 1.0) t = 1.0;
                             v6 = (1.0 - t) * v4 - t * 30.0;
                         }
                     } else {
-                        // 🛡️ JS: Vec3(yC-14, yC-13, yC-12).scale(1/64).clamp → per-point t
                         double t = ((double)(yC - 14) + (double)d) / 64.0;
                         if (t < 0.0) t = 0.0;
                         if (t > 1.0) t = 1.0;
