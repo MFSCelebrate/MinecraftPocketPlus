@@ -7,7 +7,7 @@
 
 TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
     : random(seed), level(level),
-      pNoise1(&random, 16), pNo(&random, 16), pNoise3(&random, 8),
+      pNoise1(&random, 16), pNoise2(&random, 16), pNoise3(&random, 8),
       sNoise1(&random, 4), densityBuffer(nullptr)
 {
     densityBuffer = new double[DENSITY_X * DENSITY_Y * DENSITY_Z];
@@ -159,7 +159,7 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
                             v6 = (1.0 - t) * v4 - t * 30.0;
                         }
                     } else {
-                        double t = ((double)(yC - 14) + (double 0;
+                        double t = ((double)(yC - 14) + (double)d) / 64.0;
                         if (t > 1.0) t = 1.0;
                         v6 = (1.0 - t) * v4 - t * 3000.0;
                     }
