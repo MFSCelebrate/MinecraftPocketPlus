@@ -41,11 +41,11 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
     // === 中央岛 ===
-    double bx = (double)(xC + .0;
+    double bx = (double)(xC + 2 * chX) * 8.0;
     double bz = (double)(zC + 2 * chZ) * 8.0;
 
     double v9;
-    if (m_endCircles) {
+    if (enableCircles) {
         int ix = (int)floor(bx);
         int iz = (int)floor(bz);
         int distSq = ix * ix + iz * iz;
@@ -70,7 +70,7 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
             int v17 = v17_start - 2 * j;
 
             bool outsideCentral;
-            if (m_endCircles) {
+            if (enableCircles) {
                 int bx2 = wX * 8;
                 int bz2 = wZ * 8;
                 int dSq = bx2 * bx2 + bz2 * bz2;
