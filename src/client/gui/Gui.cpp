@@ -35,6 +35,8 @@
 #include "../../world/level/levelgen/RandomLevelSource.h"
 #include "../../world/level/chunk/ChunkCache.h"
 
+#include "../../world/level/levelgen/TheEndLevelSource.h"
+
 float Gui::InvGuiScale = 1.0f / 3.0f;
 float Gui::GuiScale = 1.0f / Gui::InvGuiScale;
 const float Gui::DropTicks = 40.0f;
@@ -755,8 +757,9 @@ void Gui::onLevelGenerated() {
     }
 }
 
+
 void Gui::renderDebugInfo() {
-    // FPS counter (updates once per second)
+    // ===================== FPS =====================
     static float fps = 0.0f;
     static float fpsLastTime = 0.0f;
     static int fpsFrames = 0;
@@ -771,71 +774,95 @@ void Gui::renderDebugInfo() {
     LocalPlayer* p = minecraft->player;
     Level* lvl = minecraft->level;
 
-    // ── 偏移/缩放：double（给后续计算 + Float 噪声） ──
+    // ===================== 偏移/缩放 =====================
     double terrainOffsetX = 0.0, terrainOffsetY = 0.0, terrainOffsetZ = 0.0;
     double worldScaleX = 1.0, worldScaleY = 1.0, worldScaleZ = 1.0;
-
-    // ── 偏移/缩放字符串（给 ln[8] 显示，无浮点舍入） ──
     std::string sOffX, sOffY, sOffZ, sSclX, sSclY, sSclZ;
 
-    // ── pxo/pyo/pzo ──
+    // ===================== BigWorldCoordinate =====================
     double pxo = 0.0, pyo = 0.0, pzo = 0.0;
-bool showBig = false;
-std::string pxoBigStr, pyoBigStr, pzoBigStr;
-	
-    // 玩家原始坐标
+    bool showBig = false;
+    std::string pxoBigStr, pyoBigStr, pzoBigStr;
+
     double px = p->x;
     double py = p->y - p->heightOffset + 64;
     double pz = p->z;
     posTranslator.to(px, py, pz);
 
-	BigWorldCoordinate bigPX = p->getBigAbsX();
-BigWorldCoordinate bigPY = p->getBigAbsY();
-BigWorldCoordinate bigPZ = p->getBigAbsZ();
-std::string bigPXStr = worldCoordBigToString(bigPX);
-std::string bigPYStr = worldCoordBigToString(bigPY);
-std::string bigPZStr = worldCoordBigToString(bigPZ);
+    BigWorldCoordinate bigPX = p->getBigAbsX();
+    BigWorldCoordinate bigPY = p->getBigAbsY();
+    BigWorldCoordinate bigPZ = p->getBigAbsZ();
+    std::string bigPXStr = worldCoordBigToString(bigPX);
+    std::string bigPYStr = worldCoordBigToString(bigPY);
+    std::string bigPZStr = worldCoordBigToString(bigPZ);
 
+    // ===================== 生成器检测 =====================
     RandomLevelSource* rls = nullptr;
-if (lvl && lvl->getChunkSource()) {
-    ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
-    if (cache) {
-        rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
-        if (rls) {
-            terrainOffsetX = rls->getWorldOffsetX();
-            terrainOffsetY = rls->getWorldOffsetY();
-            terrainOffsetZ = rls->getWorldOffsetZ();
-            worldScaleX   = rls->getWorldScaleX();
-            worldScaleY   = rls->getWorldScaleY();
-            worldScaleZ   = rls->getWorldScaleZ();
+    TheEndLevelSource* els = nullptr;
+    bool isEnd = false;
+
+    if (lvl && lvl->getChunkSource()) {
+        ChunkCache* cache = dynamic_cast<ChunkCache*>(lvl->getChunkSource());
+        if (cache) {
+            rls = dynamic_cast<RandomLevelSource*>(cache->getSource());
+            if (rls) {
+                terrainOffsetX = rls->getWorldOffsetX();
+                terrainOffsetY = rls->getWorldOffsetY();
+                terrainOffsetZ = rls->getWorldOffsetZ();
+                worldScaleX   = rls->getWorldScaleX();
+                worldScaleY   = rls->getWorldScaleY();
+                worldScaleZ   = rls->getWorldScaleZ();
+            }
+        }
+        if (!rls) {
+            els = dynamic_cast<TheEndLevelSource*>(lvl->getChunkSource());
+            if (els) {
+                isEnd = true;
+                terrainOffsetX = els->getWorldOffsetX();
+                terrainOffsetY = els->getWorldOffsetY();
+                terrainOffsetZ = els->getWorldOffsetZ();
+                worldScaleX   = els->getWorldScaleX();
+                worldScaleY   = els->getWorldScaleY();
+                worldScaleZ   = els->getWorldScaleZ();
+            }
         }
     }
-}
-	
-    // ── 计算 pxo/pyo/pzo ──
-    double estPxo = px * worldScaleX + terrainOffsetX * worldScaleX;
-double estPyo = py * worldScaleY + terrainOffsetY * worldScaleY;
-double estPzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
-showBig = needsBigWorldCoord(estPxo) || needsBigWorldCoord(estPyo) || needsBigWorldCoord(estPzo);
-	
-if (rls) {
-    if (showBig) {
-    BigWorldCoordinate bxo = computeWorldCoordBig(px, worldScaleX, terrainOffsetX);
-    BigWorldCoordinate byo = computeWorldCoordBig(py, worldScaleY, terrainOffsetY);
-    BigWorldCoordinate bzo = computeWorldCoordBig(pz, worldScaleZ, terrainOffsetZ);
-    pxo = worldCoordBigToDouble(bxo);
-    pyo = worldCoordBigToDouble(byo);
-    pzo = worldCoordBigToDouble(bzo);
-    pxoBigStr = worldCoordBigToString(bxo);
-    pyoBigStr = worldCoordBigToString(byo);
-    pzoBigStr = worldCoordBigToString(bzo);
-} else {
-    pxo = estPxo;
-    pyo = estPyo;
-    pzo = estPzo;
-}
 
-    // 获取海平面高度
+    // 偏移/缩放字符串（从 Options 读，无浮点舍入）
+    if (rls || els) {
+        sOffX = minecraft->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+        sOffY = minecraft->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
+        sOffZ = minecraft->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+        sSclX = minecraft->options.getStringValue(OPTIONS_WORLD_SCALE_X);
+        sSclY = minecraft->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
+        sSclZ = minecraft->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+    }
+
+    // ===================== pxo/pyo/pzo =====================
+    double estPxo = px * worldScaleX + terrainOffsetX * worldScaleX;
+    double estPyo = py * worldScaleY + terrainOffsetY * worldScaleY;
+    double estPzo = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+    showBig = needsBigWorldCoord(estPxo) || needsBigWorldCoord(estPyo) || needsBigWorldCoord(estPzo);
+
+    if (rls || els) {
+        if (showBig) {
+            BigWorldCoordinate bxo = computeWorldCoordBig(px, worldScaleX, terrainOffsetX);
+            BigWorldCoordinate byo = computeWorldCoordBig(py, worldScaleY, terrainOffsetY);
+            BigWorldCoordinate bzo = computeWorldCoordBig(pz, worldScaleZ, terrainOffsetZ);
+            pxo = worldCoordBigToDouble(bxo);
+            pyo = worldCoordBigToDouble(byo);
+            pzo = worldCoordBigToDouble(bzo);
+            pxoBigStr = worldCoordBigToString(bxo);
+            pyoBigStr = worldCoordBigToString(byo);
+            pzoBigStr = worldCoordBigToString(bzo);
+        } else {
+            pxo = estPxo;
+            pyo = estPyo;
+            pzo = estPzo;
+        }
+    }
+
+    // ===================== 基础信息 =====================
     int seaLevel = 63;
     if (minecraft->options.getOpt(OPTIONS_SEA_LEVEL)) {
         std::string slStr = minecraft->options.getStringValue(OPTIONS_SEA_LEVEL);
@@ -845,125 +872,154 @@ if (rls) {
     int64_t bx = Mth::floor64(px), by = Mth::floor64(py), bz = Mth::floor64(pz);
     int64_t cx = bx >> 4, cz = bz >> 4;
 
-    // Facing direction
     float yMod = fmodf(p->yRot, 360.0f);
     if (yMod < 0) yMod += 360.0f;
-    const char* facing;
-    const char* axis;
-    if (yMod < 45 || yMod >= 315) { facing = "South"; axis = "+Z"; }
-    else if (yMod < 135) { facing = "West"; axis = "-X"; }
-    else if (yMod < 225) { facing = "North"; axis = "-Z"; }
-    else { facing = "East"; axis = "+X"; }
+    const char* facing; const char* axis;
+    if (yMod < 45 || yMod >= 315)      { facing = "South"; axis = "+Z"; }
+    else if (yMod < 135)                { facing = "West";  axis = "-X"; }
+    else if (yMod < 225)                { facing = "North"; axis = "-Z"; }
+    else                                { facing = "East";  axis = "+X"; }
 
-    // Biome
     const char* biomeName = "unknown";
     if (lvl) {
         Biome* biome = lvl->getBiome(bx, bz);
         if (biome) biomeName = biome->name.c_str();
     }
 
-    // Time
     long worldTime = lvl ? lvl->getTime() : 0;
     long dayTime = worldTime % Level::TICKS_PER_DAY;
     long day = worldTime / Level::TICKS_PER_DAY;
     long seed = lvl ? lvl->getSeed() : 0;
 
-    // 64-bit Farlands 选项
     bool fringeEnabled = false;
     if (minecraft->options.getOpt(OPTIONS_SIXTYFOUR_FARLANDS)) {
         fringeEnabled = minecraft->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
     }
 
-    // 调试屏幕缩放
     float debugScale = 1.0f;
     std::string scaleStr = minecraft->options.getStringValue(OPTIONS_DEBUG_SCREEN_SIZE);
-    if (!scaleStr.empty()) {
-        debugScale = (float)atof(scaleStr.c_str());
-    }
+    if (!scaleStr.empty()) debugScale = (float)atof(scaleStr.c_str());
 
-    // ===================== 噪声计算（Double 精度 + 3D 采样） =====================
+    // ===================== 噪声计算 =====================
     double noiseVals[8] = {0.0};
-    double nx_large = 0.0, ny_large = 0.0, nz_large = 0.0;
+    float  noiseValsF[8] = {0.0f};
+    const char* noiseLabels[8] = { nullptr };
+    bool showNoise = false;
+
     if (rls) {
-        double sampleWorldX = pxo;
-        double sampleWorldY = pyo;
-        double sampleWorldZ = pzo;
+        showNoise = true;
+        noiseLabels[0] = "Low-Noise"; noiseLabels[1] = "High-Noise";
+        noiseLabels[2] = "Selector-Noise"; noiseLabels[3] = "Sand-Noise";
+        noiseLabels[4] = "Gravel-Noise"; noiseLabels[5] = "Scale-Noise";
+        noiseLabels[6] = "Depth-Noise"; noiseLabels[7] = "Tree-Density-Noise";
 
         const double s = 684.412;
-        const double scale_large_XZ = s / 80.0;
-        const double scale_large_Y  = s / 160.0;
+        const double sXZ = s / 80.0;
+        const double sY  = s / 160.0;
 
-        nx_large = sampleWorldX * scale_large_XZ;
-        ny_large = sampleWorldY * scale_large_Y;
-        nz_large = sampleWorldZ * scale_large_XZ;
+        // Double 精度噪声
+        double nX = pxo * sXZ, nY = pyo * sY, nZ = pzo * sXZ;
+        noiseVals[0] = rls->getLPerlinNoise1(nX, nY, nZ);
+        noiseVals[1] = rls->getLPerlinNoise2(nX, nY, nZ);
+        noiseVals[2] = rls->getPerlinNoise1(nX, nY, nZ);
+        noiseVals[3] = rls->getPerlinNoise2(pxo / 32.0, pzo / 32.0);
+        noiseVals[4] = rlsldrlds->getDepthNoise(pxo / 200.0, pzo / 200.0);
+        noiseVals[7] = rls->getForestNoise(pxo * 0.5, pzo * 0.5);
 
-        noiseVals[0] = rls->getLPerlinNoise1(nx_large, ny_large, nz_large);
-        noiseVals[1] = rls->getLPerlinNoise2(nx_large, ny_large, nz_large);
-        noiseVals[2] = rls->getPerlinNoise1(nx_large, ny_large, nz_large);
+        // Float 精度噪声
+        double fX = px * worldScaleX + terrainOffsetX * worldScaleX;
+        double fY = py * worldScaleY + terrainOffsetY * worldScaleY;
+        double fZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+        noiseValsF[0] = (float)rls->getLPerlinNoise1(fX * sXZ, fY * sY, fZ * sXZ);
+        noiseValsF[1] = (float)rls->getLPerlinNoise2(fX * sXZ, fY * sY, fZ * sXZ);
+        noiseValsF[2] = (float)rls->getPerlinNoise1(fX * sXZ, fY * sY, fZ * sXZ);
+        noiseValsF[3] = (float)rls->getPerlinNoise2(fX / 32.0, fZ / 32.0);
+        noiseValsF[4] = (float)rls->getPerlinNoise3(fX /float)rls->getScaleNoise(fX / 80.0, fZ / 80.0);
+        noiseValsF[6] = (float)rls->getDepthNoise(fX / 200.0, fZ / 200.0);
+        noiseValsF[7] = (float)rls->getForestNoise(fX * 0.5, fZ * 0.5);
+    } else if (els) {
+        showNoise = true;
+        noiseLabels[0] = "Low-Noise";  noiseLabels[1] = "High-Noise";
+        noiseLabels[2] = "Selector-Noise"; noiseLabels[3] = "OuterIslandDetection-Noise";
+        noiseLabels[4] = "FinalDensity-Value";      noiseLabels[5] = "IslandHeight-Value";
+        noiseLabels[6] = nullptr;        noiseLabels[7] = nullptr;
 
-        const double scale_sand       = 1.0 / 32.0;
-        const double scale_depth      = 1.0 / 64.0;
-        const double scale_scale      = 1.0 / 80.0;
-        const double scale_depth_noise= 1.0 / 200.0;
-        const double scale_forest     = 0.5;
+        // Double 精度噪声
+        double nX = pxo * 1368.824, nY = pyo * 684.412, nZ = pzo * 1368.824;
+        noiseVals[0] = els->getPNoise1().getValue(nX, nY, nZ);
+        noiseVals[1] = els->getPNoise2().getValue(nX, nY, nZ);
+        noiseVals[2] = els->getPNoise3().getValue(pxo * 17.1103, pyo * 4.277575, pzo * 17.1103);
+        noiseVals[3] = els->getSNoise1().getValue(pxo / 16.0, pzo / 16.0);
+        noiseVals[4] = els->sampleDensityAt(px, py, pz);
+        noiseVals[5] = els->getIslandHeightValue(cx, cz, 1, 1);
+        noiseVals[6] = 0.0; noiseVals[7] = 0.0;
 
-        noiseVals[3] = rls->getPerlinNoise2(sampleWorldX * scale_sand, sampleWorldZ * scale_sand);
-        noiseVals[4] = rls->getPerlinNoise3(sampleWorldX * scale_depth, sampleWorldZ * scale_depth);
-        noiseVals[5] = rls->getScaleNoise(sampleWorldX * scale_scale, sampleWorldZ * scale_scale);
-        noiseVals[6] = rls->getDepthNoise(sampleWorldX * scale_depth_noise, sampleWorldZ * scale_depth_noise);
-        noiseVals[7] = rls->getForestNoise(sampleWorldX * scale_forest, sampleWorldZ * scale_forest);
+        // Float 精度噪声
+        double fX = px * worldScaleX + terrainOffsetX * worldScaleX;
+        double fY = py * worldScaleY + terrainOffsetY * worldScaleY;
+        double fZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+        noiseValsF[0] = (float)els->getPNoise1().getValue(fX * 1368.824, fY * 684.412, fZ * 1368.824);
+        noiseValsF[1] = (float)els->getPNoise2().getValue(fX * 1368.824, fY * 684.412, fZ * 1368.824);
+        noiseValsF[2] = (float)els->getPNoise3().getValue(fX * 17.1103, fY * 4.277575, fZ * 17.1103);
+        noiseValsF[3] = (float)els->getSNoise1().getValue(fX / 16.0, fZ / 16.0);
+        noiseValsF[4] = (float)els->sampleDensityAt(px, py, pz);
+        noiseValsF[5] = (float)els->getIslandHeightValue(cx, cz, 1, 1);
+        noiseValsF[6] = 0.0f; noiseValsF[7] = 0.0f;
     }
 
-    // ===================== 噪声计算（Float 精度 — 保持原样不动） =====================
-    float noiseValsF[8] = {0.0f};
-    if (rls) {
-        double sampleWorldX = px * worldScaleX + terrainOffsetX * worldScaleX;
-        double sampleWorldY = py * worldScaleY + terrainOffsetY * worldScaleY;
-        double sampleWorldZ = pz * worldScaleZ + terrainOffsetZ * worldScaleZ;
+    // ===================== 构建噪声字符串 =====================
+    static char firstPartD[2048], secondPartD[2048];
+    static char firstPartF[2048], secondPartF[2048];
+    firstPartD[0] = '\0'; secondPartD[0] = '\0';
+    firstPartF[0] = '\0'; secondPartF[0] = '\0';
 
-        const double s = 684.412;
-        const double scale_large_XZ = s / 80.0;
-        const double scale_large_Y  = s / 160.0;
-
-        noiseValsF[0] = (float)rls->getLPerlinNoise1(sampleWorldX * scale_large_XZ,
-                                                       sampleWorldY * scale_large_Y,
-                                                       sampleWorldZ * scale_large_XZ);
-        noiseValsF[1] = (float)rls->getLPerlinNoise2(sampleWorldX * scale_large_XZ,
-                                                       sampleWorldY * scale_large_Y,
-                                                       sampleWorldZ * scale_large_XZ);
-        noiseValsF[2] = (float)rls->getPerlinNoise1(sampleWorldX * scale_large_XZ,
-                                                      sampleWorldY * scale_large_Y,
-                                                      sampleWorldZ * scale_large_XZ);
-
-        const double scale_sand        = 1.0 / 32.0;
-        const double scale_depth       = 1.0 / 64.0;
-        const double scale_scale       = 1.0 / 80.0;
-        const double scale_depth_noise = 1.0 / 200.0;
-        const double scale_forest      = 0.5;
-
-        noiseValsF[3] = (float)rls->getPerlinNoise2(sampleWorldX * scale_sand,
-                                                      sampleWorldZ * scale_sand);
-        noiseValsF[4] = (float)rls->getPerlinNoise3(sampleWorldX * scale_depth,
-                                                      sampleWorldZ * scale_depth);
-        noiseValsF[5] = (float)rls->getScaleNoise(sampleWorldX * scale_scale,
-                                                    sampleWorldZ * scale_scale);
-        noiseValsF[6] = (float)rls->getDepthNoise(sampleWorldX * scale_depth_noise,
-                                                    sampleWorldZ * scale_depth_noise);
-        noiseValsF[7] = (float)rls->getForestNoise(sampleWorldX * scale_forest,
-                                                     sampleWorldZ * scale_forest);
+    if (showNoise) {
+        for (int i = 0; i < 4; i++) {
+            if (!noiseLabels[i]) continue;
+            char tmp[64];
+            bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
+            snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", noiseLabels[i], noiseVals[i]);
+            strcat(firstPartD, tmp);
+        }
+        for (int i = 4; i < 8; i++) {
+            if (!noiseLabels]);
+            char tmp[64];
+            bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
+            snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", noiseLabels[i], noiseVals[i]);
+            strcat(secondPartD, tmp);
+        }
+        for (int i = 0; i < 4; i++) {
+            if (!noiseLabels[i]) continue;
+            char tmp[64];
+            bool badF = (std::isnan(noValsF[i]) || std::isinf(noiseValsF[i]));
+            snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", badF ? "*" : "", noiseLabels[i], noiseValsF[i]);
+            strcat(firstPartF, tmp);
+        }
+        for (int i = 4; i < 8; i++) {
+            if (!noiseLabels[i]) continue;
+            char tmp[64];
+            bool badF = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
+            snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", badF ? "*" : "", noiseLabels[i], noiseValsF[i]);
+            strcat(secondPartF, tmp);
+        }
     }
 
-    // ===================== 构建显示行 (27 行) =====================
+    // ===================== 构建 27 行显示文本 =====================
     static char ln[27][2048];
     sprintf(ln[0], "Minecraft NoiseFarlands Reference [MFSCelebrate/BiliBiliMobile]");
     sprintf(ln[1], "%.2f fps", fps);
     ln[2][0] = '\0';
     sprintf(ln[3], "--- Local Server Position ---");
+    if (showBig) {
     snprintf(ln[4], sizeof(ln[4]),
-         "XYZ: %.3f / %.5f / %.3f [BigWorldCoordinate: %s / %s / %s]",
-         px, py, pz,
-         bigPXStr.c_str(), bigPYStr.c_str(), bigPZStr.c_str());
-    // 🔥 X/Y/Z(World) — 阈值分支显示
+        "XYZ(BigWorldCoordinate): %s / %s / %s",
+        bigPXStr.c_str(), bigPYStr.c_str(), bigPZStr.c_str());
+    } else {
+    snprintf(ln[4], sizeof(ln[4]),
+        "XYZ: %.3f / %.5f / %.3f",
+        px, py, pz);
+    }
+    
     if (showBig) {
         snprintf(ln[5], sizeof(ln[5]), "X(World/BigWorldCoordinate): %s", pxoBigStr.c_str());
         snprintf(ln[6], sizeof(ln[6]), "Y(World/BigWorldCoordinate): %s", pyoBigStr.c_str());
@@ -974,12 +1030,10 @@ if (rls) {
         sprintf(ln[7], "Z(World): %.15f", pzo);
     }
 
-    // 🔥 ln[8] — 偏移/缩放（用 FixedCoord 字符串，无浮点舍入）
     if (!sOffX.empty()) {
         snprintf(ln[8], sizeof(ln[8]),
             "Offset: %s / %s / %s (Scale: %s / %s / %s)",
-            sOffX.c_str(), sOffY.c_str(), sOffZ.c_str(),
-            sSclX.c_str(), sSclY.c_str(), sSclZ.c_str());
+            sOffX.c_str(), sOffY.c_str(), sOffZ.c_str(), sSclX.c_str(), sSclY.c_str(), sSclZ.c_str());
     } else {
         snprintf(ln[8], sizeof(ln[8]),
             "Offsets: %.2f / %.2f / %.2f (Scales: %.3f / %.3f / %.3f)",
@@ -989,71 +1043,34 @@ if (rls) {
 
     ln[9][0] = '\0';
     sprintf(ln[10], "--- World Generator ---");
+
+    // 🛡️ 64Bit Farlands：两种生成器都显示
     sprintf(ln[11], "64Bit Farlands: %s", fringeEnabled ? "True" : "False");
-    sprintf(ln[12], "Sea Level: %d", seaLevel);
 
-    // 噪声标签
-    const char* labels[8] = {
-        "Low-Noise", "High-Noise", "Selector-Noise", "Sand-Noise",
-        "Gravel-Noise", "Scale-Noise", "Depth-Noise", "Tree-Density-Noise"
-    };
+    // 🛡️ ln[12]：普通世界 Sea Level，末地 Generator 类型
+    if (isEnd) {
+        sprintf(ln[12], "LocalGenerator: TheEndLevelSource (.cpp)");
+    } else {
+        sprintf(ln[12], "Sea Level: %d", seaLevel);
+    }
 
-    // Double 噪声行
-    static char firstPartD[2048] = "";
-    static char secondPartD[2048] = "";
-    firstPartD[0] = '\0';
-    secondPartD[0] = '\0';
-    for (int i = 0; i < 4; i++) {
-        char tmp[64];
-        bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
-        strcat(firstPartD, tmp);
-    }
-    for (int i = 4; i < 8; i++) {
-        char tmp[64];
-        bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseVals[i]);
-        strcat(secondPartD, tmp);
-    }
     snprintf(ln[13], sizeof(ln[13]), "Terrain Noise: %s", firstPartD);
     snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPartD);
-
-    // Float 噪声行
-    static char firstPartF[2048] = "";
-    static char secondPartF[2048] = "";
-    firstPartF[0] = '\0';
-    secondPartF[0] = '\0';
-    for (int i = 0; i < 4; i++) {
-        char tmp[64];
-        bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
-        strcat(firstPartF, tmp);
-    }
-    for (int i = 4; i < 8; i++) {
-        char tmp[64];
-        bool bad = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
-        snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", labels[i], noiseValsF[i]);
-        strcat(secondPartF, tmp);
-    }
     ln[15][0] = '\0';
     snprintf(ln[16], sizeof(ln[16]), "Terrain Noise(Float): %s", firstPartF);
-    snprintf(ln[17], sizeof(ln[17]), "Surface Noise(Float): %s", secondPartF);
-
-    // ★ 第18行留空，稍后手动绘制精度
+    snprintf(ln[17], sizeof(ln17]), "Surface Noise(Float): %s", secondPartF);
     ln[18][0] = '\0';
-
     ln[19][0] = '\0';
+
     sprintf(ln[20], "--- Other Information ---");
     sprintf(ln[21], "Block: %lld %lld %lld   Chunk: %lld %lld",
         (long long)bx, (long long)by, (long long)bz,
         (long long)cx, (long long)cz);
-
     sprintf(ln[22], "Facing: %s (%s)  (%.1f / %.1f)  Biome: %s",
-            facing, axis, p->yRot, p->xRot, biomeName);
+        facing, axis, p->yRot, p->xRot, biomeName);
     sprintf(ln[23], "Day %ld  Time: %ld  Seed: %ld", day, dayTime, seed);
     ln[24][0] = '\0';
 
-    // 条纹修复警告行
     bool stripeRepairOn = minecraft->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
     if (!stripeRepairOn) {
         snprintf(ln[25], sizeof(ln[25]),
@@ -1084,7 +1101,7 @@ if (rls) {
         fill(x0, y0, x1, y1, 0x90000000);
     }
 
-    // 文本
+    // 文本 + 颜色
     Tesselator& t = Tesselator::instance;
     t.beginOverride();
     for (int i = 0; i < N; i++) {
@@ -1092,29 +1109,27 @@ if (rls) {
         float y = MGN + i * LH;
         int col = 0xffffffff;
 
-        if (i == 0)
-            col = 0xffFFFF55;
-        else if (i == 11)
-            col = fringeEnabled ? 0xff00ff00 : 0xffff0000;
-        else if (i == 16 || i == 17)
-            col = 0xFFFF8080;
-        else if (i == 25)
-            col = 0xffff0000;
+if (i == 0)
+    col = 0xffFFFF55;
+else if (i == 11)
+    col = fringeEnabled ? 0xff00ff00 : 0xffff0000;
+else if (i == 16 || i == 17)
+    col = 0xFFFF8080;
+else if (i == 25)
+    col = 0xffff0000;
 
         font->draw(ln[i], MGN, y, col);
     }
     t.endOverrideAndDraw();
 
-    // ========== 精度丢失显示（替换原 ln[18] 位置） ==========
+    // ===================== 精度丢失显示（ln[18] 位置） =====================
     {
         double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
         double doubleStep; float floatStep;
         Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
         float yPos = MGN + 18 * LH;
-
-        // BigCoord 步长：定点数最小精度 = 1 / FIXED_SCALE = 1e-12
         double bigStep = 1.0e-12;
-		
+
         char bufDouble[64], bufFloat[64], bufBig[64];
         snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
         snprintf(bufFloat, sizeof(bufFloat), "%.9f", floatStep);
@@ -1132,10 +1147,10 @@ if (rls) {
         trimZeros(bufFloat);
         trimZeros(bufBig);
 
-        const char* labelText = "Current Precision: ";
-        const char* middleText = " (Float: ";
-        const char* bigText   = ") (BigWorldCoordinate: ";
-        const char* endText   = ")";
+        const char* labelText  = "Current Precision: ";
+const char* middleText = " (Float: ";
+const char* bigText    = ") (BigWorldCoordinate: ";
+const char* endText    = ")";
 
         float totalWidth = font->width(labelText)
                          + font->width(bufDouble)
@@ -1148,8 +1163,8 @@ if (rls) {
         fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
 
         font->draw(labelText, MGN, yPos, 0xFFFFFFFF);
-
         float xCursor = MGN + font->width(labelText);
+
         int colD = Mth::getPrecisionColor(doubleStep);
         font->draw(bufDouble, xCursor, yPos, colD);
         xCursor += font->width(bufDouble);
@@ -1164,8 +1179,7 @@ if (rls) {
         font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
         xCursor += font->width(bigText);
 
-        int colBig = 0xFF88FF88; // BigCoord 步长恒定 1e-12，永远绿色
-        font->draw(bufBig, xCursor, yPos, colBig);
+        int colBig = 0xFF88FF yPos, colBig);
         xCursor += font->width(bufBig);
 
         font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
@@ -1173,7 +1187,7 @@ if (rls) {
 
     glPopMatrix();
 }
-}
+
 void Gui::renderPlayerList(Font* font, int screenWidth, int screenHeight) {
 	// only show when in game, no other screen
 	// if (!minecraft->level) return;
