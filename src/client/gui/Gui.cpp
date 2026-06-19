@@ -1125,14 +1125,16 @@ else if (i == 25)
     }
     t.endOverrideAndDraw();
 
-    // ===================== 精度丢失显示（ln[18] 位置） =====================
+    // ========== 精度丢失显示（替换原 ln[18] 位置） ==========
     {
         double maxCoord = std::max(std::abs(pxo), std::abs(pzo));
         double doubleStep; float floatStep;
         Mth::computePrecisionLoss(maxCoord, doubleStep, floatStep);
         float yPos = MGN + 18 * LH;
-        double bigStep = 1.0e-12;
 
+        // BigCoord 步长：定点数最小精度 = 1 / FIXED_SCALE = 1e-12
+        double bigStep = 1.0e-12;
+		
         char bufDouble[64], bufFloat[64], bufBig[64];
         snprintf(bufDouble, sizeof(bufDouble), "%.16f", doubleStep);
         snprintf(bufFloat, sizeof(bufFloat), "%.9f", floatStep);
@@ -1150,10 +1152,10 @@ else if (i == 25)
         trimZeros(bufFloat);
         trimZeros(bufBig);
 
-        const char* labelText  = "Current Precision: ";
-const char* middleText = " (Float: ";
-const char* bigText    = ") (BigWorldCoordinate: ";
-const char* endText    = ")";
+        const char* labelText = "Current Precision: ";
+        const char* middleText = " (Float: ";
+        const char* bigText   = ") (BigWorldCoordinate: ";
+        const char* endText   = ")";
 
         float totalWidth = font->width(labelText)
                          + font->width(bufDouble)
@@ -1161,14 +1163,13 @@ const char* endText    = ")";
                          + font->width(bufFloat)
                          + font->width(bigText)
                          + font->width(bufBig)
-                         + font->width(endText)
-		                 + 20.0f;  // ← 🛡️ 额外 padding，防止截断
+                         + font->width(endText);
 
         fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
 
         font->draw(labelText, MGN, yPos, 0xFFFFFFFF);
-        float xCursor = MGN + font->width(labelText);
 
+        float xCursor = MGN + font->width(labelText);
         int colD = Mth::getPrecisionColor(doubleStep);
         font->draw(bufDouble, xCursor, yPos, colD);
         xCursor += font->width(bufDouble);
@@ -1180,14 +1181,15 @@ const char* endText    = ")";
         font->draw(bufFloat, xCursor, yPos, colF);
         xCursor += font->width(bufFloat);
 
-		font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
+        font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
         xCursor += font->width(bigText);
 
-        int colBig = 0xFF88FF88;
+        int colBig = 0xFF88FF88; // BigCoord 步长恒定 1e-12，永远绿色
         font->draw(bufBig, xCursor, yPos, colBig);
+        xCursor += font->width(bufBig);
 
         font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
-    }
+	}
 
     glPopMatrix();
 }
