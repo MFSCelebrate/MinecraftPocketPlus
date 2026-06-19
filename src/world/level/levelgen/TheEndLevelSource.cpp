@@ -50,17 +50,27 @@ TheEndLevelSource::~TheEndLevelSource() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    // 🛡️ 偏移后的 chunk 坐标（影响岛屿在 XZ 平面的位置）
+    // 🛡️ 偏移后的 chunk 坐标
     double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
-    // 中央岛
-    double cx = (double)(zC + 2 * chZ);
-    double cz = (double)(xC + 2 * chX);
-    double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
+    // === 中央岛高度 ===
+    double v9;
+    if (enableCircles) {
+        // 🔥 末地环模式：使用 int 中间量，溢出 → NaN → 环形裂隙
+        int ix = zC + 2 * (int)chZ;
+        int iz = xC + 2 * (int)chX;
+        float distSq = (float)(ix * ix + iz * iz);
+        v9 = (double)(100.0f - Mth::sqrt(distSq) * 8.0f);
+    } else {
+        // 正常模式：double 安全
+        double cx = (double)(zC + 2 * chZ);
+        double cz = (double)(xC + 2 * chX);
+        v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
+    }
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // 外岛
+    // === 外岛 ===
     int wX_start = (int)(chX - 12.0);
     int wZ_start = (int)(chZ - 12.0);
     int v28_start = xC + 24;
@@ -69,19 +79,42 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
     for (int i = 0; i < 25; i++) {
         int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
+
         for (int j = 0; j < 25; j++) {
             int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
-            if ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096) {
+
+            bool outsideCentral;
+            if (enableCircles) {
+                // 🔥 末地环模式：int 溢出 → 负值 → "大于"4096 可能为 true
+                outsideCentral = (wX * wX + wZ * wZ > 4096);
+            } else {
+                // 正常模式：int64_t 安全
+                outsideCentral = ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096);
+            }
+
+            if (outsideCentral) {
                 if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
+
                     int mul = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
-                    double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
+                    double v20;
+
+                    if (enableCircles) {
+                        // 🔥 末地环模式：int 溢出 hypot
+                        float v20f = 100.0f - Mth::sqrt((float)(v17 * v17 + v28 * v28)) * (float)mul;
+                        v20 = (double)v20f;
+                    } else {
+                        // 正常模式：double hypot
+                        v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
+                    }
+
                     v20 = Mth::clamp(v20, -100.0, 80.0);
-                    v9 = Mth::Max(v20, v9);
+                    if (v20 > v9) v9 = v20;
                 }
             }
         }
     }
+
     return v9;
 }
 // ========== Density Cells ==========
