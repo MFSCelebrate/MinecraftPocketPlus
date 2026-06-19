@@ -254,8 +254,11 @@ void Tile::initTiles() {
 	stairs_stoneBrickSmooth = (new StairTile(109, Tile::stoneBrickSmooth))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsStoneBrickSmooth");//->sendTileData();
 	netherBrick    = (new Tile(112, 0 + 14 * 16, Material::stone))->init()->setDestroyTime(2.0f)->setExplodeable(10)->setSoundType(SOUND_STONE)->setCategory(ItemCategory::Structures)->setDescriptionId("netherBrick");
 	stairs_netherBricks = (new StairTile(114, Tile::netherBrick))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsNetherBrick");//->sendTileData();
-	endStone = (new EndStoneTile(121, 175))->setDescriptionId("tile.endStone.name")->setLightBlock(255);  // ← 必须有！石头类方块默认 lightBlock=255
-	Tile::tiles[121] = Tile::endStone;
+	Tile::endStone = (new EndStoneTile(121, 175))
+    ->setDescriptionId("tile.endStone.name");
+
+// 🛡️ 兜底：显式确保 tiles[121] 指向 endStone（防御构造器未自动注册）
+Tile::tiles[121] = Tile::endStone;
 	stairs_sandStone = (new StairTile(128, Tile::sandStone))->init()->setCategory(ItemCategory::Structures)->setDescriptionId("stairsSandStone");//->sendTileData();
 
 	quartzBlock   = (new QuartzBlockTile(155))->init()->setSoundType(SOUND_STONE)->setDestroyTime(0.8f)->setCategory(ItemCategory::Structures)->setDescriptionId("quartzBlock");
