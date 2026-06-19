@@ -105,6 +105,7 @@ enum OptionId {
     OPTIONS_WORLD_SCALE_Y,   // 新增：Y 轴缩放
     OPTIONS_WORLD_OFFSET_Y,  // 新增：Y 轴偏移
     OPTIONS_END_GENERATOR,
+    OPTIONS_END_CIRCLES,  // 🛡️ 新增：末地环开关
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
