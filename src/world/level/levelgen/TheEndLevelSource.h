@@ -28,6 +28,13 @@ private:
     double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
     std::map<int64_t, LevelChunk*> chunkMap;
 
+    double m_worldOffsetX = 0.0;
+    double m_worldOffsetY = 0.0;
+    double m_worldOffsetZ = 0.0;
+    double m_worldScaleX  = 1.0;
+    double m_worldScaleY  = 1.0;
+    double m_worldScaleZ  = 1.0;
+
     Level* level;
     Random random;
     PerlinNoise pNoise1;   // 16 octaves, 3D — 地形低频
