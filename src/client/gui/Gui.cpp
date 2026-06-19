@@ -923,7 +923,7 @@ void Gui::renderDebugInfo() {
         noiseVals[1] = rls->getLPerlinNoise2(nX, nY, nZ);
         noiseVals[2] = rls->getPerlinNoise1(nX, nY, nZ);
         noiseVals[3] = rls->getPerlinNoise2(pxo / 32.0, pzo / 32.0);
-        noiseVals[4] = rlsldrlds->getDepthNoise(pxo / 200.0, pzo / 200.0);
+        noiseVals[4] = rls->getDepthNoise(pxo / 200.0, pzo / 200.0);
         noiseVals[7] = rls->getForestNoise(pxo * 0.5, pzo * 0.5);
 
         // Float 精度噪声
@@ -934,7 +934,8 @@ void Gui::renderDebugInfo() {
         noiseValsF[1] = (float)rls->getLPerlinNoise2(fX * sXZ, fY * sY, fZ * sXZ);
         noiseValsF[2] = (float)rls->getPerlinNoise1(fX * sXZ, fY * sY, fZ * sXZ);
         noiseValsF[3] = (float)rls->getPerlinNoise2(fX / 32.0, fZ / 32.0);
-        noiseValsF[4] = (float)rls->getPerlinNoise3(fX /float)rls->getScaleNoise(fX / 80.0, fZ / 80.0);
+        noiseValsF[4] = (float)rls->getPerlinNoise3(fX / 64.0, fZ / 64.0);
+        noiseValsF[5] = (float)rls->getScaleNoise(fX / 80.0, fZ / 80.0);
         noiseValsF[6] = (float)rls->getDepthNoise(fX / 200.0, fZ / 200.0);
         noiseValsF[7] = (float)rls->getForestNoise(fX * 0.5, fZ * 0.5);
     } else if (els) {
@@ -982,7 +983,7 @@ void Gui::renderDebugInfo() {
             strcat(firstPartD, tmp);
         }
         for (int i = 4; i < 8; i++) {
-            if (!noiseLabels]);
+            if (!noiseLabels[i]) continue;
             char tmp[64];
             bool bad = (std::isnan(noiseVals[i]) || std::isinf(noiseVals[i]));
             snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", bad ? "*" : "", noiseLabels[i], noiseVals[i]);
@@ -991,7 +992,7 @@ void Gui::renderDebugInfo() {
         for (int i = 0; i < 4; i++) {
             if (!noiseLabels[i]) continue;
             char tmp[64];
-            bool badF = (std::isnan(noValsF[i]) || std::isinf(noiseValsF[i]));
+            bool badF = (std::isnan(noiseValsF[i]) || std::isinf(noiseValsF[i]));
             snprintf(tmp, sizeof(tmp), "%s%s: %.4f  ", badF ? "*" : "", noiseLabels[i], noiseValsF[i]);
             strcat(firstPartF, tmp);
         }
@@ -1058,7 +1059,7 @@ void Gui::renderDebugInfo() {
     snprintf(ln[14], sizeof(ln[14]), "Surface Noise: %s", secondPartD);
     ln[15][0] = '\0';
     snprintf(ln[16], sizeof(ln[16]), "Terrain Noise(Float): %s", firstPartF);
-    snprintf(ln[17], sizeof(ln17]), "Surface Noise(Float): %s", secondPartF);
+    snprintf(ln[17], sizeof(ln[17]), "Surface Noise(Float): %s", secondPartF);
     ln[18][0] = '\0';
     ln[19][0] = '\0';
 
@@ -1176,11 +1177,11 @@ const char* endText    = ")";
         font->draw(bufFloat, xCursor, yPos, colF);
         xCursor += font->width(bufFloat);
 
-        font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
+		font->draw(bigText, xCursor, yPos, 0xFFFFFFFF);
         xCursor += font->width(bigText);
 
-        int colBig = 0xFF88FF yPos, colBig);
-        xCursor += font->width(bufBig);
+        int colBig = 0xFF88FF88;
+        font->draw(bufBig, xCursor, yPos, colBig);
 
         font->draw(endText, xCursor, yPos, 0xFFFFFFFF);
     }
