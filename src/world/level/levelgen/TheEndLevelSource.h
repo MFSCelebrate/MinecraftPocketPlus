@@ -53,6 +53,9 @@ private:
     double m_worldScaleY  = 1.0;
     double m_worldScaleZ  = 1.0;
 
+    bool m_spikesGenerated = false;
+void generateEndSpikes();
+
     Level* level;
     Random random;
     PerlinNoise pNoise1;   // 16 octaves, 3D — 地形低频
