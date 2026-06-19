@@ -21,6 +21,7 @@ OptionBool isFlying("isflying", false);
 OptionBool barOnTop("barOnTop", false);
 OptionBool disableSkygrid("disable_skygrid", false);  // 默认 false = 不禁用（允许天空网格）
 OptionBool allowSprint("allowSprint", true);
+static OptionBool endCircles("endCircles", false);
 OptionBool rpiCursor("rpiCursor", false);
 OptionBool autoJump("autoJump", true);
 
@@ -202,6 +203,7 @@ void Options::initTable() {
 	m_options[OPTIONS_WORLD_SCALE_Y] = &worldScaleY;
     m_options[OPTIONS_WORLD_OFFSET_Y] = &worldOffsetY;
 	m_options[OPTIONS_END_GENERATOR] = &endGenerator;
+	m_options[OPTIONS_END_CIRCLES] = &endCircles;
 }
 
 void Options::set(OptionId key, const std::string& value) {
