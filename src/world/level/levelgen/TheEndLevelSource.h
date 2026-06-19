@@ -27,6 +27,8 @@ public:
 
     double sampleDensityAt(double worldX, double worldY, double worldZ);
     double getIslandHeightValue(int64 chunkX, int64_t chunkZ, int xC, int zC);
+    double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
+    std::map<int64_t, LevelChunk*> chunkMap;
 
     virtual bool hasChunk(int64_t x, int64_t z) override;
     virtual LevelChunk* create(int64_t x, int64_t z) override;
@@ -40,8 +42,6 @@ public:
 private:
     void prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned char* blocks);
     void generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density);
-    double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
-    std::map<int64_t, LevelChunk*> chunkMap;
 
     double m_worldOffsetX = 0.0;
     double m_worldOffsetY = 0.0;
