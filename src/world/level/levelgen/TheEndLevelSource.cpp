@@ -36,23 +36,30 @@ TheEndLevelSource::~TheEndLevelSource() {
     delete[] densityBuffer;
 }
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
+
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
     double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
+    // === 中央岛 ===
     double v9;
     if (enableCircles) {
-        int ix = zC + 2 * (int)chZ;
-        int iz = xC + 2 * (int)chX;
-        float distSq = (float)(ix * ix + iz * iz);
-        v9 = (double)(100.0f - Mth::sqrt(distSq) * 8.0f);
+        // 末地环：int 溢出 → sqrt(负数) → NaN 污染
+        int ix = (int)(zC + 2.0 * chZ);
+        int iz = (int)(xC + 2.0 * chX);
+        int distSq = ix * ix + iz * iz;
+        v9 = 100.0 - Mth::sqrt((double)distSq) * 8.0;
     } else {
-        double cx = (double)(zC + 2 * chZ);
-        double cz = (double)(xC + 2 * chX);
-        v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
+        double cx = (double)(zC + 2.0 * chZ);
+        double cz = (double)(xC + 2.0 * chX);
+        v9 = 100.0 - Mth::sqrt(cx * cx + cz * cz) * 8.0;
     }
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
+    // === 外岛 ===
     int wX_start = (int)(chX - 12.0);
     int wZ_start = (int)(chZ - 12.0);
     int v28_start = xC + 24;
@@ -61,33 +68,31 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
     for (int i = 0; i < 25; i++) {
         int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
+
         for (int j = 0; j < 25; j++) {
             int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
 
             bool outsideCentral;
             if (enableCircles) {
-                outsideCentral = (wX * wX + wZ * wZ > 4096);
+                // 末地环：int 溢出 → 负数 → >4096 为 false
+                int dSq = wX * wX + wZ * wZ;
+                outsideCentral = dSq > 4096;
             } else {
-                outsideCentral = ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096);
+                outsideCentral = (int64_t)wX * wX + (int64_t)wZ * wZ > 4096;
             }
 
             if (outsideCentral) {
                 if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
-                    int mul = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
-                    double v20;
-                    if (enableCircles) {
-                        float v20f = 100.0f - Mth::sqrt((float)(v17 * v17 + v28 * v28)) * (float)mul;
-                        v20 = (double)v20f;
-                    } else {
-                        v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
-                    }
+                    int mul = (237 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
+                    double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
-                    if (v20 > v9) v9 = v20;
+                    v9 = Mth::Max(v20, v9);
                 }
             }
         }
     }
+
     return v9;
 }
 
