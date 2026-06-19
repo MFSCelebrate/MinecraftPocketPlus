@@ -33,7 +33,7 @@ TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
         std::string ox = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
         if (!ox.empty()) m_worldOffsetX = atof(ox.c_str());
 
-        std::string oy = Minecraft::instance->options.getStringValue(OPTIONSES
+        std::string oy = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
         if (!oy.empty()) m_worldOffsetY = atof(oy.c_str());
 
         std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
