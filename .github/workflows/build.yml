@@ -97,6 +97,11 @@ jobs:
             mv /tmp/boost_1_83_0/boost lib/include/
           fi
 
+      - name: Copy runtime DLLs
+        run: |
+           cp $GITHUB_WORKSPACE/llvm-mingw/x86_64-w64-mingw32/bin/libc++.dll $GITHUB_WORKSPACE/build/
+           cp $GITHUB_WORKSPACE/llvm-mingw/x86_64-w64-mingw32/bin/libunwind.dll $GITHUB_WORKSPACE/build/
+
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
