@@ -96,7 +96,9 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
 
     double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
     double originY = m_worldOffsetY * m_worldScaleY / 8.0;
-    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ *orld. sx  = B_XZ  * m_worldScaleX;
+    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ / 8.0;
+
+    double sx  = B_XZ  * m_worldScaleX;
     double sy  = B_Y   * m_worldScaleY;
     double sz  = B_XZ  * m_worldScaleZ;
     double ssx = BS_XZ * m_worldScaleX;
