@@ -39,7 +39,7 @@ TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
         std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
         if (!oz.empty()) m_worldOffsetZ = atof(oz.c_str());
     }
-    generateEndSpikes();
+    
 }
 
 TheEndLevelSource::~TheEndLevelSource() {
@@ -285,6 +285,7 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     // DataLayer 每字节存两个 4-bit nibble，0xFF = 两个 15
     memset(levelChunk->skyLight.data, 0xFF, LevelChunk::ChunkBlockCount / 2);
     // blockLight 已经是 0（构造时 setAll(0)），末地无发光方块，不需改
+    generateEndSpikes();
 
     levelChunk->recalcHeightmapOnly();
 
