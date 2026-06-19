@@ -289,14 +289,7 @@ void Item::initItems() {
 	//Item::record_01 = (new RecordingItem(2000, "13"))->setIcon(0, 15)->setCategory(ItemCategory::Decorations)->setDescriptionId("record");
 	//Item::record_02 = (new RecordingItem(2001, "cat"))->setIcon(1, 15)->setCategory(ItemCategory::Decorations)->setDescriptionId("record");
 	Item::camera = (new CameraItem(200))->setIcon(2, 15)->setCategory(ItemCategory::Decorations)->setDescriptionId("camera");
-	LOGI("Tile::tiles[121] = %p, Tile::endStone = %p\n", 
-     (void*)Tile::tiles[121], (void*)Tile::endStone);
-
-// 末地石 TileItem 注册
-items[377] = (new TileItem(121))
-    ->setDescriptionId("tile.endStone.name")
-    ->setIcon(175);
-	// 在 initItems 最后，其他物品后面添加：
+	
 negativePickaxe = new NegativePickaxeItem(199, Tier::EMERALD);
 negativePickaxe->setIcon(2, 4)                 // 借用钻石镐的图标（column=2, row=4）
                ->setDescriptionId("negativePickaxe")
