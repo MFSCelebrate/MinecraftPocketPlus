@@ -67,10 +67,10 @@ void Chunk::translateToPos()
 
 void Chunk::rebuild() {
     // 🛡️ 防御垃圾值
-    if(xs <= 0 || xs > 256) xs = 16;
-    if(ys <= 0 || ys > 256) ys = 16;
-    if(zs <= 0 || zs > 256) zs = 16;
-    
+    if (xs <= 0 || xs > 256) xs = 16;
+    if (ys <= 0 || ys > 256) ys = 16;
+    if (zs <= 0 || zs > 256) zs = 16;
+
     if (!dirty) return;
     updates++;
 
@@ -99,42 +99,47 @@ void Chunk::rebuild() {
         bool started = false;
         int cindex = -1;
 
-        for (int64_t y = y0; y < y1; y++) {
-            for (int64_t z = z0; z < z1; z++) {
-                for (int64_t x = x0; x < x1; x++) {
+        for (int64_t cy = y0; cy < y1; cy++) {
+            for (int64_t cz = z0; cz < z1; cz++) {
+                for (int64_t cx = x0; cx < x1; cx++) {
                     ++cindex;
-                    int tileId = region.getTile(x, y, z);
-                    if (tileId > 0) {
-                        if (!started) {
-                            started = true;
+                    int tileId = region.getTile(cx, cy, cz);
+                    
+                    // 🛡️ 跳过空气和无效方块ID
+                    if (tileId <= 0) continue;
+                    if (tileId >= Tile::NUM_BLOCK_TYPES) continue;
+                    
+                    Tile* tile = Tile::tiles[tileId];
+                    
+                    // 🛡️ 跳过未注册的方块（纯防御）
+                    if (tile == nullptr) continue;
 
+                    if (!started) {
+                        started = true;
 #ifndef USE_VBO
-                            glNewList(lists + l, GL_COMPILE);
-                            glPushMatrix2();
-                            translateToPos();
-                            float ss = 1.000001f;
-                            glTranslatef2(-zs / 2.0f, -ys / 2.0f, -zs / 2.0f);
-                            glScalef2(ss, ss, ss);
-                            glTranslatef2(zs / 2.0f, ys / 2.0f, zs / 2.0f);
+                        glNewList(lists + l, GL_COMPILE);
+                        glPushMatrix2();
+                        translateToPos();
+                        float ss = 1.000001f;
+                        glTranslatef2(-zs / 2.0f, -ys / 2.0f, -zs / 2.0f);
+                        glScalef2(ss, ss, ss);
+                        glTranslatef2(zs / 2.0f, ys / 2.0f, zs / 2.0f);
 #endif
-                            // 在 Chunk::rebuild() 中，找到 t.begin() 之后的 t.offset(...)，改为：
-t.begin();
-if (TileRenderer::stripeRepairEnabled) {
-    t.offset(0.0, 0.0, 0.0);
-} else {
-    t.offset((double)(-this->x), (double)(-this->y), (double)(-this->z));
-}
+                        t.begin();
+                        if (TileRenderer::stripeRepairEnabled) {
+                            t.offset(0.0, 0.0, 0.0);
+                        } else {
+                            t.offset((double)(-this->x), (double)(-this->y), (double)(-this->z));
                         }
+                    }
 
-                        Tile* tile = Tile::tiles[tileId];
-                        int renderLayer = tile->getRenderLayer();
+                    int renderLayer = tile->getRenderLayer();
 
-                        if (renderLayer > l) {
-                            renderNextLayer = true;
-                            doRenderLayer[renderLayer] = true;
-                        } else if (renderLayer == l) {
-                            rendered |= tileRenderer.tesselateInWorld(tile, x, y, z);
-                        }
+                    if (renderLayer > l) {
+                        renderNextLayer = true;
+                        doRenderLayer[renderLayer] = true;
+                    } else if (renderLayer == l) {
+                        rendered |= tileRenderer.tesselateInWorld(tile, cx, cy, cz);
                     }
                 }
             }
@@ -143,20 +148,18 @@ if (TileRenderer::stripeRepairEnabled) {
         if (started) {
 #ifdef USE_VBO
             renderChunk[l] = t.end(true, vboBuffers[l]);
-            // Chunk.cpp 的 rebuild() 中，找到 renderChunk[l].baseX/Y/Z 赋值的地方
-renderChunk[l].pos.x = (float)this->x;
-renderChunk[l].pos.y = (float)this->y;
-renderChunk[l].pos.z = (float)this->z;
+            renderChunk[l].pos.x = (float)this->x;
+            renderChunk[l].pos.y = (float)this->y;
+            renderChunk[l].pos.z = (float)this->z;
 
-// 根据修复开关设置 baseY
-bool stripeFix = TileRenderer::stripeRepairEnabled;
-renderChunk[l].baseX = (float)this->x;
-renderChunk[l].baseZ = (float)this->z;
-if (stripeFix) {
-    renderChunk[l].baseY = 0.0f;   // Y 轴顶点已是世界高度，不需要区块偏移
-} else {
-    renderChunk[l].baseY = (float)this->y;
-}
+            bool stripeFix = TileRenderer::stripeRepairEnabled;
+            renderChunk[l].baseX = (float)this->x;
+            renderChunk[l].baseZ = (float)this->z;
+            if (stripeFix) {
+                renderChunk[l].baseY = 0.0f;
+            } else {
+                renderChunk[l].baseY = (float)this->y;
+            }
 #else
             t.end(false, -1);
             glPopMatrix2();
