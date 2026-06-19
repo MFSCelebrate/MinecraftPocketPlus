@@ -36,32 +36,28 @@ TheEndLevelSource::~TheEndLevelSource() {
     delete[] densityBuffer;
 }
 
-// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
-
-// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
-
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
     double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
     // === 中央岛 ===
+    double bx = (double)(xC + .0;
+    double bz = (double)(zC + 2 * chZ) * 8.0;
+
     double v9;
-    if (enableCircles) {
-        // 末地环：int 溢出 → sqrt(负数) → NaN 污染
-        int ix = (int)(zC + 2.0 * chZ);
-        int iz = (int)(xC + 2.0 * chX);
+    if (m_endCircles) {
+        int ix = (int)floor(bx);
+        int iz = (int)floor(bz);
         int distSq = ix * ix + iz * iz;
         v9 = 100.0 - Mth::sqrt((double)distSq) * 8.0;
     } else {
-        double cx = (double)(zC + 2.0 * chZ);
-        double cz = (double)(xC + 2.0 * chX);
-        v9 = 100.0 - Mth::sqrt(cx * cx + cz * cz) * 8.0;
+        v9 = 100.0 - Mth::sqrt(bx * bx + bz * bz) * 8.0;
     }
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
     // === 外岛 ===
-    int wX_start = (int)(chX - 12.0);
-    int wZ_start = (int)(chZ - 12.0);
+    int wX_start = (int)floor(chX - 12.0);
+    int wZ_start = (int)floor(chZ - 12.0);
     int v28_start = xC + 24;
     int v17_start = zC + 24;
 
@@ -74,10 +70,11 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
             int v17 = v17_start - 2 * j;
 
             bool outsideCentral;
-            if (enableCircles) {
-                // 末地环：int 溢出 → 负数 → >4096 为 false
-                int dSq = wX * wX + wZ * wZ;
-                outsideCentral = dSq > 4096;
+            if (m_endCircles) {
+                int bx2 = wX * 8;
+                int bz2 = wZ * 8;
+                int dSq = bx2 * bx2 + bz2 * bz2;
+                outsideCentral = dSq > 4096 * 64;
             } else {
                 outsideCentral = (int64_t)wX * wX + (int64_t)wZ * wZ > 4096;
             }
