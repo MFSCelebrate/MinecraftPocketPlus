@@ -121,7 +121,7 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
                         double t = ((double)(yC - 14) + (double)d) / 64.0;
                         if (t < 0.0) t = 0.0;
                         if (t > 1.0) t = 1.0;
-                        v6 = (1.0 v4 - t * 3000.0;
+                        v6 = (1.0 - t) * v4 - t * 3000.0;
                     }
 
                     density[ind] = v6;
