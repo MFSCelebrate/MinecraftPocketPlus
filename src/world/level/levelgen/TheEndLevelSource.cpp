@@ -2,17 +2,43 @@
 #include "../Level.h"
 #include "../chunk/LevelChunk.h"
 #include "../tile/Tile.h"
+#include "../../../client/Minecraft.h"
+
+#include <cstdint>
 
 TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
-    : random(seed),
-      level(level),
-      pNoise1(&random, 16),
-      pNoise2(&random, 16),
-      pNoise3(&random, 8),
-      sNoise1(&random, 4),
-      densityBuffer(nullptr)
+    : random(seed), level(level),
+      pNoise1(&random, 16), pNoise2(&random, 16), pNoise3(&random, 8),
+      sNoise1(&random, 4), densityBuffer(nullptr),
+      m_worldOffsetX(0.0),
+      m_worldOffsetY(0.0),
+      m_worldOffsetZ(0.0),
+      m_worldScaleX(1.0),
+      m_worldScaleY(1.0),
+      m_worldScaleZ(1.0)
 {
     densityBuffer = new double[DENSITY_X * DENSITY_Y * DENSITY_Z];
+
+    // 🛡️ 读取世界缩放/偏移（和 RandomLevelSource 一致）
+    if (Minecraft::instance) {
+        std::string sx = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
+        if (!sx.empty()) m_worldScaleX = atof(sx.c_str());
+
+        std::string sy = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
+        if (!sy.empty()) m_worldScaleY = atof(sy.c_str());
+
+        std::string sz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+        if (!sz.empty()) m_worldScaleZ = atof(sz.c_str());
+
+        std::string ox = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+        if (!ox.empty()) m_worldOffsetX = atof(ox.c_str());
+
+        std::string oy = Minecraft::instance->options.getStringValue(OPTIONSES
+        if (!oy.empty()) m_worldOffsetY = atof(oy.c_str());
+
+        std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+        if (!oz.empty()) m_worldOffsetZ = atof(oz.c_str());
+    }
 }
 
 TheEndLevelSource::~TheEndLevelSource() {
@@ -24,39 +50,33 @@ TheEndLevelSource::~TheEndLevelSource() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    // === 中央岛基础高度 ===
-    double cx = (double)(zC + 2 * chunkZ);
-    double cz = (double)(xC + 2 * chunkX);
+    // 🛡️ 应用偏移后换算世界坐标（影响岛屿位置）
+    double offX = (double)chunkX + m_worldOffsetX / 16.0;
+    double offZ = (double)chunkZ + m_worldOffsetZ / 16.0;
+
+    // 中央岛高度 — 使用偏移后的坐标
+    double cx = (double)(zC + 2 * offZ);
+    double cz = (double)(xC + 2 * offX);
     double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // === 外岛检测 ===
-    // JS: for (v25=25, v11=x-12, v28=xC+24; v25; v25--, v11++, v28-=2)
-    int v11_start = (int)chunkX - 12;
+    // 外岛检测 — 使用偏移后的世界坐标
+    int wX_start = (int)(offX - 12.0);
+    int wZ_start = (int)(offZ - 12.0);
     int v28_start = xC + 24;
+    int v17_start = zC + 24;
 
     for (int i = 0; i < 25; i++) {
-        int v11 = v11_start + i;
+        int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
 
-        int v16_start = (int)chunkZ - 12;
-        int v17_start = zC + 24;
-
         for (int j = 0; j < 25; j++) {
-            int v16 = v16_start + j;
+            int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
 
-            // JS: if (v11*v11 + v16*v16 > 4096)
-            // v11/v16 是 chunk 坐标，4096 = 64²，即距离原点 > 64 chunks
-            if ((int64_t)v11 * v11 + (int64_t)v16 * v16 > 4096) {
-
-                // JS: if (sNoise1.getValue(v11, v16) < -0.89999998)
-                if (sNoise1.getValue((double)v11, (double)v16) < -0.89999998) {
-
-                    // JS: (147*abs(v16) + 3439*abs(v11)) % 13 + 9
-                    int multiplier = (147 * abs(v16) + 3439 * abs(v11)) % 13 + 9;
-
-                    // JS: 100 - hypot(v17, v28) * multiplier
+            if ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096) {
+                if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
+                    int multiplier = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
                     double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)multiplier;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
                     v9 = Mth::Max(v20, v9);
@@ -72,21 +92,29 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
 
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
-    const double SX = 1368.824;
-    const double SY = 684.412;
-    const double SZ = 1368.824;
-    const double S_SMALL = 17.1103;
-    const double S_SMALL_Y = 4.277575;
+    // 🛡️ 应用偏移和缩放后计算噪声坐标（模仿 RandomLevelSource::getHeights）
+    double worldX = (double)(chunkX * 2) + m_worldOffsetX / 8.0;  // chunk*2 = 半chunk
+    double worldZ = (double)(chunkZ * 2) + m_worldOffsetZ / 8.0;
 
-    double originX = (double)(chunkX * 2);
-    double originZ = (double)(chunkZ * 2);
+    // 噪声采样原点偏移（XZ）+ Y 偏移
+    double originX = worldX;
+    double originY = m_worldOffsetY / 8.0;
+    double originZ = worldZ;
 
-    double* n1 = pNoise1.getRegion(nullptr, originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, SX, SY, SZ);
-    double* n2 = pNoise2.getRegion(nullptr, originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, SX, SY, SZ);
-    double* n3 = pNoise3.getRegion(nullptr, originX, 0.0, originZ,
-        DENSITY_X, DENSITY_Y, DENSITY_Z, S_SMALL, S_SMALL_Y, S_SMALL);
+    //  噪声频率缩放（模仿 684.412 的模式）
+    const double BASE_XZ = 1368.824 * m_worldScaleX;
+    const double BASE_Y  = 684.412  * m_worldScaleY;
+    const double BASE_SMALL_XZ = 17.1103 * m_worldScaleX;
+    const double BASE_SMALL_Y  = 4.277575 * m_worldScaleY;
+
+    double* n1 = pNoise1.getRegion(nullptr, originX, originY, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_XZ, BASE_Y, BASE_XZ);
+    double* n2 = pNoise2.getRegion(nullptr, originX, originY, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_XZ, BASE_Y, BASE_XZ);
+    double* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
+        DENSITY_X, DENSITY_Y, DENSITY_Z, BASE_SMALL_XZ, BASE_SMALL_Y, BASE_SMALL_XZ);
+
+    // ... 后续密度计算不变 ...
 
     for (int xC = 0; xC < DENSITY_X; xC++) {
         for (int zC = 0; zC < DENSITY_Z; zC++) {
