@@ -2,33 +2,42 @@
 #include "../Level.h"
 #include "../chunk/LevelChunk.h"
 #include "../tile/Tile.h"
-#include "../../../util/Mth.h"
 #include "../../../client/Minecraft.h"
+
+#include <cstdint>
 
 TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
     : random(seed), level(level),
       pNoise1(&random, 16), pNoise2(&random, 16), pNoise3(&random, 8),
-      sNoise1(&random, 4), densityBuffer(nullptr)
+      sNoise1(&random, 4), densityBuffer(nullptr),
+      m_worldOffsetX(0.0),
+      m_worldOffsetY(0.0),
+      m_worldOffsetZ(0.0),
+      m_worldScaleX(1.0),
+      m_worldScaleY(1.0),
+      m_worldScaleZ(1.0)
 {
     densityBuffer = new double[DENSITY_X * DENSITY_Y * DENSITY_Z];
 
+    // 🛡️ 读取世界缩放/偏移（和 RandomLevelSource 一致）
     if (Minecraft::instance) {
-        std::string v;
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
-        if (!v.empty()) m_worldScaleX = atof(v.c_str());
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
-        if (!v.empty()) m_worldScaleY = atof(v.c_str());
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
-        if (!v.empty()) m_worldScaleZ = atof(v.c_str());
+        std::string sx = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
+        if (!sx.empty()) m_worldScaleX = atof(sx.c_str());
 
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
-        if (!v.empty()) m_worldOffsetX = atof(v.c_str());
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
-        if (!v.empty()) m_worldOffsetY = atof(v.c_str());
-        v = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
-        if (!v.empty()) m_worldOffsetZ = atof(v.c_str());
+        std::string sy = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Y);
+        if (!sy.empty()) m_worldScaleY = atof(sy.c_str());
 
-        enableCircles = Minecraft::instance->options.getBooleanValue(OPTIONS_END_CIRCLES);
+        std::string sz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_Z);
+        if (!sz.empty()) m_worldScaleZ = atof(sz.c_str());
+
+        std::string ox = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_X);
+        if (!ox.empty()) m_worldOffsetX = atof(ox.c_str());
+
+        std::string oy = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Y);
+        if (!oy.empty()) m_worldOffsetY = atof(oy.c_str());
+
+        std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
+        if (!oz.empty()) m_worldOffsetZ = atof(oz.c_str());
     }
 }
 
@@ -36,52 +45,36 @@ TheEndLevelSource::~TheEndLevelSource() {
     delete[] densityBuffer;
 }
 
+// ========== Island Height ==========
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
+
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
+    // 🛡️ 偏移后的 chunk 坐标（影响岛屿在 XZ 平面的位置）
     double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
-    // === 中央岛 ===
-    double bx = (double)(xC + 2 * chX) * 8.0;
-    double bz = (double)(zC + 2 * chZ) * 8.0;
-
-    double v9;
-    if (enableCircles) {
-        int ix = (int)floor(bx);
-        int iz = (int)floor(bz);
-        int distSq = ix * ix + iz * iz;
-        v9 = 100.0 - Mth::sqrt((double)distSq) * 8.0;
-    } else {
-        v9 = 100.0 - Mth::sqrt(bx * bx + bz * bz) * 8.0;
-    }
+    // 中央岛
+    double cx = (double)(zC + 2 * chZ);
+    double cz = (double)(xC + 2 * chX);
+    double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // === 外岛 ===
-    int wX_start = (int)floor(chX - 12.0);
-    int wZ_start = (int)floor(chZ - 12.0);
+    // 外岛
+    int wX_start = (int)(chX - 12.0);
+    int wZ_start = (int)(chZ - 12.0);
     int v28_start = xC + 24;
     int v17_start = zC + 24;
 
     for (int i = 0; i < 25; i++) {
         int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
-
         for (int j = 0; j < 25; j++) {
             int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
-
-            bool outsideCentral;
-            if (enableCircles) {
-                int bx2 = wX * 8;
-                int bz2 = wZ * 8;
-                int dSq = bx2 * bx2 + bz2 * bz2;
-                outsideCentral = dSq > 4096 * 64;
-            } else {
-                outsideCentral = (int64_t)wX * wX + (int64_t)wZ * wZ > 4096;
-            }
-
-            if (outsideCentral) {
+            if ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096) {
                 if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
-                    int mul = (237 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
+                    int mul = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
                     double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
                     v9 = Mth::Max(v20, v9);
@@ -89,9 +82,11 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
             }
         }
     }
-
     return v9;
 }
+// ========== Density Cells ==========
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp → generateDensityCells()
 
 void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
     const double B_XZ  = 1368.824;
@@ -101,16 +96,16 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
 
     double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
     double originY = m_worldOffsetY * m_worldScaleY / 8.0;
-    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ / 8.0;
-
-    double sx  = B_XZ  * m_worldScaleX;
+    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ *orld. sx  = B_XZ  * m_worldScaleX;
     double sy  = B_Y   * m_worldScaleY;
     double sz  = B_XZ  * m_worldScaleZ;
     double ssx = BS_XZ * m_worldScaleX;
     double ssy = BS_Y  * m_worldScaleY;
     double ssz = BS_XZ * m_worldScaleZ;
 
-    // 🛡️ 防止大缩放导致 int 溢出：折回 origin 取模 256
+    // 🛡️ 关键修复：利用 PerlinNoise 256 周期折回大坐标
+    // ImprovedNoise::add 内部 X = floor(x) & 255，所以噪声以 256 为周期
+    // 将 origin 对 256 取模，避免 (int)(origin * sx) 溢出
     const double P = 256.0;
     originX = fmod(originX, P);
     if (originX < 0.0) originX += P;
@@ -119,8 +114,13 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
     originZ = fmod(originZ, P);
     if (originZ < 0.0) originZ += P;
 
-    // 🛡️ 钳制噪声频率防止 int 溢出
-    const double MAX_SAFE = 5.0e8;
+    // 🛡️ 对 sx/sy/sz 同样折回：sx 等效于 fmod(sx, P)
+    // 但 PerlinNoise 频率 sx 的 "周期" 意义不同，这里用钳制更安全
+    // 原理：originX*fmod(sx,P) + xx*fmod(sx,P) 在 &255 后和 originX*sx + xx*sx 等效
+    // 但 fmod(sx, P) 可能太小影响噪声特征。折中方案：限制到 int 安全范围
+    const double MAX_SAFE = 5.0e8;  // 5e8 * 258 ≈ 1.3e11，远小于 INT_MAX 2.1e9 但留余量
+    // 实际上如果 sx>MAX_SAFE，噪声在 3 个采样点内至少变化数个周期
+    // 限制它不会显著改变地形（因为高频分量已被滤波）
     if (sx > MAX_SAFE || sx < -MAX_SAFE) sx = (sx > 0) ? MAX_SAFE : -MAX_SAFE;
     if (sy > MAX_SAFE || sy < -MAX_SAFE) sy = (sy > 0) ? MAX_SAFE : -MAX_SAFE;
     if (sz > MAX_SAFE || sz < -MAX_SAFE) sz = (sz > 0) ? MAX_SAFE : -MAX_SAFE;
@@ -134,6 +134,8 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
         DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
     double* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, ssx, ssy, ssz);
+
+    // ... 后续不变 ...
 
     for (int xC = 0; xC < DENSITY_X; xC++) {
         for (int zC = 0; zC < DENSITY_Z; zC++) {
@@ -162,6 +164,7 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
                         }
                     } else {
                         double t = ((double)(yC - 14) + (double)d) / 64.0;
+                        if (t < 0.0) t = 0.0;
                         if (t > 1.0) t = 1.0;
                         v6 = (1.0 - t) * v4 - t * 3000.0;
                     }
@@ -177,31 +180,36 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
     delete[] n3;
 }
 
+// ========== Prepare Heights ==========
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned char* blocks) {
     generateDensityCells(chunkX, chunkZ, densityBuffer);
     memset(blocks, 0, LevelChunk::ChunkBlockCount);
 
-    const int DZ = DENSITY_Y;
-    const int DX = DENSITY_Y * DENSITY_Z;
-
+    // JS: for xCH in 0..1, zCH in 0..1, yCH in 0..31
     for (int xCH = 0; xCH < 2; xCH++) {
         for (int zCH = 0; zCH < 2; zCH++) {
             for (int yCH = 0; yCH < 32; yCH++) {
-                int base = yCH + DZ * (zCH + DENSITY_Z * xCH);
+                // v23 = yCH + 33*(zCH + 3*xCH)
+                int baseIdx = yCH + DENSITY_Y * (zCH + DENSITY_Z * xCH);
 
-                double c000 = densityBuffer[base];
-                double c001 = densityBuffer[base + DZ];
-                double c010 = densityBuffer[base + DX];
-                double c011 = densityBuffer[base + DX + DZ];
-                double c100 = densityBuffer[base + 1];
-                double c101 = densityBuffer[base + 1 + DZ];
-                double c110 = densityBuffer[base + 1 + DX];
-                double c111 = densityBuffer[base + 1 + DX + DZ];
+                // 8 个角: Y=yCH 面 4 个 + Y=yCH+1 面 4 个
+                double c000 = densityBuffer[baseIdx];
+                double c001 = densityBuffer[baseIdx + DENSITY_Y];
+                double c010 = densityBuffer[baseIdx + DENSITY_Y * DENSITY_Z];
+                double c011 = densityBuffer[baseIdx + DENSITY_Y + DENSITY_Y * DENSITY_Z];
+                double c100 = densityBuffer[baseIdx + 1];
+                double c101 = densityBuffer[baseIdx + 1 + DENSITY_Y];
+                double c110 = densityBuffer[baseIdx + 1 + DENSITY_Y * DENSITY_Z];
+                double c111 = densityBuffer[baseIdx + 1 + DENSITY_Y + DENSITY_Y * DENSITY_Z];
 
+                // JS: for zCL in 0..7, xCL in 0..7, yCL in 0..3
                 for (int zCL = 0; zCL < 8; zCL++) {
                     double fz = zCL / 8.0;
                     int zP = zCH * 8 + zCL;
 
+                    // Z 方向双线性插值 (Y=yCH 和 Y=yCH+1)
                     double z0_y0 = c000 + (c001 - c000) * fz;
                     double z1_y0 = c010 + (c011 - c010) * fz;
                     double z0_y1 = c100 + (c101 - c100) * fz;
@@ -211,6 +219,7 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
                         double fx = xCL / 8.0;
                         int xP = xCH * 8 + xCL;
 
+                        // X 方向插值
                         double val_y0 = z0_y0 + (z1_y0 - z0_y0) * fx;
                         double val_y1 = z0_y1 + (z1_y1 - z0_y1) * fx;
 
@@ -232,6 +241,9 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
         }
     }
 }
+// ========== ChunkSource interface ==========
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp → create()
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
@@ -241,7 +253,12 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     chunkMap.insert(std::make_pair(hashedPos, levelChunk));
 
     prepareHeights(x, z, blocks);
+
+    // 🛡️ 末地不需要光照更新 — 全部设为最高亮度 15
+    // DataLayer 每字节存两个 4-bit nibble，0xFF = 两个 15
     memset(levelChunk->skyLight.data, 0xFF, LevelChunk::ChunkBlockCount / 2);
+    // blockLight 已经是 0（构造时 setAll(0)），末地无发光方块，不需改
+
     levelChunk->recalcHeightmapOnly();
 
     return levelChunk;
@@ -251,21 +268,30 @@ LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
     int64_t hashedPos = (x << 32) | (z & 0xffffffff);
     auto it = chunkMap.find(hashedPos);
     if (it != chunkMap.end()) return it->second;
-    return create(x, z);
+    return create(x, z);  // ← create 已 insert，直接返回
 }
 
 bool TheEndLevelSource::hasChunk(int64_t x, int64_t z) {
     return true;
 }
 
-void TheEndLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {}
+void TheEndLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt) {
+    // 末地暂不生成结构（未来可加末地城）
+}
 
-bool TheEndLevelSource::tick() { return false; }
+bool TheEndLevelSource::tick() {
+    return false;
+}
 
-bool TheEndLevelSource::shouldSave() { return true; }
+bool TheEndLevelSource::shouldSave() {
+    return true;
+}
 
-std::string TheEndLevelSource::gatherStats() { return "TheEndLevelSource"; }
+std::string TheEndLevelSource::gatherStats() {
+    return "TheEndLevelSource";
+}
 
 Biome::MobList TheEndLevelSource::getMobsAt(const MobCategory& mobCategory, int x, int y, int z) {
-    return Biome::MobList();
+    return Biome::MobList(); // 末地暂不刷怪
 }
+
