@@ -13,6 +13,21 @@ public:
     TheEndLevelSource(Level* level, long seed);
     ~TheEndLevelSource();
 
+    double getWorldOffsetX() const { return m_worldOffsetX; }
+    double getWorldOffsetY() const { return m_worldOffsetY; }
+    double getWorldOffsetZ() const { return m_worldOffsetZ; }
+    double getWorldScaleX()  const { return m_worldScaleX; }
+    double getWorldScaleY()  const { return m_worldScaleY; }
+    double getWorldScaleZ()  const { return m_worldScaleZ; }
+
+    PerlinNoise& getPNoise1() { return pNoise1; }
+    PerlinNoise& getPNoise2() { return pNoise2; }
+    PerlinNoise& getPNoise3() { return pNoise3; }
+    PerlinNoise& getSNoise1() { return sNoise1; }
+
+    double sampleDensityAt(double worldX, double worldY, double worldZ);
+    double getIslandHeightValue(int64 chunkX, int64_t chunkZ, int xC, int zC);
+
     virtual bool hasChunk(int64_t x, int64_t z) override;
     virtual LevelChunk* create(int64_t x, int64_t z) override;
     virtual LevelChunk* getChunk(int64_t xOffs, int64_t zOffs) override;
