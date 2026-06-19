@@ -3,7 +3,6 @@
 #include "../chunk/LevelChunk.h"
 #include "../tile/Tile.h"
 #include "../../../util/Mth.h"
-#include "../../../util/Mth.h"
 #include "../../../client/Minecraft.h"
 
 TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
