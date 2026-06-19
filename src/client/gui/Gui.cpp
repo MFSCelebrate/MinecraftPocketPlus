@@ -1161,7 +1161,8 @@ const char* endText    = ")";
                          + font->width(bufFloat)
                          + font->width(bigText)
                          + font->width(bufBig)
-                         + font->width(endText);
+                         + font->width(endText)
+		                 + 20.0f;  // ← 🛡️ 额外 padding，防止截断
 
         fill(MGN - PAD, yPos - 1.0f, MGN + totalWidth + PAD, yPos + LH - 1.0f, 0x90000000);
 
