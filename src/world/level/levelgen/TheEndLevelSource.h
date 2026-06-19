@@ -26,7 +26,7 @@ public:
     PerlinNoise& getSNoise1() { return sNoise1; }
 
     double sampleDensityAt(double worldX, double worldY, double worldZ);
-    double getIslandHeightValue(int64 chunkX, int64_t chunkZ, int xC, int zC);
+    double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
     double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
     std::map<int64_t, LevelChunk*> chunkMap;
 
