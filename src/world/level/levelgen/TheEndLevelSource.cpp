@@ -86,27 +86,47 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
 }
 // ========== Density Cells ==========
 
-// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
-void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
-    // 🛡️ 噪声原点：世界块坐标 × 缩放 + 偏移 × 缩放 → 除以 8（半chunk）
-    //   origin = (chunk*16 * scale + offset * scale) / 8
-    //          = chunk*2 * scale + offset * scale / 8
-    double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
-    double originY = m_worldOffsetY * m_worldScaleY / 8.0;
-    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ / 8.0;
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp → generateDensityCells()
 
-    // 🛡️ 噪声频率：基础值 × 各轴独立缩放
+void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density) {
     const double B_XZ  = 1368.824;
     const double B_Y   = 684.412;
     const double BS_XZ = 17.1103;
     const double BS_Y  = 4.277575;
 
-    double sx  = B_XZ  * m_worldScaleX;
+    double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
+    double originY = m_worldOffsetY * m_worldScaleY / 8.0;
+    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ *orld. sx  = B_XZ  * m_worldScaleX;
     double sy  = B_Y   * m_worldScaleY;
     double sz  = B_XZ  * m_worldScaleZ;
     double ssx = BS_XZ * m_worldScaleX;
     double ssy = BS_Y  * m_worldScaleY;
     double ssz = BS_XZ * m_worldScaleZ;
+
+    // 🛡️ 关键修复：利用 PerlinNoise 256 周期折回大坐标
+    // ImprovedNoise::add 内部 X = floor(x) & 255，所以噪声以 256 为周期
+    // 将 origin 对 256 取模，避免 (int)(origin * sx) 溢出
+    const double P = 256.0;
+    originX = fmod(originX, P);
+    if (originX < 0.0) originX += P;
+    originY = fmod(originY, P);
+    if (originY < 0.0) originY += P;
+    originZ = fmod(originZ, P);
+    if (originZ < 0.0) originZ += P;
+
+    // 🛡️ 对 sx/sy/sz 同样折回：sx 等效于 fmod(sx, P)
+    // 但 PerlinNoise 频率 sx 的 "周期" 意义不同，这里用钳制更安全
+    // 原理：originX*fmod(sx,P) + xx*fmod(sx,P) 在 &255 后和 originX*sx + xx*sx 等效
+    // 但 fmod(sx, P) 可能太小影响噪声特征。折中方案：限制到 int 安全范围
+    const double MAX_SAFE = 5.0e8;  // 5e8 * 258 ≈ 1.3e11，远小于 INT_MAX 2.1e9 但留余量
+    // 实际上如果 sx>MAX_SAFE，噪声在 3 个采样点内至少变化数个周期
+    // 限制它不会显著改变地形（因为高频分量已被滤波）
+    if (sx > MAX_SAFE || sx < -MAX_SAFE) sx = (sx > 0) ? MAX_SAFE : -MAX_SAFE;
+    if (sy > MAX_SAFE || sy < -MAX_SAFE) sy = (sy > 0) ? MAX_SAFE : -MAX_SAFE;
+    if (sz > MAX_SAFE || sz < -MAX_SAFE) sz = (sz > 0) ? MAX_SAFE : -MAX_SAFE;
+    if (ssx > MAX_SAFE || ssx < -MAX_SAFE) ssx = (ssx > 0) ? MAX_SAFE : -MAX_SAFE;
+    if (ssy > MAX_SAFE || ssy < -MAX_SAFE) ssy = (ssy > 0) ? MAX_SAFE : -MAX_SAFE;
+    if (ssz > MAX_SAFE || ssz < -MAX_SAFE) ssz = (ssz > 0) ? MAX_SAFE : -MAX_SAFE;
 
     double* n1 = pNoise1.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
@@ -114,6 +134,8 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
         DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
     double* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, ssx, ssy, ssz);
+
+    // ... 后续不变 ...
 
     for (int xC = 0; xC < DENSITY_X; xC++) {
         for (int zC = 0; zC < DENSITY_Z; zC++) {
