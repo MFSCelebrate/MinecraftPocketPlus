@@ -920,11 +920,13 @@ void Gui::renderDebugInfo() {
         // Double 精度噪声
         double nX = pxo * sXZ, nY = pyo * sY, nZ = pzo * sXZ;
         noiseVals[0] = rls->getLPerlinNoise1(nX, nY, nZ);
-        noiseVals[1] = rls->getLPerlinNoise2(nX, nY, nZ);
-        noiseVals[2] = rls->getPerlinNoise1(nX, nY, nZ);
-        noiseVals[3] = rls->getPerlinNoise2(pxo / 32.0, pzo / 32.0);
-        noiseVals[4] = rls->getDepthNoise(pxo / 200.0, pzo / 200.0);
-        noiseVals[7] = rls->getForestNoise(pxo * 0.5, pzo * 0.5);
+noiseVals[1] = rls->getLPerlinNoise2(nX, nY, nZ);
+noiseVals[2] = rls->getPerlinNoise1(nX, nY, nZ);
+noiseVals[3] = rls->getPerlinNoise2(pxo / 32.0, pzo / 32.0);
+noiseVals[4] = rls->getPerlinNoise3(pxo / 64.0, pzo / 64.0);
+noiseVals[5] = rls->getScaleNoise(pxo / 80.0, pzo / 80.0);
+noiseVals[6] = rls->getDepthNoise(pxo / 200.0, pzo / 200.0);
+noiseVals[7] = rls->getForestNoise(pxo * 0.5, pzo * 0.5);
 
         // Float 精度噪声
         double fX = px * worldScaleX + terrainOffsetX * worldScaleX;
@@ -952,7 +954,7 @@ void Gui::renderDebugInfo() {
         noiseVals[2] = els->getPNoise3().getValue(pxo * 17.1103, pyo * 4.277575, pzo * 17.1103);
         noiseVals[3] = els->getSNoise1().getValue(pxo / 16.0, pzo / 16.0);
         noiseVals[4] = els->sampleDensityAt(px, py, pz);
-        noiseVals[5] = els->getIslandHeightValue(cx, cz, 1, 1);
+        noiseVals[5] = els->debugIslandHeightValue(cx, cz);
         noiseVals[6] = 0.0; noiseVals[7] = 0.0;
 
         // Float 精度噪声
@@ -964,7 +966,7 @@ void Gui::renderDebugInfo() {
         noiseValsF[2] = (float)els->getPNoise3().getValue(fX * 17.1103, fY * 4.277575, fZ * 17.1103);
         noiseValsF[3] = (float)els->getSNoise1().getValue(fX / 16.0, fZ / 16.0);
         noiseValsF[4] = (float)els->sampleDensityAt(px, py, pz);
-        noiseValsF[5] = (float)els->getIslandHeightValue(cx, cz, 1, 1);
+        noiseValsF[5] = (float)els->debugIslandHeightValue(cx, cz);
         noiseValsF[6] = 0.0f; noiseValsF[7] = 0.0f;
     }
 
