@@ -21,22 +21,43 @@ TheEndLevelSource::~TheEndLevelSource() {
 
 // ========== Island Height ==========
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
+
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    // 中央岛: 距离中心越远越低
+    // === 中央岛基础高度 ===
     double cx = (double)(zC + 2 * chunkZ);
     double cz = (double)(xC + 2 * chunkX);
     double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // 外岛: SimplexNoise 检测 + 距离
-    for (int x = (int)(chunkX * 2) - 12, xEnd = x + 25; x < xEnd; x++) {
-        for (int z = (int)(chunkZ * 2) - 12, zEnd = z + 25; z < zEnd; z++) {
-            if ((int64_t)x * x + (int64_t)z * z > 4096) {
-                if (sNoise1.getValue((double)x, (double)z) < -0.89999998) {
-                    double dx = (double)((z + 12) * 2 - (chunkZ * 2));
-                    double dz = (double)((x + 12) * 2 - (chunkX * 2));
-                    double v20 = 100.0 - hypot(dx, dz) * 
-                        (double)((147 * abs(z) + 3439 * abs(x)) % 13 + 9);
+    // === 外岛检测 ===
+    // JS: for (v25=25, v11=x-12, v28=xC+24; v25; v25--, v11++, v28-=2)
+    int v11_start = (int)chunkX - 12;
+    int v28_start = xC + 24;
+
+    for (int i = 0; i < 25; i++) {
+        int v11 = v11_start + i;
+        int v28 = v28_start - 2 * i;
+
+        int v16_start = (int)chunkZ - 12;
+        int v17_start = zC + 24;
+
+        for (int j = 0; j < 25; j++) {
+            int v16 = v16_start + j;
+            int v17 = v17_start - 2 * j;
+
+            // JS: if (v11*v11 + v16*v16 > 4096)
+            // v11/v16 是 chunk 坐标，4096 = 64²，即距离原点 > 64 chunks
+            if ((int64_t)v11 * v11 + (int64_t)v16 * v16 > 4096) {
+
+                // JS: if (sNoise1.getValue(v11, v16) < -0.89999998)
+                if (sNoise1.getValue((double)v11, (double)v16) < -0.89999998) {
+
+                    // JS: (147*abs(v16) + 3439*abs(v11)) % 13 + 9
+                    int multiplier = (147 * abs(v16) + 3439 * abs(v11)) % 13 + 9;
+
+                    // JS: 100 - hypot(v17, v28) * multiplier
+                    double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)multiplier;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
                     v9 = Mth::Max(v20, v9);
                 }
@@ -71,39 +92,36 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
         for (int zC = 0; zC < DENSITY_Z; zC++) {
             double hV = getIslandHeightValue(chunkX, chunkZ, xC, zC);
             double v23 = 7.0;
-            
-            // JS: for (var yC = 0, v23 = 7; yC < 33; yC += 3, v23 -= 3)
+
+            // JS: for (yC = 0, v23 = 7; yC < 33; yC += 3, v23 -= 3)
             for (int yC = 0; yC < DENSITY_Y; yC += 3, v23 -= 3.0) {
                 int idx = yC + DENSITY_Y * (zC + DENSITY_Z * xC);
 
-                // JS: 三个连续密度值 (ind, ind+1, ind+2)，各自独立计算
+                // 3 个连续 Y 采样点
                 for (int d = 0; d < 3; d++) {
                     int ind = idx + d;
-                    // JS: s = clamp(n3/20 + 0.5, 0, 1)
-                    double s = Mth::clamp(n3[ind] / 20.0 + 0.5, 0.0, 1.0);
-                    // JS: clampedLerp(selector, lowNoise1, lowNoise2)
-                    double terrainNoise = n1[ind] / 512.0 + 
-                        (n2[ind] / 512.0 - n1[ind] / 512.0) * s;
-                    double v4 = terrainNoise + hV - 8.0;
+
+                    double s  = Mth::clamp(n3[ind] / 20.0 + 0.5, 0.0, 1.0);
+                    double v4 = n1[ind] / 512.0
+                              + (n2[ind] / 512.0 - n1[ind] / 512.0) * s
+                              + hV - 8.0;
                     double v6;
 
-                    // JS: if (yC < 14) — 中部/底部
                     if (yC < 14) {
                         v6 = v4;
-                        // JS: if (yC < 9) — 底部渐变
                         if (yC < 9) {
-                            // JS: t = (v23 + 1) / 7
-                            double t = (v23 + 1.0) / 7.0;
+                            // 🛡️ JS: Vec3(v23+1, v23, v23-1).scale(1/7) → per-point t
+                            double t = (v23 + 1.0 - (double)d) / 7.0;
                             if (t < 0.0) t = 0.0;
                             if (t > 1.0) t = 1.0;
                             v6 = (1.0 - t) * v4 - t * 30.0;
                         }
                     } else {
-                        // JS: t = (yC - 14) / (33 - 14) → 顶部渐变
-                        double t = (double)(yC - 14) / (double)(DENSITY_Y - 14);
+                        // 🛡️ JS: Vec3(yC-14, yC-13, yC-12).scale(1/64).clamp → per-point t
+                        double t = ((double)(yC - 14) + (double)d) / 64.0;
                         if (t < 0.0) t = 0.0;
                         if (t > 1.0) t = 1.0;
-                        v6 = (1.0 - t) * v4 - t * 3000.0;
+                        v6 = (1.0 v4 - t * 3000.0;
                     }
 
                     density[ind] = v6;
@@ -191,7 +209,11 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
 
     prepareHeights(x, z, blocks);
 
-    // 🛡️ 只算 heightmap，不触发 lightGaps → getHeightmap → create 无限递归！
+    // 🛡️ 末地不需要光照更新 — 全部设为最高亮度 15
+    // DataLayer 每字节存两个 4-bit nibble，0xFF = 两个 15
+    memset(levelChunk->skyLight.data, 0xFF, LevelChunk::ChunkBlockCount / 2);
+    // blockLight 已经是 0（构造时 setAll(0)），末地无发光方块，不需改
+
     levelChunk->recalcHeightmapOnly();
 
     return levelChunk;
