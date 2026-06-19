@@ -45,6 +45,32 @@ TheEndLevelSource::~TheEndLevelSource() {
     delete[] densityBuffer;
 }
 
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp 末尾
+
+double TheEndLevelSource::sampleDensityAt(double worldX, double worldY, double worldZ) {
+    double noiseX = worldX * m_worldScaleX + m_worldOffsetX * m_worldScaleX;
+    double noiseY = worldY * m_worldScaleY + m_worldOffsetY * m_worldScaleY;
+    double noiseZ = worldZ * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ;
+
+    const double S_SMALL = 17.1103;
+    double s = pNoise3.getValue(noiseX * S_SMALL, noiseY * S_SMALL / 4.0, noiseZ * S_SMALL);
+    s = Mth::clamp(s / 20.0 + 0.5, 0.0, 1.0);
+
+    const double SX = 1368.824;
+    const double SY = 684.412;
+    double n1 = pNoise1.getValue(noiseX * SX, noiseY * SY, noiseZ * SX);
+    double n2 = pNoise2.getValue(noiseX * SX, noiseY * SY, noiseZ * SX);
+
+    double density = n1 / 512.0 + (n2 / 512.0 - n1 / 512.0) * s;
+
+    int64_t cx = Mth::floor64(worldX / 16.0);
+    int64_t cz = Mth::floor64(worldZ / 16.0);
+    double hV = getIslandHeightValue(cx, cz, 1, 1);
+    density += hV - 8.0;
+
+    return density;
+}
+
 // ========== Island Height ==========
 
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
