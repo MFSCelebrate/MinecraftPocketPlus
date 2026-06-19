@@ -39,6 +39,7 @@ TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
         std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
         if (!oz.empty()) m_worldOffsetZ = atof(oz.c_str());
     }
+    generateEndSpikes();
 }
 
 TheEndLevelSource::~TheEndLevelSource() {
@@ -220,6 +221,53 @@ void TheEndLevelSource::prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned 
         }
     }
 }
+
+// 文件：src/world/level/levelgen/TheEndLevelSource.cpp
+
+void TheEndLevelSource::generateEndSpikes() {
+    if (m_spikesGenerated) return;
+    m_spikesGenerated = true;
+
+    // 用世界种子初始化随机源
+    Random rand(level->getSeed());
+
+    // Fisher-Yates 洗牌：打乱 [0..9] 分配为柱子等级
+    int nums[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    for (int i = 1; i < 10; i++) {
+        int t = rand.nextInt(i + 1);
+        int tmp = nums[i];
+        nums[i] = nums[t];
+        nums[t] = tmp;
+    }
+
+    // 生成 10 根柱子
+    for (int i = 0; i < 10; i++) {
+        double radians = i * 0.62831855 - 6.2831855;  // i * 2π/10 - 2π
+        int posX = (int)floor(cos(radians) * 42.0);
+        int posZ = (int)floor(sin(radians) * 42.0);
+
+        int size   = nums[i] / 3 + 2;                   // 柱子半径：2~5
+        int height = nums[i] + 2 * (nums[i] + 38);      // 柱子高度：76~103
+
+        // 🛡️ 应用偏移
+        int offX = (int)(m_worldOffsetX * m_worldScaleX);
+        int offZ = (int)(m_worldOffsetZ * m_worldScaleZ);
+
+        // 建造圆柱体
+        for (int dx = -size; dx <= size; dx++) {
+            for (int dz = -size; dz <= size; dz++) {
+                if (dx * dx + dz * dz > size * size) continue;  // 圆形裁剪
+                int worldX = posX + dx + offX;
+                int worldZ = posZ + dz + offZ;
+                for (int y = 0; y < height; y++) {
+                    level->setTileAndDataNoUpdate(worldX, y, worldZ,
+                        Tile::obsidian->id, 0);
+                }
+            }
+        }
+    }
+}
+
 // ========== ChunkSource interface ==========
 
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp → create()
