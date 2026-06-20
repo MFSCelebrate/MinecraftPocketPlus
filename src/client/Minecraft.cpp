@@ -428,17 +428,17 @@ void Minecraft::prepareLevel(const std::string& title) {
 }
 
 void Minecraft::update() {
-	// 例如在 LevelRenderer::render() 函数开头
+#ifndef STANDALONE_SERVER
     TileRenderer::stripeRepairEnabled = this->options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-	// Minecraft.cpp 中设置开关的位置
-bool newStripeRepair = options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
-if (TileRenderer::stripeRepairEnabled != newStripeRepair) {
-    TileRenderer::stripeRepairEnabled = newStripeRepair;
-	if (levelRenderer) {
-        levelRenderer->allChanged();    // 标记所有区块为脏
-	}
-    onGraphicsReset();   // 强制重建所有区块的渲染数据
-}
+    bool newStripeRepair = options.getBooleanValue(OPTIONS_STRIPE_REPAIR);
+    if (TileRenderer::stripeRepairEnabled != newStripeRepair) {
+        TileRenderer::stripeRepairEnabled = newStripeRepair;
+        if (levelRenderer) {
+            levelRenderer->allChanged();
+        }
+        onGraphicsReset();
+    }
+#endif
 	//LOGI("Enter Update\n");
 
 	if (Options::debugGl)
@@ -1429,7 +1429,9 @@ void Minecraft::_levelGenerated()
 
 	// Hack to (hopefully) get the players to show (note: in LevelListener
 	// instead, since adding yourself always generates a entityAdded)
-	EntityRenderDispatcher::getInstance()->onGraphicsReset();
+#ifndef STANDALONE_SERVER
+    EntityRenderDispatcher::getInstance()->onGraphicsReset();
+#endif
 	_hasSignaledGeneratingLevelFinished = true;
 }
 
