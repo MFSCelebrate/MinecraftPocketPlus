@@ -14,6 +14,7 @@ public:
 
     ChunkSource() : isChunkCache(false) {}
     virtual ~ChunkSource() {}
+virtual bool isEndSource() const { return false; }
 
     virtual bool hasChunk(int64_t x, int64_t y) = 0;
     virtual LevelChunk* getChunk(int64_t x, int64_t z) = 0;
