@@ -28,6 +28,7 @@
 // ---------- 新增：偏移/区块缓存/地形源 头文件 ----------
 #include "../../world/level/chunk/ChunkCache.h"
 #include "../../world/level/levelgen/RandomLevelSource.h"
+#include "../../world/level/levelgen/TheEndLevelSource.h"
 // ----------------------------------------------------
 #include "../../util/DebugLog.h"  // 确保在文件顶部包含，如果还没有的话
 #include <cmath>
@@ -1213,7 +1214,20 @@ std::string LevelRenderer::gatherStats1() {
 
 // ==================== 完整 renderSky ====================
 void LevelRenderer::renderSky(float a){
-    if(mc->level->dimension->foggy) return;
+    if (mc->level->dimension->foggy) {
+        // 末地：黑色天空 + 无天体
+        bool isEnd = dynamic_cast<TheEndLevelSource*>(mc->level->getChunkSource()) != nullptr;
+        if (isEnd) {
+            // 只画纯黑天空底，不画太阳/月亮/星星
+            glDisable(GL_TEXTURE_2D);
+            glColor4f(0.0f, 0.0f, 0.0f, 1.0f);
+            glDepthMask(false);
+            drawArrayVT(m_skyChunk.vboId, m_skyChunk.vertexCount);
+            glDepthMask(true);
+            glEnable(GL_TEXTURE_2D);
+        }
+        return;
+	}
     
     Vec3 skyColor = level->getSkyColor(mc->cameraTargetPlayer, a);
     float r = (float)skyColor.x;
