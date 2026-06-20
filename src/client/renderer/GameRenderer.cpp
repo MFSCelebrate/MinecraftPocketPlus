@@ -28,6 +28,7 @@
 #include "Textures.h"
 #include "../gui/components/ImageButton.h"
 #include "Tesselator.h"
+#include "../../world/level/levelgen/TheEndLevelSource.h"
 
 static int _shTicks = -1;
 
@@ -540,6 +541,19 @@ void GameRenderer::setupFog(int i) {
     glFogfv(GL_FOG_COLOR, fogColor);
 
     Mob* player = mc->cameraTargetPlayer;
+	bool isEnd = dynamic_cast<TheEndLevelSource*>(mc->level->getChunkSource()) != nullptr;
+
+    if (isEnd) {
+        // 末地迷雾：远距离线性雾
+        glFogx(GL_FOG_MODE, GL_LINEAR);
+        glFogf(GL_FOG_START, 0.0f);
+        glFogf(GL_FOG_END, renderDistance * 0.5f);  // 比主世界更近的雾
+        
+        GLfloat endFog[4] = { 0x0B/255.0f, 0x08/255.0f, 0x0C/255.0f, 1.0f };
+        glFogfv(GL_FOG_COLOR, endFog);
+        return;  // 跳过水体/岩浆雾判断
+    }
+    // ... 原有液体雾逻辑
 
     if (player->isUnderLiquid(Material::water)) {
         // 水下：指数雾，密度适中，雾颜色手动加深（Beta 风格深蓝）
@@ -791,6 +805,17 @@ void GameRenderer::setupClearColor(float a) {
     fr += (sr - fr) * whiteness;
     fg += (sg - fg) * whiteness;
     fb += (sb - fb) * whiteness;
+
+	bool isEnd = dynamic_cast<TheEndLevelSource*>(level->getChunkSource()) != nullptr;
+    if (isEnd) {
+        // BE 末地: 天空纯黑 + 迷雾 #0B080C
+        float sr = 0.0f, sg = 0.0f, sb = 0.0f;             // #000000
+        float fr = 0x0B/255.0f, fg = 0x08/255.0f, fb = 0x0C/255.0f; // #0B080C
+
+        Vec3 skyColor(sr, sg, sb);
+        Vec3 fogColor(fr, fg, fb);
+        // 继续使用上面已声明的 skyColor/fogColor 赋值后走后续逻辑
+	}
 
     if (player->isUnderLiquid(Material::water)) {
         fr = 0.02f;
