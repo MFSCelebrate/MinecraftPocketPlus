@@ -234,7 +234,8 @@ jobs:
           submodules: recursive
 
       - name: Install Library
-        run: sudo apt-get update
+        run: |
+             sudo apt-get update
              sudo apt-get install -y libboost-all-dev g++-multilib
 
       - name: Configure
