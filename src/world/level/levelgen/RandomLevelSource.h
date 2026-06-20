@@ -24,14 +24,46 @@ public:
     static const int CHUNK_WIDTH = 4;
 
     // 噪声查询接口（全部 double 精度）
-    inline double getLPerlinNoise1(double x, double y, double z) { return lperlinNoise1.getValue(x, y, z); }
-    inline double getLPerlinNoise2(double x, double y, double z) { return lperlinNoise2.getValue(x, y, z); }
-    inline double getPerlinNoise1(double x, double y, double z) { return perlinNoise1.getValue(x, y, z); }
-    inline double getPerlinNoise2(double x, double z) { return perlinNoise2.getValue(x, z); }
-    inline double getPerlinNoise3(double x, double z) { return perlinNoise3.getValue(x, z); }
-    inline double getScaleNoise(double x, double z) { return scaleNoise.getValue(x, z); }
-    inline double getDepthNoise(double x, double z) { return depthNoise.getValue(x, z); }
-    inline double getForestNoise(double x, double z) { return forestNoise.getValue(x, z); }
+    inline double getLPerlinNoise1(double x, double y, double z) {
+    if (m_useDoubleNoise && lperlinNoise1  ) return lperlinNoise1->getValue(x, y, z);
+    if (!m_useDoubleNoise && lperlinNoise1_f) return (double)lperlinNoise1_f->getValue((float)x, (float)y, (float)z);
+    return 0.0;
+}
+inline double getLPerlinNoise2(double x, double y, double z) {
+    if (m_useDoubleNoise && lperlinNoise2  ) return lperlinNoise2->getValue(x, y, z);
+    if (!m_useDoubleNoise && lperlinNoise2_f) return (double)lperlinNoise2_f->getValue((float)x, (float)y, (float)z);
+    return 0.0;
+}
+inline double getPerlinNoise1(double x, double y, double z) {
+    if (m_useDoubleNoise && perlinNoise1  ) return perlinNoise1->getValue(x, y, z);
+    if (!m_useDoubleNoise && perlinNoise1_f) return (double)perlinNoise)y, (float)z);
+    return 0.0;
+}
+inline double getPerlinNoise2(double x, double z) {
+    if (m_useDoubleNoise && perlinNoise2  ) return perlinNoise2->getValue(x, z);
+    if (!m_useDoubleNoise &&Noise2_f) return (double)perlinNoise2_f->getValue((float)x, (float)z);
+    return 0.0;
+}
+inline double getPerlinNoise3(double x, double z) {
+    if (m_useDoubleNoise && perlinNoise3  ) return perlinNoise3->getValue(x, z);
+    if (!m_useDoubleNoise && perlinNoise3_f) returnlinNoise3_f->getValue((float)x, (float)z);
+    return 0.0;
+}
+inline double getScaleNoise(double x, double z) {
+    if (m_useDoubleNoise && scaleNoise  ) return scaleNoise->getValue(x, z);
+    if (!m_useDoubleNoise && scaleNoise_f) return (double)scaleNoise_f->getValue((float)x, (float)z);
+    return 0.0;
+}
+inline double getDepthNoise(double x, double z) {
+    if (m_useDoubleNoise && depthNoise  ) return depthNoise->getValue(x, z);
+    if (!m_useDoubleNoise && depthNoise_f) return (double)depthNoise_f->getValue((float)x, (float)z);
+    return 0.0;
+}
+inline double getForestNoise(double x, double z) {
+    if (m_useDoubleNoise && forestNoise  ) return forestNoise->getValue(x, z);
+    if (!m_useDoubleNoise && forestNoise_f) return (double)forestNoise_f->getValue((float)x, (float)z);
+    return 0.0;
+}
 
     RandomLevelSource(Level* level, long seed, int version, bool spawnMobs);
     ~RandomLevelSource();
@@ -71,14 +103,18 @@ private:
 
     ChunkMap chunkMap;
     Random random;
-    PerlinNoise lperlinNoise1;
-    PerlinNoise lperlinNoise2;
-    PerlinNoise perlinNoise1;
-    PerlinNoise perlinNoise2;
-    PerlinNoise perlinNoise3;
-    PerlinNoise scaleNoise;
-    PerlinNoise depthNoise;
-    PerlinNoise forestNoise;
+    PerlinNoise*        lperlinNoise1 = nullptr;
+PerlinNoise*        lperlinNoise2 = nullptr;
+PerlinNoise*        perlinNoise1  = nullptr;
+PerlinNoise*        perlinNoise2  = nullptr;
+PerlinNoise*        perise*        scaleNoise    = nullptr;
+PerlinNoise*        depthNoiseNolinNoiseT<float>* lperlinNoise2_f = nullptr;
+PerlinNoiseT<float>* perlinNoisemNoiseT<float>* perlinNoise3_f  = nullptr;
+PerlinNoiseT<float>* scaleNoise_f    = nullptr;
+PerlinNoiseT<float>* depthNoise_f    = nullptr;
+PerlinNoiseT<float>* forestNoise_f   = nullptr;
+
+bool m_useDoubleNoise = false;
 
     Level* level;
     bool spawnMobs;
