@@ -294,18 +294,15 @@ void LevelRenderer::allChanged()
 
 	Tile::leaves->setFancy(fancy);
 	Tile::leaves_carried->setFancy(fancy);
-	lastViewDistance = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);
 
-	int dist = (512 >> 3) << (3 - lastViewDistance);
-	if (lastViewDistance <= 2 && mc->isPowerVR())
-		dist = (int)((float)dist * 0.8f);
-	LOGI("last: %d, power: %d\n", lastViewDistance, mc->isPowerVR());
+	int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);  // 1~50
+    int dist = viewChunks * CHUNK_SIZE;  // = viewChunks × 16
 
-	#if defined(RPI)
-		dist *= 0.6f;
-	#endif
-
-	if (dist > 400) dist = 400;
+    if (mc->isPowerVR())
+        dist = (int)(dist * 0.8f);
+#if defined(RPI)
+    dist = (int)(dist * 0.6f);
+#endif
 	/*
 	* if (Minecraft.FLYBY_MODE) { dist = 512 - CHUNK_SIZE * 2; }
 	*/
