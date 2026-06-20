@@ -205,6 +205,7 @@ void Options::initTable() {
     m_options[OPTIONS_WORLD_OFFSET_Y] = &worldOffsetY;
 	m_options[OPTIONS_END_GENERATOR] = &endGenerator;
 	m_options[OPTIONS_END_CIRCLES] = &endCircles;
+	m_options[OPTIONS_EXTENDED_PERLIN_NOISE]  = &extendedPerlinNoise;       // ← 🛡️
 }
 
 void Options::set(OptionId key, const std::string& value) {
