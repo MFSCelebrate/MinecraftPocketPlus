@@ -210,9 +210,9 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
 
-    perlinNoise2.getRegion(sandBuffer,   xf, 0.0, zf, 16, 1, 16, sx, 1.0, sz);
-    perlinNoise2.getRegion(gravelBuffer, xf, 109.01340, zf, 16, 1, 16, sx, 1.0, sz);
-    perlinNoise3.getRegion(depthBuffer,  xf, 0.0, zf, 16, 1, 16, sx * 2.0, 1.0, sz * 2.0);
+    perlinNoise2->getRegion(sandBuffer,   xf, 0.0, zf, 16, 1, 16, sx, 1.0, sz);
+    perlinNoise2->getRegion(gravelBuffer, xf, 109.01340, zf, 16, 1, 16, sx, 1.0, sz);
+    perlinNoise3->getRegion(depthBuffer,  xf, 0.0, zf, 16, 1, 16, sx * 2.0, 1.0, sz * 2.0);
 
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
@@ -423,7 +423,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     }
 
     const float ss = 0.5f;
-    int oFor = (int) ((forestNoise.getValue(xo * ss, zo * ss) / 8 + random.nextFloat() * 4 + 4) / 3);
+    int oFor = (int) ((forestNoise->getValue(xo * ss, zo * ss) / 8 + random.nextFloat() * 4 + 4) / 3);
     int forests = 0;//1; (java: 0)
     if (random.nextInt(10) == 0) forests += 1;
 
@@ -597,10 +597,10 @@ double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z,
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-        sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
+        sr = scaleNoise->getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
                               1.121 * m_worldScaleX,
                               1.121 * m_worldScaleZ, 0.5);
-        dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
+        dr = depthNoise->getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
                               200.0 * m_worldScaleX,
                               200.0 * m_worldScaleZ, 0.5);
 	
@@ -608,9 +608,9 @@ double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z,
     double yf = (double)noiseY;
     double zf = (double)noiseZ;
 
-    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0, sy / 160.0, sz / 80.0);
-    ar  = lperlinNoise1.getRegion(ar,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
-    br  = lperlinNoise2.getRegion(br,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
+    pnr = perlinNoise1->getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0, sy / 160.0, sz / 80.0);
+    ar  = lperlinNoise1->getRegion(ar,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
+    br  = lperlinNoise2->getRegion(br,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
 
     int p = 0;
     int pp = 0;
