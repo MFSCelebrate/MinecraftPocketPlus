@@ -39,7 +39,7 @@ TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
         std::string oz = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
         if (!oz.empty()) m_worldOffsetZ = atof(oz.c_str());
     }
-    
+    m_endCircles = Minecraft::instance->options.getBooleanValue(OPTIONS_END_CIRCLES);
 }
 
 TheEndLevelSource::~TheEndLevelSource() {
@@ -52,31 +52,54 @@ TheEndLevelSource::~TheEndLevelSource() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    // 🛡️ 偏移后的 chunk 坐标（影响岛屿在 XZ 平面的位置）
     double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
-    // 中央岛
-    double cx = (double)(zC + 2 * chZ);
-    double cz = (double)(xC + 2 * chX);
-    double v9 = 100.0 - sqrt(cx * cx + cz * cz) * 8.0;
+    // === 中央岛 ===
+    // 半chunk → 块坐标：×8
+    // 末地环：块坐标 int 溢出 → sqrt(负) → NaN → 环形虚空
+    double v9;
+    if (m_endCircles) {
+        int bx = (int)floor((zC + 2.0 * chZ) * 8.0);
+        int bz = (int)floor((xC + 2.0 * chX) * 8.0);
+        int distSq = bx * bx + bz * bz;
+        v9 = 100.0 - Mth::sqrt((double)distSq) * 8.0;
+    } else {
+        double bx = (double)(zC + 2.0 * chZ) * 8.0;
+        double bz = (double)(xC + 2.0 * chX) * 8.0;
+        v9 = 100.0 - Mth::sqrt(bx * bx + bz * bz) * 8.0;
+    }
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
-    // 外岛
-    int wX_start = (int)(chX - 12.0);
-    int wZ_start = (int)(chZ - 12.0);
+    // === 外岛 ===
+    int wX_start = (int)floor(chX - 12.0);
+    int wZ_start = (int)floor(chZ - 12.0);
     int v28_start = xC + 24;
     int v17_start = zC + 24;
 
     for (int i = 0; i < 25; i++) {
         int wX = wX_start + i;
         int v28 = v28_start - 2 * i;
+
         for (int j = 0; j < 25; j++) {
             int wZ = wZ_start + j;
             int v17 = v17_start - 2 * j;
-            if ((int64_t)wX * wX + (int64_t)wZ * wZ > 4096) {
+
+            bool outsideCentral;
+            if (m_endCircles) {
+                // 末地环：chunk → 块坐标 (×16)，int 溢出
+                int bx = wX * 16;
+                int bz = wZ * 16;
+                int dSq = bx * bx + bz * bz;
+                // 4096 chunk² = 4096 × 256 = 1048576 block²
+                outsideCentral = dSq > 1048576;
+            } else {
+                outsideCentral = (int64_t)wX * wX + (int64_t)wZ * wZ > 4096;
+            }
+
+            if (outsideCentral) {
                 if (sNoise1.getValue((double)wX, (double)wZ) < -0.89999998) {
-                    int mul = (147 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
+                    int mul = (237 * abs(wZ) + 3439 * abs(wX)) % 13 + 9;
                     double v20 = 100.0 - hypot((double)v17, (double)v28) * (double)mul;
                     v20 = Mth::clamp(v20, -100.0, 80.0);
                     v9 = Mth::Max(v20, v9);
@@ -84,6 +107,7 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
             }
         }
     }
+
     return v9;
 }
 // ========== Density Cells ==========
