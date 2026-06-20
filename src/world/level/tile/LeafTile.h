@@ -50,14 +50,6 @@ public:
     int getColor(LevelSource* level, int64_t x, int64_t y, int64_t z) {
 
         int data = (level->getData(x, y, z) & LEAF_TYPE_MASK);
-		if (Level* lvl = dynamic_cast<Level*>(level)) {
-        if (lvl->getChunkSource()->isEndSource()) {
-            int data = level->getData(x, y, z) & LEAF_TYPE_MASK;
-            if (data == NORMAL_LEAF) return FoliageColor::getEndFoliageColor(); // #71A74D
-            if (data == EVERGREEN_LEAF) return FoliageColor::getEvergreenColor();
-            if (data == BIRCH_LEAF) return FoliageColor::getBirchColor();
-        }
-		}
         if (data == EVERGREEN_LEAF) {
             return FoliageColor::getEvergreenColor();
         }
