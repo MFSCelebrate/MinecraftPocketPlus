@@ -233,21 +233,18 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Library
-        run: |
-             sudo apt-get update
-             sudo apt-get install -y libboost-all-dev g++-multilib
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libboost-all-dev g++-multilib
 
-      - name: Configure
+      - name: Configure + Build
         run: |
-            sudo apt-get update
-            sudo dir -p build-server && cd build-server
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-m64" -DCMAKE_CXX_FLAGS="-m64 -fno-sized-deallocation"
+          cmake -S . -B build-server \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS='-m64' \
+            -DCMAKE_CXX_FLAGS='-m64 -fno-sized-deallocation'
+          cmake --build build-server --parallel $(nproc)
         working-directory: project/dedicated_server
 
-      - name: Build
-        run: cmake --build build-server --parallel $(nproc)
-        working-directory: project/dedicated_server   # ← 改这里
 
       - uses: actions/upload-artifact@v4
         if: success()
