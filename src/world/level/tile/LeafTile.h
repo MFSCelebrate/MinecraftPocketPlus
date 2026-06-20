@@ -10,7 +10,6 @@
 #include "../../item/Item.h"
 #include "../../item/ItemInstance.h"
 #include "../FoliageColor.h"
-#include "../../world/level/levelgen/TheEndLevelSource.h"
 
 class Entity;
 
