@@ -54,8 +54,8 @@ TheEndLevelSource::~TheEndLevelSource() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
 
 double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC) {
-    double chX = (double)chunkX + m_worldOffsetX * m_worldScaleX / 16.0;
-    double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
+    double chX = (double)chunkX + m_worldOffsetX / 16.0;
+    double chZ = (double)chunkZ + m_worldOffsetZ / 16.0;
 
     // === 中央岛 ===
     // 直接用半chunk坐标做 int 溢出（对齐 Java 的 x/z 参数）
@@ -119,9 +119,9 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
     // 🛡️ 噪声原点：世界块坐标 × 缩放 + 偏移 × 缩放 → 除以 8（半chunk）
     //   origin = (chunk*16 * scale + offset * scale) / 8
     //          = chunk*2 * scale + offset * scale / 8
-    double originX = (double)(chunkX * 2) * m_worldScaleX + m_worldOffsetX * m_worldScaleX / 8.0;
-    double originY = m_worldOffsetY * m_worldScaleY / 8.0;
-    double originZ = (double)(chunkZ * 2) * m_worldScaleZ + m_worldOffsetZ * m_worldScaleZ / 8.0;
+    double originX = (double)(chunkX * 2) + m_worldOffsetX / 8.0;
+    double originY = m_worldOffsetY / 8.0;
+    double originZ = (double)(chunkZ * 2) + m_worldOffsetZ / 8.0;
 
     // 🛡️ 噪声频率：基础值 × 各轴独立缩放
     const double B_XZ  = 1368.824;
