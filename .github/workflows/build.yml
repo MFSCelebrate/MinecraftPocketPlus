@@ -246,9 +246,9 @@ jobs:
             https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2
           tar xf boost.tar.bz2 --strip-components=1
 
-      - name: Patch RakNet
+      - name: Patch RakNet for 64-bit Windows
         run: |
-          sed -i 's/DWORD mProcMask, mSysMask/DWORD_PTR mProcMask, mSysMask/' \
+          sed -i 's/GetProcessAffinityMask(mProc, &mProcMask, &mSysMask)/GetProcessAffinityMask(mProc, (PDWORD_PTR)\&mProcMask, (PDWORD_PTR)\&mSysMask)/' \
           project/lib_projects/raknet/jni/RaknetSources/GetTime.cpp
           sed -i 's/register //g' \
           project/lib_projects/raknet/jni/RaknetSources/Rand.cpp
