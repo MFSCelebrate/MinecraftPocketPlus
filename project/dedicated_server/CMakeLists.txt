@@ -16,7 +16,8 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/../lib_projects/raknet/jni"
                  "${CMAKE_CURRENT_BINARY_DIR}/raknet")
 
 # ---- STANDALONE_SERVER 宏 (关闭所有客户端渲染/GUI/音频) ----
-add_definitions(-DSTANDALONE_SERVER)
+add_compile_options(-w)
+add_definitions(-DSTANDALONE_SERVER -fno-sized-deallocation)
 
 # ---- 源文件 (原版118 + MCRe新增) ----
 set(CompileFiles
