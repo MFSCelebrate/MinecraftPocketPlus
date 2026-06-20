@@ -51,7 +51,7 @@ public:
 
         int data = (level->getData(x, y, z) & LEAF_TYPE_MASK);
 		if (Level* lvl = dynamic_cast<Level*>(level)) {
-        if (dynamic_cast<TheEndLevelSource*>(lvl->getChunkSource())) {
+        if (level->getChunkSource()->isEndSource()) {
             int data = level->getData(x, y, z) & LEAF_TYPE_MASK;
             if (data == NORMAL_LEAF) return FoliageColor::getEndFoliageColor(); // #71A74D
             if (data == EVERGREEN_LEAF) return FoliageColor::getEvergreenColor();
