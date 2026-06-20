@@ -40,8 +40,6 @@ public:
 
     // 2D Simplex Noise（主接口）
     double getValue(double x, double z) override {
-        x += m_xo;
-        z += m_zo;
 
         // Skew 到单形空间
         double s = (x + z) * F2;
