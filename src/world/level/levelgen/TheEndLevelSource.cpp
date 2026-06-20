@@ -9,7 +9,9 @@
 TheEndLevelSource::TheEndLevelSource(Level* level, long seed)
     : random(seed), level(level),
       pNoise1(&random, 16), pNoise2(&random, 16), pNoise3(&random, 8),
-      sNoise1(&random, 4), densityBuffer(nullptr),
+      sNoise1(&random),     // ✅ SimplexNoise(无 levels 参数)
+      // ...
+      densityBuffer(nullptr),
       m_worldOffsetX(0.0),
       m_worldOffsetY(0.0),
       m_worldOffsetZ(0.0),
