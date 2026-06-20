@@ -225,8 +225,56 @@ jobs:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
+  build-windows-dedicated-server:
+    name: Build Dedicated Server (Windows)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Download llvm-mingw
+        run: |
+          curl -fsSL -o llvm-mingw64.tar.xz \
+            https://github.com/mstorsjo/llvm-mingw/releases/download/20241001/llvm-mingw-20241001-ucrt-ubuntu-20.04-x86_64.tar.xz
+          mkdir -p llvm-mingw && tar xf llvm-mingw64.tar.xz -C llvm-mingw --strip-components=1
+
+      - name: Download Boost for Windows
+        run: |
+          mkdir boost-win && cd boost-win
+          curl -fsSL -o boost.tar.bz2 \
+            https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2
+          tar xf boost.tar.bz2 --strip-components=1
+
+      - name: Configure
+        env:
+          CC: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-clang
+          CXX: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-clang++
+        run: |
+          mkdir -p build-server-win && cd build-server-win
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_CROSSCOMPILING=TRUE \
+            -DBOOST_ROOT="${{ github.workspace }}/boost-win" \
+            -DBOOST_INCLUDEDIR="${{ github.workspace }}/boost-win"
+        working-directory: project/dedicated_server
+
+      - name: Build
+        env:
+          CC: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-clang
+          CXX: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-clang++
+        run: cmake --build build-server-win --parallel $(nproc)
+        working-directory: project/dedicated_server
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: mcpe-server-win-x64
+          path: project/dedicated_server/build-server-win/mcpe_server.exe
+
   build-linux-dedicated-server:
-    name: Build Dedicated Server
+    name: Build Dedicated Server (Linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
