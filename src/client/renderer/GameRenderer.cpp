@@ -95,7 +95,7 @@ void GameRenderer::setupCamera(float a, int eye) {
 int viewDist = (int)(progress * 3.0f + 0.5f);
 if (viewDist < 0) viewDist = 0;
 if (viewDist > 3) viewDist = 3;
-renderDistance = (float)(16 * 16 >> viewDist);
+renderDistance = viewChunks * 16;
 #if defined(ANDROID)
     if (mc->isPowerVR() && mc->options.getIntValue(OPTIONS_VIEW_DISTANCE) <= 2)
 		renderDistance *= 0.8f;
@@ -801,7 +801,7 @@ void GameRenderer::setupClearColor(float a) {
     Mob* player = mc->cameraTargetPlayer;
 
     int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);
-    float whiteness = 1.0f / (float)(viewChunks + 1);
+float whiteness = 1.0f / (float)(viewChunks + 1);
     whiteness = 1 - (float) pow(whiteness, 0.25f);
 
     Vec3 skyColor = level->getSkyColor(mc->cameraTargetPlayer, a);
