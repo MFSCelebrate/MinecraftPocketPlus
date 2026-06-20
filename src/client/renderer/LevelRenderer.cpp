@@ -296,8 +296,7 @@ void LevelRenderer::allChanged()
 	Tile::leaves_carried->setFancy(fancy);
 
 	int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);  // 1~50
-    int dist = viewChunks * CHUNK_SIZE;  // = viewChunks × 16
-
+    int dist = viewChunks * 16;  // ← 一行搞定！
     if (mc->isPowerVR())
         dist = (int)(dist * 0.8f);
 #if defined(RPI)
