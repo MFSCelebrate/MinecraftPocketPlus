@@ -84,16 +84,17 @@ if (Minecraft::instance) {
 }
 
     // 🛡️ 根据选项创建 double 或 float 噪声
-    if (m_useDoubleNoise) {
-        lperlinNoise1 = new PerlinNoiseT<double>(&random, 16);
-        lperlinNoise2 = new PerlinNoiseT<double>(&random, 16);
-        perlinNoise1  = new PerlinNoiseT<double>(&random, 8);
-        perlinNoise2  = new PerlinNoiseT<double>(&random, 4);
-        perlinNoise3  = new PerlinNoiseT<double>(&random, 4);
-        scaleNoise    = new PerlinNoiseT<double>(&random, 10);
-        forestNoise   = new PerlinNoiseT<double>(&random, 16);
-        forestNoise   = new PerlinNoiseT<double>(&random, 8);
-    } else {
+    lperlinNoise1 = new PerlinNoiseT<double>(&random, 16);
+    lperlinNoise2 = new PerlinNoiseT<double>(&random, 16);
+    perlinNoise1  = new PerlinNoiseT<double>(&random, 8);
+    perlinNoise2  = new PerlinNoiseT<double>(&random, 4);
+    perlinNoise3  = new PerlinNoiseT<double>(&random, 4);
+    scaleNoise    = new PerlinNoiseT<double>(&random, 10);
+    depthNoise    = new PerlinNoiseT<double>(&random, 16);
+    forestNoise   = new PerlinNoiseT<double>(&random, 8);
+
+    // 🛡️ 单点查询路径（调试面板 inline 访问器）根据选项额外创建 float 版本
+    if (!m_useDoubleNoise) {
         lperlinNoise1_f = new PerlinNoiseT<float>(&random, 16);
         lperlinNoise2_f = new PerlinNoiseT<float>(&random, 16);
         perlinNoise1_f  = new PerlinNoiseT<float>(&random, 8);
@@ -102,7 +103,7 @@ if (Minecraft::instance) {
         scaleNoise_f    = new PerlinNoiseT<float>(&random, 10);
         depthNoise_f    = new PerlinNoiseT<float>(&random, 16);
         forestNoise_f   = new PerlinNoiseT<float>(&random, 8);
-    }
+}
 }
 
 RandomLevelSource::~RandomLevelSource()
