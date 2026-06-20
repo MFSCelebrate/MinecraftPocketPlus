@@ -1,110 +1,151 @@
-
 # MCRe NoiseFarlands
 
-> **基于 Minecraft PE 0.6.1 Alpha 泄露源码改造的边境之地研究专用项目**
->
-> 🏔️ 将有限的 MCPE 0.6.1 世界彻底改造为**真正的、丝般顺滑的、高精度的无限世界**
-
-![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Windows-lightgrey)
-![License](https://img.shields.io/badge/license-Research%20Only-red)
-![Status](https://img.shields.io/badge/status-Development-blue)
 ![Arch](https://img.shields.io/badge/arch-armeabi--v7a%20%7C%20arm64--v8a%20%7C%20x86__64-green)
+![License](https://img.shields.io/badge/license-GPLv3-blue)
+![Status](https://img.shields.io/badge/status-Development-orange)
 
 > [!WARNING]
-> 该版本为 Development 开发版，可能有不稳定性。稳定版请从 Release 页面下载。
-> 开发版本包含测试中的功能和实验性改动，不适合常规游戏用途。
+> **Development 开发版**，可能包含实验性改动和未完善功能。
+> 稳定版请从 [Releases](https://github.com/MFSCelebrate/MCReference_NoiseFarlands/releases) 下载。
+> **不适合常规游戏用途！**
 
 ---
 
-## 📖 项目简介
+## 🧊 项目简介
 
-**MCRe NoiseFarlands** 是一个深度改造的 Minecraft Pocket Edition 客户端，基于 **MCPE 0.6.1 Alpha 泄露源码** 构建。
+**MCRe NoiseFarlands** 是一个深度改造的 Minecraft Pocket Edition 客户端，
+基于 **MCPE 0.6.1 Alpha 泄露源码** 构建，
+以 **B1.7.3 视觉风格** 为目标，探索 Minecraft 的算法极限。
 
-项目核心目标：
-- 🧮 **真无限世界**：引入 `BigWorldCoordinate`（Boost 50 位十进制精度）+ `WorldOrigin` 动态原点系统，实现真正无限、高精度的地形生成
-- 🔢 **Double 精度化**：实体坐标、噪声采样、地物生成全链路 double 化
-- 🏔️ **边境之地探索**：支持世界偏移/缩放、64-bit 噪声、Double 噪声、海平面自定义等，便于研究远距离现象
-- ⚡ **高性能**：OpenGL ES 1.1 + VBO 渲染，帧率稳定 90-125 FPS
+> *"在 double 的尾数位上建立殖民地，在整数的边界上盖城堡。"* 🌌
+
+---
+
+### 🔥 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| 🧮 **真无限世界** | `BigWorldCoordinate`（Boost 50 位十进制精度）+ `WorldOrigin` 动态原点 |
+| 🔢 **全链路 Double 精度** | 实体坐标、噪声采样、地物生成全部 double 化 |
+| 🏔️ **边境之地探索** | 偏移/缩放/64-bit 噪声/Double 噪声/海平面自定义/条纹修复 |
+| 🌌 **末地生成器** | 从 MCBE 1.20 反向工程移植：中央岛 + 外岛 + 黑曜石柱 + 末地环 |
+| 🎵 **SimplexNoise** | 2D 单形噪声——MCBE 1.20 / Java 1.18+ 地形生成的基础 |
+| 📟 **双生成器调试面板** | 动态判定主世界/末地，显示完整噪声参数 + BigWorldCoordinate 精度 |
+| 🖼️ **B1.7.3 视觉风格** | 经典亮绿色草地、怀旧光照、老版本地形 |
+| ⚡ **高性能** | OpenGL ES 1.1 + VBO，帧率 90-125 FPS |
+| 🐧 **跨平台** | Android (arm32/arm64) + Windows (x86_64) + CI 自动构建 |
 
 ---
 
 ## 🧮 技术架构
 
-### 大数类型体系 (`src/util/WorldCoordinate.h`)
+### 双轨坐标系统
+
+```
+玩家绝对坐标 (BigWorldCoordinate, 50位)
+       │
+       ▼
+  WorldOrigin.tickBig()
+       │
+       ├── origin (Big) — 动态原点, 2^48 阈值自动迁移
+       └── local (double) — 局部坐标, 用于渲染/碰撞
+```
 
 | 类型 | 底层 | 阈值 | 用途 |
 |------|------|------|------|
 | `WorldCoordinate` | `double` | — | offset/scale 存储 |
 | `BigWorldCoordinate` | `cpp_dec_float<50, et_off>` | 2^48 | 绝对坐标精确计算 |
-| `WorldCoordinate_Integer` | `int64_t` | — | 区块/方块坐标 |
-| `BigWorldCoordinate_Integer` | `cpp_int, et_off` | 2^48 | 整数防溢出计算 |
+| `WorldCoordinate_Integer` | `int64_t` | — | 区块/方块整数坐标 |
+| `BigWorldCoordinate_Integer` | `cpp_int, et_off` | 2^48 | 远距离整数防溢出 |
 
-### 噪声体系（8 噪声 + B1.7.3 特征常数）
+### 噪声体系
 
-| # | 噪声 | 维度 | 倍频 | 核心常数 | 32bit 溢出 |
-|---|------|------|------|----------|-----------|
-| 1 | `lperlinNoise1` (Low) | 3D | 16 | 684.412 | ~12.5M |
-| 2 | `lperlinNoise2` (High) | 3D | 16 | 684.412 | ~12.5M |
-|perNoise1` (Selector) | 3D | 8 | 684.412 | ~10 亿 ⭐ |
-| 4 | `perlinNoise2` (Sand) | 2D | 4 | 1/32 | ~2.75e11 |
-| 5 | `perlinNoise3` (Gravel) | 2D | 4 | 1/64 | ~1.37e11 |
-| 6 | `scaleNoise` | 2D | 10 | 1/80 | ~7.66e9 |
-| 7 | `depthNoise` | 2D | 16 | 1/200 | ~43M |
-| 8 | `forestNoise` | 2D | 8 | 0.5 | ~4.29e9 |
+**主世界**：8 个 Perlin/ImprovedNoise × `684.412`（B1.7.3 特征常数）
 
-> 选择器 32 位溢出 ≈ 10 亿格 = 经典遥远之地（Farther Lands）  
-> Double 精度条纹在 2^53 ≈ 9e15（已用 WorldOrigin 动态原点修复）
+| # | 噪声 | 维度 | 倍频 | 溢出距离 |
+|---|------|------|------|---------|
+| 1 | `lperlinNoise1` (Low) | 3D | 16 | ~12.5M |
+| 2 | `lperlinNoise2` (High) | 3D | 16 | ~12.5M |
+| 3 | `perlinNoise1` (Selector) | 3D | 8 | ~10 亿 ⭐ |
+| 4-8 | 沙/砾/缩放/深度/森林 | 2D | 4-16 | ~43M ~ 2.75e11 |
 
-### WorldOrigin 自动切换系统
+**末地**：3×PerlinNoise + 1×SimplexNoise
 
-每帧用 `BigWorldCoordinate` 算术重算 `local = abs - origin`，若 |local| ≥ 2^48 自动迁移原点，local 精度 ≤ 0.03 格。
+| # | 噪声 | 维度 | 倍频 | 作用 |
+|---|------|------|------|------|
+| 1 | `pNoise1` | 3D | 16 | 低频密度 |
+| 2 | `pNoise2` | 3D | 16 | 高频密度 |
+| 3 | `pNoise3` | 3D | 8 | 混合选择器 |
+| 4 | `sNoise1` | 2D | — | **SimplexNoise** 外岛检测 |
 
-### Entity::move() 精度保护策略 (v4)
+### 末地环理论
 
-> **核心矛盾**：`bb.move(xa, 0, 0)` 在 2^48 处因 double ULP=0.0625，0.1 增量舍入为 0
+> **成因**：`int x²` 溢出 → 负值 → sqrt(负数) → NaN → 自然虚空  
+> **周期**：距离² 每 2³² → 世界坐标每 **524,288 块**  
+> **第一环**：370,728 ~ 524,288 块  
+> **面积恒定**：S = (2³⁷ − 2⁶)π，与环序号 n 无关
 
-**三重保护方案**：
-1. **碰撞箱进 local 空间** — `bb.move(-ox, -oy, -oz)`，碰撞检测精度丝般顺滑
-2. **getCubes 独立构造绝对 AABB** — 用 `bb.expand(xa,ya,za).move(ox,oy,oz)` 查方块
-3. **Big 最终合成** — `(BigWorldCoordinate(bb.x0+ox) + BigWorldCoordinate(bb.x1+ox)) / 2`
+通过 `OPTIONS_END_CIRCLES` 开关控制 int 溢出路径——开启后末地出现经典环状虚空结构。
 
 ---
 
-## 🔧 构建环境
+## 🔧 构建
 
-| 平台 | 构建工具 | 说明 |
-|------|---------|------|
+| 平台 | 工具 | 目标 |
+|------|------|------|
 | 🤖 Android | NDK r23c (Clang 12, c++_static) | armeabi-v7a + arm64-v8a |
 | 🪟 Windows | CMake + llvm-mingw + Boost 1.83.0 | x86_64 |
-| 🔄 CI | GitHub Actions | `build.yml` / `build.sh` / `build.ps1` |
+| 🔄 CI | GitHub Actions | 自动构建 + artifact |
+
+构建脚本：`build.sh` (Android) / `build.ps1` (Windows)
 
 ---
 
-## ✅ 已完成修复清单 (37 项)
+## ✅ 已完成的重大工作 (50+ Bug / 70+ 文件)
 
-### 🖼️ 渲染 (1-8)
-条纹之地修复、64 位条纹修复、地形下沉、星星渲染、云渲染、视锥裁剪、Windows glad
+### 🧮 坐标系统（14 项核心改动）
+- Entity Big 访问器 + 速度 `m_bigVx/y/z`
+- `updatePositionFromBB` Big 合成绝对坐标
+- `isInWall()` / `isInWater()` Big→BigWorldCoordinate_Integer 精确计算
+- `LocalPlayer` Big 位置 + `WorldOrigin` 动态追踪
+- `travel()` 重力/摩擦/流体/梯子全用 Big 速度
+- `moveRelative()` / `lerpMotion()` / `push()` 速度操作 Big 化
+- `move()` 碰撞清零 + 末尾方块检测用 Big 整数坐标
 
-### 🔢 精度 (9-16, 37)
-int→int64_t、resortChunks 安全取模、float→double、噪声 double 化、BiomeSource double 化、RandomLevelSource double 化、地物 int64_t、Entity::move() 2^48+ 精度保护 (v4)
+### 🐛 2^48+ 移动修复（5 个关键 BUG）
+1. **2^48 完全卡死**：`move()` useLocal 分支缺 `storeAbsolutePosition`
+2. **AABB 坐标飞负无穷**：`bb.set()` 后忘 `bb.move(ox)`
+3. **2^53 缓慢回弹**：`setPos` 直接用 BigWorldCoordinate(double) 精度全丢
+4. **网络回环覆写 Big**：`autoSendPosRot` 发送 MoveEntityPacket 回传污染
+5. **lerpTo float 污染**：`lx/ly/lz` 从 float 改为 double
 
-### 🖥️ 调试 (17-20)
-NaN 修复、%lld 格式、精度颜色编码、面板缩放
+### 🌌 末地生成器（JS 逆向 → C++）
+- 3 组 PerlinNoise + 1 组 SimplexNoise
+- DENSITY_X=3 × DENSITY_Y=33 × DENSITY_Z=3 (297 采样点)
+- 中央岛(半径 ~12.5 chunks) + 外岛(sNoise1 < -0.9) + 末地环(int 溢出)
+- 黑曜石柱(10 根, Fisher-Yates, 半径 42, 高度 76~103)
+- 偏移/缩放全轴支持
+- 全亮度锁定避免光照卡顿 (memset(skyLight, 0xFF))
+- 三线性插值 (NoiseCellInterpolator)
 
-### 👆 触控 (21-25)
-数字键支持、小数点输入、触控延迟、按钮穿透、_forceCanUse
+### 🎵 SimplexNoise 移植
+- 从 Project Mirror (MCBE 1.20) JS 源码移植 2D SimplexNoise
+- 替代 `sNoise1` 的 PerlinNoise 近似 → 外岛分布自然圆形
 
-### 🌐 网络 (26)
-版本检查移除
+### 🖼️ 渲染修复
+- 条纹之地修复 (`int64_t` 原点 + chunk 坐标折回)
+- 64 位条纹修复、地形下沉、星星/云/视锥裁剪修复
+- Chunk::rebuild / Level::animateTick 空指针防御
 
-### 🎮 游戏机制 (27-28)
-传送物理、相对坐标解析
+### 📟 调试面板
+- 双生成器动态判定 (RandomLevelSource vs TheEndLevelSource)
+- 末地模式隐藏 Sea Level
+- 噪声行替换 + BigWorldCoordinate 坐标 + 精度三色显示
+- 64Bit Farlands 双生成器状态显示
 
-### 🏗️ 构建 (29-31)
-NDK 升级、ChunkCache 双重释放、Region bad_alloc
-
-### 📐 理论 (32-36)
-噪声分析、边境之地坐标、大数选型、构建脚本、会话迁移
+### 🏗️ 构建修复
+- Windows 端 DLL 打包 (libc++.dll / libunwind.dll / libpng16.dll)
+- NDK 升级、ChunkCache 双重释放、Region bad_alloc
 
 ---
 
@@ -112,44 +153,56 @@ NDK 升级、ChunkCache 双重释放、Region bad_alloc
 
 | # | 问题 | 优先级 |
 |---|------|--------|
-| 1 | 创建世界页面 World 选项卡滚动面板 | 中 |
-| 2 | CanyonFeature / DungeonFeature 激活 | 中 |
-| 3 | 区块剔除性能优化 | 低 |
-| 4 | EGL context lost 恢复 | 低 |
-| 5 | 完整物品系统 100% | 低 |
-
----
-
-## 🎯 代码风格约定
-
-- 新类型统一放 `src/util/`
-- Boost 大数必须 `et_off`（防爆栈 + 防 ABI 冲突）
-- 调试屏幕大数用 `{}` 块隔离生命周期
-- 跨编译单元只用 `double`/`int64_t`，不用 Boost 大数
-- 噪声全链路 `double`
-- `-fstack-protector` 崩溃：大数组改 `static`，大数用 `et_off` + 块隔离
+| 1 | 摄像机 BigWorldCoordinate 渲染改造 | 🔴 高 |
+| 2 | CanyonFeature / DungeonFeature 激活+修复 | 🟡 中 |
+| 3 | 创建世界页面 World 选项卡滚动面板 | 🟡 中 |
+| 4 | 区块剔除性能优化 | 🟢 低 |
+| 5 | EGL context lost 恢复 | 🟢 低 |
 
 ---
 
 ## 📂 关键文件
 
-| 文件 | 关键改动 |
-|------|---------|
-| `src/util/WorldCoordinate.h` | 大数类型、阈值判断 |
-| `src/util/WorldOrigin.h` | tick() 自动原点切换、OriginStep=2^48 |
-| `src/world/entity/Entity.cpp/h` | move() local 帧碰撞 + Big 合成 |
-| `src/client/player/LocalPlayer.h` | WorldOrigin 成员、Big 位置存储 |
-| `src/client/renderer/LevelRenderer.cpp/h` | 动态原点渲染、resortChunks |
-| `src/world/level/levelgen/*` | 噪声全 double 化、地物 int64_t |
-| `src/client/gui/Gui.cpp` | 调试面板 Big 坐标显示 |
+| 文件 | 说明 |
+|------|------|
+| `src/util/WorldCoordinate.h` | 大数类型体系 (BigWorldCoordinate, WorldCoordinate_Integer) |
+| `src/util/WorldOrigin.h` | 动态原点追踪器 (2^48 阈值自动迁移) |
+| `src/world/entity/Entity.h/cpp` | Big 访问器 + 速度全链路 + move() local 帧碰撞 |
+| `src/client/player/LocalPlayer.h/cpp` | Big 位置存储 + setPos/moveTo 差分保护 |
+| `src/world/level/levelgen/TheEndLevelSource.h/cpp` | 完整末地生成器 (外岛+柱+环+偏移+光照) |
+| `src/world/level/levelgen/synth/SimplexNoise.h` | 2D SimplexNoise (MCBE 1.20 / Java 1.18+ 基础噪声) |
+| `src/world/level/levelgen/RandomLevelSource.h/cpp` | 主世界生成器 (8 噪声 + 偏移/缩放) |
+| `src/client/renderer/LevelRenderer.cpp` | 动态原点渲染Ch条纹|ui.cpp |调试生成 +坐标|/client/Options.h/cpp` | 全量 Options 注册 (末地环/偏移/缩放/64bit/Double 噪声等) |
 
 ---
 
-## 📸 截图
+## 🎯 代码约定
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/713ec506-0937-4c7a-96fc-8b2c9d59301b" width="80%" alt="性能截图" />
-</p>
+- 新类型 → `src/util/`
+- Boost 大数 → 必须 `et_off`（防爆栈 + 防 ABI 冲突）
+- {} 块隔离生命周期
+- 跨编译单元 → 只用 `double`/`int64_t`，不用 Boost 大数
+- 噪声全链路 → `double`
+- 代码修改 → 🔍分析→🔧修复→📊效果 三段式，先给最小改动量
+
+---
+
+## ⚖️ License
+
+MCRe NoiseFarlands 原创修改代码以 [GNU General Public License v3.0](LICENSE) 发布。
+
+底层 MCPE 0.6.1 Alpha 源码版权归 **Mojang AB / Microsoft Corporation** 所有。
+
+```
+Copyright (C) 2025-2026  大佬
+Copyright (C) 2025-2026  INF32768
+```
+
+**MCRe 原创修改包括但不限于**：BigWorldCoordinate 坐标系统、WorldOrigin 动态原点、
+末地生成器 (TheEndLevelSource)、SimplexNoise 移植、偏移/缩放/末地环支持、
+调试面板双生成器适配、条纹之地修复、全链路 Double 精度化。
+
+任何基于本项目的衍生作品必须同样以 GPLv3 开源，并保留原作者署名。
 
 ---
 
@@ -157,23 +210,24 @@ NDK 升级、ChunkCache 双重释放、Region bad_alloc
 
 | 来源 | 说明 |
 |------|------|
-| 4chan 泄露 MCPE 0.6.1 源码 | 基础引擎 |
-| Kolyah35 的 MCPE 0.6.1 Plus | 二改增强 |
+| MCPE 0.6.1 Alpha 泄露源码 | 基础引擎 |
+| Kolyah35 的 MCPE 0.6.1 Plus | 二改增强参考 |
+| Project Mirror (MCBE 1.20 逆向) | 末地生成器 + SimplexNoise 算法来源 |
 | "念" 大佬的边境之地 Mod | Y 轴突破参考 |
 | Java 版各大边境之地 Mod | 算法参考 |
-| B1.7.3 噪声特征常数 (`684.412`) | 基础缩放因子 |
-| Project Mirror (MCBE 1.20 逆向) | 末地生成器参考 |
+| B1.7.3 噪声特征常数 (`684.412`) | 噪声缩放因子 |
 
-**致谢**：Mojang AB、4J Studios、Kolyah35、"念" 以及所有边境之地研究社区的探索者 🧊
+**致谢**：Mojang AB、4J Studios、Kolyah35、Project Mirror (HTMonkeyG)、
+"念" 以及所有边境之地研究社区的探索者 🧊
 
 ---
 
 ## ⚠️ 免责声明
 
 - 本项目**仅供技术研究与学习**，不得用于任何商业用途
-- 源码版权归 Mojang AB / 4J Studios 所有
+- 源码版权归 **Mojang AB / 4J Studios / Microsoft Corporation** 所有
 - 使用者需自行承担风险，开发者不对数据丢失或设备损坏负责
-- **不适合生存模式！**
+- **不适合生存模式！这不适合生存模式！这不适合生存模式！**
 
 ---
 
@@ -184,4 +238,7 @@ NDK 升级、ChunkCache 双重释放、Region bad_alloc
 
 ---
 
-> *"在 double 的尾数位上建立殖民地，在整数的边界上盖城堡。"* 🌌
+> *"在 double 的尾数位上建立殖民地，在整数的边界上盖城堡，
+> 用 cpp_dec_float<50> 探索 float 永远到不了的距离。"* 🧊🚀
+
+---
