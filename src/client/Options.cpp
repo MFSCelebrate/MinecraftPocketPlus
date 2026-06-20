@@ -22,6 +22,7 @@ OptionBool barOnTop("barOnTop", false);
 OptionBool disableSkygrid("disable_skygrid", false);  // 默认 false = 不禁用（允许天空网格）
 OptionBool allowSprint("allowSprint", true);
 static OptionBool endCircles("endCircles", false);
+static OptionBool extendedPerlinNoise("extended_perlin_noise", false);  // ← 🛡️
 OptionBool rpiCursor("rpiCursor", false);
 OptionBool autoJump("autoJump", true);
 
