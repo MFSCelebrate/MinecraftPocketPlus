@@ -556,12 +556,21 @@ void GameRenderer::setupFog(int i) {
     // ... 原有液体雾逻辑
 
     if (player->isUnderLiquid(Material::water)) {
-        // 水下：指数雾，密度适中，雾颜色手动加深（Beta 风格深蓝）
+    bool isEnd = dynamic_cast<TheEndLevelSource*>(mc->level->getChunkSource()) != nullptr;
+    if (isEnd) {
+        GLfloat endWaterFog[4] = { 0x62/255.0f, 0x52/255.0f, 0x9E/255.0f, 1.0f };
         glFogx(GL_FOG_MODE, GL_EXP);
-        glFogf(GL_FOG_DENSITY, 0.08f);   // Beta 的水下朦胧感
+        glFogf(GL_FOG_DENSITY, 0.08f);
+        glFogfv(GL_FOG_COLOR, endWaterFog);
+    } else {
+        // 原有主世界水体雾
+        glFogx(GL_FOG_MODE, GL_EXP);
+        glFogf(GL_FOG_DENSITY, 0.08f);
         GLfloat waterFog[4] = { 0.02f, 0.02f, 0.3f, 1.0f };
         glFogfv(GL_FOG_COLOR, waterFog);
-    } else if (player->isUnderLiquid(Material::lava)) {
+    }
+	} 
+    if (player->isUnderLiquid(Material::lava)) {
         // 熔岩：浓密指数雾，颜色偏红
         glFogx(GL_FOG_MODE, GL_EXP);
         glFogf(GL_FOG_DENSITY, 1.5f);
