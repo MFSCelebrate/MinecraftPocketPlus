@@ -56,18 +56,17 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
     double chZ = (double)chunkZ + m_worldOffsetZ * m_worldScaleZ / 16.0;
 
     // === 中央岛 ===
-    // 半chunk → 块坐标：×8
-    // 末地环：块坐标 int 溢出 → sqrt(负) → NaN → 环形虚空
+    // 直接用半chunk坐标做 int 溢出（对齐 Java 的 x/z 参数）
     double v9;
     if (m_endCircles) {
-        int bx = (int)floor((zC + 2.0 * chZ) * 8.0);
-        int bz = (int)floor((xC + 2.0 * chX) * 8.0);
-        int distSq = bx * bx + bz * bz;
+        int sx = (int)(zC + 2.0 * chZ);   // 半chunk → int → 溢出
+        int sz = (int)(xC + 2.0 * chX);
+        int distSq = sx * sx + sz * sz;
         v9 = 100.0 - Mth::sqrt((double)distSq) * 8.0;
     } else {
-        double bx = (double)(zC + 2.0 * chZ) * 8.0;
-        double bz = (double)(xC + 2.0 * chX) * 8.0;
-        v9 = 100.0 - Mth::sqrt(bx * bx + bz * bz) * 8.0;
+        double sx = (double)(zC + 2.0 * chZ);
+        double sz = (double)(xC + 2.0 * chX);
+        v9 = 100.0 - Mth::sqrt(sx * sx + sz * sz) * 8.0;
     }
     v9 = Mth::clamp(v9, -100.0, 80.0);
 
@@ -87,12 +86,12 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
 
             bool outsideCentral;
             if (m_endCircles) {
-                // 末地环：chunk → 块坐标 (×16)，int 溢出
-                int bx = wX * 16;
-                int bz = wZ * 16;
-                int dSq = bx * bx + bz * bz;
-                // 4096 chunk² = 4096 × 256 = 1048576 block²
-                outsideCentral = dSq > 1048576;
+                // 外岛：chunk → 半chunk (×2)，int 溢出
+                int sx = wX * 2;
+                int sz = wZ * 2;
+                int dSq = sx * sx + sz * sz;
+                // 4096 chunk² = 4096 × 4 = 16384 半chunk²
+                outsideCentral = dSq > 16384;
             } else {
                 outsideCentral = (int64_t)wX * wX + (int64_t)wZ * wZ > 4096;
             }
@@ -110,6 +109,7 @@ double TheEndLevelSource::getIslandHeightValue(int64_t chunkX, int64_t chunkZ, i
 
     return v9;
 }
+
 // ========== Density Cells ==========
 
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp
