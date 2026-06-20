@@ -248,9 +248,11 @@ jobs:
 
       - name: Patch RakNet
         run: |
-          sed -i 's/GetProcessAffinityMask(mProc, &mProcMask, &mSysMask)/GetProcessAffinityMask(mProc, (PDWORD_PTR)\&mProcMask, (PDWORD_PTR)\&mSysMask)/' \
+          sed -i 's/DWORD mProcMask, mSysMask/DWORD_PTR mProcMask, mSysMask/' \
           project/lib_projects/raknet/jni/RaknetSources/GetTime.cpp
-
+          sed -i 's/register //g' \
+          project/lib_projects/raknet/jni/RaknetSources/Rand.cpp
+      
       - name: Configure
         env:
           CC: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-clang
