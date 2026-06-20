@@ -3,6 +3,7 @@
 
 #include "../chunk/ChunkSource.h"
 #include "synth/PerlinNoise.h"
+#include "synth/SimplexNoise.h"  // ← 新增
 #include <map>  // 文件顶部
 
 class Level;
@@ -62,7 +63,7 @@ void generateEndSpikes();
     PerlinNoise pNoise1;   // 16 octaves, 3D — 地形低频
     PerlinNoise pNoise2;   // 16 octaves, 3D — 地形高频
     PerlinNoise pNoise3;   // 8 octaves, 3D — 选择器
-    PerlinNoise sNoise1;   // 4 octaves, 2D — 外岛检测
+    SimplexNoise sNoise1;  // ✅ 真正的 SimplexNoise
     double* densityBuffer;
     static const int DENSITY_X = 3;
     static const int DENSITY_Y = 33;  // 128/8 + 1
