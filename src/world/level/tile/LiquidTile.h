@@ -66,10 +66,6 @@ public:
     }
 
 	int getColor(LevelSource* level, int64_t x, int y, int64_t z) {
-    if (Level* lvl = dynamic_cast<Level*>(level)) {
-        if (lvl->getChunkSource() && lvl->getChunkSource()->isEndSource())
-            return 0x62529E;   // 末地水体 #62529E
-    }
     return 0x3F76E4;           // 主世界蓝水
 	}
 
