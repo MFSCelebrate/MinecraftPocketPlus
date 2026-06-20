@@ -242,7 +242,11 @@ jobs:
         run: |
           mkdir -p build-server
           cd build-server
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-w
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_FLAGS="-m64" \
+            -DCMAKE_CXX_FLAGS="-m64" \
+            -DCMAKE-sized-direct projected Build: cmake --build build-server --parallel $(nproc)
         working-directory: project/dedicated_server   # ← 改这里
 
       - name: Build
