@@ -2,22 +2,21 @@ cmake_minimum_required(VERSION 3.10)
 
 project(mcpe_server CXX)
 
-# ---- 平台检测：不要硬编码 -m32 ----
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(WARNING "Building on 32-bit platform. Boost may not be available.")
-endif()
+# ====== ★ 关键：先设 64 位 + 禁用 sized deallocation ======
+# 必须在 add_subdirectory(RakNet) 之前设，RakNet 会继承
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -fno-sized-deallocation")
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -m64")
 
-# ---- Dependencies ----
 find_package(Boost REQUIRED)
 find_package(Threads REQUIRED)
 
-# ---- RakNet ----
+# RakNet 会继承上面的 CMAKE_CXX_FLAGS → 64 位 + 无 sized deallocation
 add_subdirectory("${PROJECT_SOURCE_DIR}/../lib_projects/raknet/jni"
                  "${CMAKE_CURRENT_BINARY_DIR}/raknet")
 
-# ---- STANDALONE_SERVER 宏 (关闭所有客户端渲染/GUI/音频) ----
+# ---- 只需 preprocessor 宏，不需要编译器 flag ----
+add_definitions(-DSTANDALONE_SERVER)
 add_compile_options(-w)
-add_definitions(-DSTANDALONE_SERVER -fno-sized-deallocation)
 
 # ---- 源文件 (原版118 + MCRe新增) ----
 set(CompileFiles
