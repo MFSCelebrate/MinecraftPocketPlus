@@ -194,7 +194,7 @@ MCRe NoiseFarlands 原创修改代码以 [GNU General Public License v3.0](LICEN
 底层 MCPE 0.6.1 Alpha 源码版权归 **Mojang AB / Microsoft Corporation** 所有。
 
 ```
-Copyright (C) 2025-2026  大佬
+Copyright (C) 2025-2026  MFSCelebrate_
 Copyright (C) 2025-2026  INF32768
 ```
 
