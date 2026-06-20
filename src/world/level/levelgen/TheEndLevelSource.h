@@ -24,7 +24,7 @@ public:
     PerlinNoise& getPNoise1() { return pNoise1; }
     PerlinNoise& getPNoise2() { return pNoise2; }
     PerlinNoise& getPNoise3() { return pNoise3; }
-    PerlinNoise& getSNoise1() { return sNoise1; }
+    SimplexNoise& getSNoise1() { return sNoise1; }
 
     double sampleDensityAt(double worldX, double worldY, double worldZ);
     double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
