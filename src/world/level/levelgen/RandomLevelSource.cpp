@@ -24,14 +24,6 @@ static const int MAX_BUFFER_SIZE = 1024;
 RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool spawnMobs)
     : random(seed),
       level(level),
-      lperlinNoise1(&random, 16),
-      lperlinNoise2(&random, 16),
-      perlinNoise1(&random, 8),
-      perlinNoise2(&random, 4),
-      perlinNoise3(&random, 4),
-      scaleNoise(&random, 10),
-      depthNoise(&random, 16),
-      forestNoise(&random, 8),
       spawnMobs(spawnMobs),
       pnr(NULL),
       ar(NULL),
@@ -46,7 +38,8 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
       m_worldScaleX(1.0),
       m_worldScaleY(1.0),
       m_worldScaleZ(1.0),
-      m_disableSkygrid(false)
+      m_disableSkygrid(false),
+      m_useDoubleNoise(false)
 {
     for (int i = 0; i < 32; ++i)
         for (int j = 0; j < 32; ++j)
@@ -74,13 +67,9 @@ if (!scaleZStr.empty()) {
     if (!yStr.empty()) { m_worldOffsetY = atof(yStr.c_str()); }
     std::string zStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_OFFSET_Z);
     if (!zStr.empty()) { m_worldOffsetZ = atof(zStr.c_str()); }
-
-if (Minecraft::instance) {
-    m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
 }
 
-    // BiomeSource 传入时用 worldCoordToDouble()
-    if (level) {
+if (level) {
         BiomeSource* biomeSource = level->getBiomeSource();
         if (biomeSource) {
             biomeSource->setWorldTransform(
@@ -88,8 +77,32 @@ if (Minecraft::instance) {
                 m_worldScaleX, m_worldScaleZ
             );
         }
-	}
 }
+
+if (Minecraft::instance) {
+    m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
+}
+
+    // 🛡️ 根据选项创建 double 或 float 噪声
+    if (m_useDoubleNoise) {
+        lperlinNoise1 = new PerlinNoiseT<double>(&random, 16);
+        lperlinNoise2 = new PerlinNoiseT<double>(&random, 16);
+        perlinNoise1  = new PerlinNoiseT<double>(&random, 8);
+        perlinNoise2  = new PerlinNoiseT<double>(&random, 4);
+        perlinNoise3  = new PerlinNoiseT<double>(&random, 4);
+        scaleNoise    = new PerlinNoiseT<double>(&random, 10);
+        forestNoise   = new PerlinNoiseT<double>(&random, 16);
+        forestNoise   = new PerlinNoiseT<double>(&random, 8);
+    } else {
+        lperlinNoise1_f = new PerlinNoiseT<float>(&random, 16);
+        lperlinNoise2_f = new PerlinNoiseT<float>(&random, 16);
+        perlinNoise1_f  = new PerlinNoiseT<float>(&random, 8);
+        perlinNoise2_f  = new PerlinNoiseT<float>(&random, 4);
+        perlinNoise3_f  = new PerlinNoiseT<float>(&random, 4);
+        scaleNoise_f    = new PerlinNoiseT<float>(&random, 10);
+        depthNoise_f    = new PerlinNoiseT<float>(&random, 16);
+        forestNoise_f   = new PerlinNoiseT<float>(&random, 8);
+    }
 }
 
 RandomLevelSource::~RandomLevelSource()
@@ -102,6 +115,15 @@ RandomLevelSource::~RandomLevelSource()
     delete[] dr;
     delete[] fi;
     delete[] fis;
+	// 8 个 double 指针 + 8 个 float 指针，delete 前判断非空
+delete lperlinNoise1;   delete lperlinNoise1_f;
+delete lperlinNoise2;   delete lperlinNoise2_f;
+delete perlinNoise1;    delete perlinNoise1_f;
+delete perlinNoise2;    delete perlinNoise2_f;
+delete perlinNoise3;    delete perlinNoise3_f;
+delete scaleNoise;      delete scaleNoise_f;
+delete depthNoise;      delete depthNoise_f;
+delete forestNoise;     delete forestNoise_f;
 }
 
 void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, double* temperatures)
