@@ -240,14 +240,10 @@ jobs:
 
       - name: Configure
         run: |
-          mkdir -p build-server
-          cd build-server
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_FLAGS="-m64" \
-            -DCMAKE_CXX_FLAGS="-m64" \
-            -DCMAKE-sized-direct projected Build: cmake --build build-server --parallel $(nproc)
-        working-directory: project/dedicated_server   # ← 改这里
+            sudo apt-get update
+            sudo dir -p build-server && cd build-server
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-m64" -DCMAKE_CXX_FLAGS="-m64 -fno-sized-deallocation"
+        working-directory: project/dedicated_server
 
       - name: Build
         run: cmake --build build-server --parallel $(nproc)
