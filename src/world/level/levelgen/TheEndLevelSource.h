@@ -13,6 +13,7 @@ class TheEndLevelSource : public ChunkSource {
 public:
     TheEndLevelSource(Level* level, long seed);
     ~TheEndLevelSource();
+bool isEndSource() const override { return true; }
 
     double getWorldOffsetX() const { return m_worldOffsetX; }
     double getWorldOffsetY() const { return m_worldOffsetY; }
