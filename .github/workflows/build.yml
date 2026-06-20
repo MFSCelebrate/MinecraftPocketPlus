@@ -242,7 +242,7 @@ jobs:
         run: |
           mkdir -p build-server
           cd build-server
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_FLAGS=-w
         working-directory: project/dedicated_server   # ← 改这里
 
       - name: Build
