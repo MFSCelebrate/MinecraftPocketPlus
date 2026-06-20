@@ -54,6 +54,7 @@ private:
     double m_worldScaleZ  = 1.0;
 
     bool m_spikesGenerated = false;
+    bool m_endCircles = false;
 void generateEndSpikes();
 
     Level* level;
