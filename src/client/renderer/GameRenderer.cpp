@@ -91,14 +91,11 @@ void renderCursor(float x, float y, Minecraft* minecraft) {
 
 /*private*/
 void GameRenderer::setupCamera(float a, int eye) {
-    float progress = mc->options.getProgressValue(OPTIONS_VIEW_DISTANCE);
-int viewDist = (int)(progress * 3.0f + 0.5f);
-if (viewDist < 0) viewDist = 0;
-if (viewDist > 3) viewDist = 3;
-renderDistance = viewChunks * 16;
+    int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);
+renderDistance = (float)(viewChunks * 16);
 #if defined(ANDROID)
-    if (mc->isPowerVR() && mc->options.getIntValue(OPTIONS_VIEW_DISTANCE) <= 2)
-		renderDistance *= 0.8f;
+    if (mc->isPowerVR() && viewChunks > 8)
+        renderDistance *= 0.8f;
 #endif
 
 	glMatrixMode(GL_PROJECTION);
