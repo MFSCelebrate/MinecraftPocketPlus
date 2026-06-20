@@ -350,6 +350,10 @@ void LevelRenderer::allChanged()
 		}
 	}
 
+	LOGI("allChanged: viewChunks=%d dist=%d xChunks=%d yChunks=%d zChunks=%d chunksLen=%d",
+     mc->options.getIntValue(OPTIONS_VIEW_DISTANCE),
+     dist, xChunks, yChunks, zChunks, chunksLength);
+
 	if (level != NULL) {
 		Entity* player = mc->cameraTargetPlayer;
 		if (player != NULL) {
