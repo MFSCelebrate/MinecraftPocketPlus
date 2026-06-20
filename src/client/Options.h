@@ -106,6 +106,7 @@ enum OptionId {
     OPTIONS_WORLD_OFFSET_Y,  // 新增：Y 轴偏移
     OPTIONS_END_GENERATOR,
     OPTIONS_END_CIRCLES,  // 🛡️ 新增：末地环开关
+    OPTIONS_EXTENDED_PERLIN_NOISE,   // ← 🛡️ 补上！
 
     OPTIONS_RPI_CURSOR,
 	// Should be last!
