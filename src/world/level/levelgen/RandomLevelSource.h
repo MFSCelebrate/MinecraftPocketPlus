@@ -37,7 +37,7 @@ inline double getPerlinNoise1(double x, double y, double z) {
     else return (double)perlinNoise1_f->getValue((float)x, (float)y, (float)z);
 }
 inline double getPerlinNoise2(double x, double z) {
-    if (m_useDoubleNoise) return perlinNoise2 z);
+    if (m_useDoubleNoise) return perlinNoise2->getValue(x, z);
     else return (double)perlinNoise2_f->getValue((float)x, (float)z);
 }
 inline double getPerlinNoise3(double x, double z) {
