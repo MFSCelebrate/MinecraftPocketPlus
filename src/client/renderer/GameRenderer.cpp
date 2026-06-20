@@ -783,7 +783,9 @@ void GameRenderer::tick(int nTick, int maxTick) {
 											Mth::floor(mc->cameraTargetPlayer->y),
 											Mth::floor(mc->cameraTargetPlayer->z));
 
-	float whiteness = (3 - mc->options.getIntValue(OPTIONS_VIEW_DISTANCE)) / 3.0f;
+	int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);
+float whiteness = 1.0f - (float)viewChunks / 50.0f;
+if (whiteness < 0.0f) whiteness = 0.0f;
     float fogBrT = brr * (1 - whiteness) + whiteness;
     fogBr += (fogBrT - fogBr) * 0.1f;
 
@@ -798,7 +800,8 @@ void GameRenderer::setupClearColor(float a) {
     Level* level = mc->level;
     Mob* player = mc->cameraTargetPlayer;
 
-    float whiteness = 1.0f / (4 - mc->options.getIntValue(OPTIONS_VIEW_DISTANCE));
+    int viewChunks = mc->options.getIntValue(OPTIONS_VIEW_DISTANCE);
+    float whiteness = 1.0f / (float)(viewChunks + 1);
     whiteness = 1 - (float) pow(whiteness, 0.25f);
 
     Vec3 skyColor = level->getSkyColor(mc->cameraTargetPlayer, a);
