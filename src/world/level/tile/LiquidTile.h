@@ -65,9 +65,14 @@ public:
         return 0;
     }
 
-	int getColor(LevelSource* level, int64_t x, int64_t y, int64_t z) {
-        return 0x999999ff;
+	int getColor(LevelSource* level, int64_t x, int y, int64_t z) {
+    // 末地水体颜色 (BE: #62529E)
+    if (Level* lvl = dynamic_cast<Level*>(level)) {
+        if (dynamic_cast<TheEndLevelSource*>(lvl->getChunkSource()))
+            return 0x62529E;  // 紫色末地水
     }
+    return 0x3F76E4;  // 主世界蓝水
+	}
 
 	void handleEntityInside(Level* level, int64_t x, int64_t y, int64_t z, Entity* e, Vec3& current) {
         Vec3 flow = getFlow(level, x, y, z);
