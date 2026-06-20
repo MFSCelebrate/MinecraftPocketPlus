@@ -225,6 +225,28 @@ jobs:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
+  build-linux-dedicated-server:
+      name: Build Dedicated Server
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v4
+         - name: Install Boost
+           run: sudo apt-get install -y libboost-all-dev
+           
+         - name: Configure
+           run: |
+             mkdir build-server && cd build-server
+             cmake .. -DCMAKE_BUILD_TYPE=Release
+           working-directory: project/server/jni
+           
+         - name: Build
+           run: cmake --build build-server --parallel $(nproc)
+           working-directory: project/server/jni
+         - uses: actions/upload-artifact@v4
+           with:
+             name: mcpe-server-linux
+             path: project/server/jni/build-server/mcpe_server
+
   publish:
     name: Publish
     runs-on: ubuntu-latest
