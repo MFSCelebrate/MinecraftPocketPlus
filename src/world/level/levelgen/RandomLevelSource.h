@@ -64,8 +64,8 @@ double getWorldScaleZ()  const { return m_worldScaleZ; }
     int waterDepths[16+16][16+16];
 
 private:
-    double* getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize);
-    void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, double* temperatures);
+    double* getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize);
+    void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures);
     void buildSurfaces(double xOffs, double zOffs, unsigned char* blocks, Biome** biomes);
     void calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt);
 
@@ -83,17 +83,17 @@ private:
     Level* level;
     bool spawnMobs;
 
-    double* buffer;                // 通用缓冲区，改为 double
-    double sandBuffer[16*16];
-    double gravelBuffer[16*16];
-    double depthBuffer[16*16];
-    double* pnr;
-    double* ar;
-    double* br;
-    double* sr;
-    double* dr;
-    double* fi;
-    double* fis;
+    float* buffer;
+float sandBuffer[16*16];
+float gravelBuffer[16*16];
+float depthBuffer[16*16];
+float* pnr;
+float* ar;
+float* br;
+float* sr;
+float* dr;
+float* fi;
+float* fis;
 
     double m_worldOffsetX = 0.0;
 double m_worldOffsetY = 0.0;
