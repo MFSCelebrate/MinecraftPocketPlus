@@ -511,7 +511,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 		MobSpawner::postProcessSpawnMobs(level, biome, xo + 8, zo + 8, 16, 16, &random);
 
     // 积雪处理：直接使用 BiomeSource 中的 temperatures 数组（已在 create 中填充）
-    double* temperatures = level->getBiomeSource()->temperatures;
+    float* temperatures = level->getBiomeSource()->temperatures;
     for (int x = xo + 8; x < xo + 8 + 16; x++) {
         for (int z = zo + 8; z < zo + 8 + 16; z++) {
             int xp = x - (xo + 8);
@@ -565,8 +565,8 @@ double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z,
         LOGI("RandomLevelSource::getHeights: TOO LARGE BUFFER REQUESTED: %d (max %d)\n", size, MAX_BUFFER_SIZE);
     }
 
-    double* temperatures = level->getBiomeSource()->temperatures;
-    double* downfalls = level->getBiomeSource()->downfalls;
+    float* temperatures = level->getBiomeSource()->temperatures;
+    float* downfalls = level->getBiomeSource()->downfalls;
 
     double noiseX = x / 4.0;
         double noiseY = (y + m_worldOffsetY) / 8.0;
@@ -664,7 +664,7 @@ chunkMap.insert(std::make_pair(hashedPos, levelChunk));
     double worldBlockZ = z * 16.0 + m_worldOffsetZ;
 
     Biome** biomes = level->getBiomeSource()->getBiomeBlock((int)worldBlockX, (int)worldBlockZ, 16, 16);
-    double* temperatures = level->getBiomeSource()->temperatures;
+    float* temperatures = level->getBiomeSource()->temperatures;
     prepareHeights(worldBlockX, worldBlockZ, blocks, 0, temperatures);
     buildSurfaces(worldBlockX, worldBlockZ, blocks, biomes);
 
