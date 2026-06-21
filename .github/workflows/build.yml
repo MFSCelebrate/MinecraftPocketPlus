@@ -244,6 +244,13 @@ jobs:
           grep -q IPHONEOS_DEPLOYMENT_TARGET minecraftpe.xcodeproj/project.pbxproj || \
             sed -i '' 's/GCC_PREPROCESSOR_DEFINITIONS/IPHONEOS_DEPLOYMENT_TARGET = 16.0; GCC_PREPROCESSOR_DEFINITIONS/' minecraftpe.xcodeproj/project.pbxproj
 
+      - name: Patch Xcode project header paths
+        run: |
+          cd project/iosproj
+          # 在 pbxproj 里加 HEADER_SEARCH_PATHS
+          sed -i '' 's|GCC_PREPROCESSOR_DEFINITIONS|HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../../../src $(PROJECT_DIR)/../../../lib_projects/raknet/jni/RaknetSources";\n\t\t\t\tGCC_PREPROCESSOR_DEFINITIONS|' \
+            minecraftpe.xcodeproj/project.pbxproj
+
       - name: Build
         run: |
           cd project/iosproj
