@@ -224,65 +224,6 @@ jobs:
         with:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
-
-  build-ios:
-    name: Build iOS
-    runs-on: macos-latest
-    continue-on-error: true   # ★ 加这行！失败不挡其他构建
-  
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-    
-      - name: Patch + Build
-        run: |
-          cd project/iosproj
-    
-          git checkout -- minecraftpe.xcodeproj/project.pbxproj
-    
-          # ★ 先装 boost 并立刻捕获路径
-          brew install boost openal-soft
-          BOOST_INCLUDE=$(brew --prefix boost)/include
-          OPENAL_INCLUDE=$(brew --prefix openal-soft)/include
-    
-          sed -i '' \
-            -e 's/iphoneos6\.0/iphoneos/g' \
-            -e 's/ARCHS = .*/ARCHS = arm64;/g' \
-            -e 's/IPHONEOS_DEPLOYMENT_TARGET = 4\.3/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' \
-            minecraftpe.xcodeproj/project.pbxproj
-    
-          touch minecraftpe/minecraftpe-Prefix.pch
-          touch "$GITHUB_WORKSPACE/src/client/gui/components/SmallButton.cpp"
-          touch "$GITHUB_WORKSPACE/src/client/gui/components/OptionsPane.cpp"
-          
-          sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
-             "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
-    
-          sed -i '' '/virtual void isPowerVR();/d' \
-             "$GITHUB_WORKSPACE/src/AppPlatform_iOS.h"
-    
-          xcodebuild -scheme minecraftpe \
-            -derivedDataPath build \
-            -destination 'generic/platform=iOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            -sdk iphoneos \
-            ONLY_ACTIVE_ARCH=YES \
-            IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            OTHER_CPLUSPLUSFLAGS="-I $GITHUB_WORKSPACE/src -I $GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I ${BOOST_INCLUDE} -I ${OPENAL_INCLUDE} -Wno-c++11-narrowing" \
-            OTHER_CFLAGS="-I $GITHUB_WORKSPACE/src"
-            -verbose
-            
-          mkdir -p Payload
-          cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
-          zip -r minecraftpe.ipa Payload
-          rm -rf Payload
-    
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: minecraftpe-ios
-          path: project/iosproj/minecraftpe.ipa
           
   build-linux:
     name: Build Linux
@@ -331,56 +272,6 @@ jobs:
           name: mcpe-linux
           path: |
             ${{github.workspace}}/build/MinecraftPE
-
-  build-web:
-    name: Build Web
-    runs-on: ubuntu-latest
-    continue-on-error: true   # ★ 加这行！失败不挡其他构建
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup caches
-        uses: ./.github/actions/setup-cache
-        with:
-          host: linux
-          target: linux
-    
-      - name: Setup Ninja
-        uses: ./.github/actions/setup-ninja
-        with:
-          host: linux
-
-      - name: Setup emsdk
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 5.0.3
-          actions-cache-folder: 'emsdk-cache'
-
-      - name: Create Build Environment
-        # Some projects don't allow in-source building, so create a separate build directory
-        # We'll use this as our working directory for all subsequent commands
-        run: cmake -E make_directory ${{github.workspace}}/build
-
-      - name: Configure CMake
-        # Use a bash shell so we can use the same syntax for environment variable
-        # access regardless of the host operating system
-        shell: bash
-        working-directory: ${{github.workspace}}/build
-        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/emsdk-cache/emsdk-main/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
-
-      - name: Build
-        working-directory: ${{github.workspace}}/build
-        run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
-      
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: mcpe-web
-          path: |
-            ${{github.workspace}}/build/MinecraftPE.js
-            ${{github.workspace}}/build/MinecraftPE.wasm
-            ${{github.workspace}}/build/MinecraftPE.data
 
   build-windows-dedicated-server:
     name: Build Dedicated Server (Windows)
