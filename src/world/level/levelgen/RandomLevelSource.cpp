@@ -517,7 +517,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
             int xp = x - (xo + 8);
             int zp = z - (zo + 8);
             int y = level->getTopSolidBlock(x, z);
-            double temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0 * SNOW_SCALE;
+            float temp = temperatures[xp * 16 + zp] - (y - customSeaLevel) / 64.0 * SNOW_SCALE;
             if (temp < SNOW_CUTOFF) {
                 if (y > 0 && y < 128 && level->isEmptyTile(x, y, z) && level->getMaterial(x, y - 1, z)->blocksMotion()) {
                     if (level->getMaterial(x, y - 1, z) != Material::ice)
@@ -553,7 +553,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     level->isGeneratingTerrain = false;
 }
 
-double* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
+float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
         double sx = 684.412 * farlandsScale * m_worldScaleX;
@@ -597,16 +597,16 @@ double* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, 
         int xp = xx * wScale + wScale / 2;
         for (int zz = 0; zz < zSize; zz++) {
             int zp = zz * wScale + wScale / 2;
-            double temperature = temperatures[xp * 16 + zp];
-            double downfall = downfalls[xp * 16 + zp] * temperature;
+            float temperature = temperatures[xp * 16 + zp];
+            float downfall = downfalls[xp * 16 + zp] * temperature;
             double dd = 1 - downfall;
             dd = dd * dd;
             dd = dd * dd;
             dd = 1 - dd;
-            double scale = ((sr[pp] + 256.0) / 512.0);
+            float scale = ((sr[pp] + 256.0) / 512.0);
             scale *= dd;
             if (scale > 1) scale = 1;
-            double depth = (dr[pp] / 8000.0);
+            float depth = (dr[pp] / 8000.0);
             if (depth < 0) depth = -depth * 0.3;
             depth = depth * 3.0 - 2.0;
             if (depth < 0) {
