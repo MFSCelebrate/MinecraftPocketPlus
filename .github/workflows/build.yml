@@ -287,9 +287,8 @@ jobs:
       - name: Build
         working-directory: ${{github.workspace}}/build
         shell: bash
-        run: |
-          cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
-          cmake --build . --config $BUILD_TYPE --target MinecraftPE-server --parallel
+        timeout-minutes: 30
+        run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel 2
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -297,7 +296,6 @@ jobs:
           name: mcpe-linux
           path: |
             ${{github.workspace}}/build/MinecraftPE
-            ${{github.workspace}}/build/MinecraftPE-server
 
   build-web:
     name: Build Web
