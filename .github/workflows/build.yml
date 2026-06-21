@@ -251,6 +251,7 @@ jobs:
             minecraftpe.xcodeproj/project.pbxproj
     
           touch minecraftpe/minecraftpe-Prefix.pch
+          touch "$GITHUB_WORKSPACE/src/client/gui/components/SmallButton.cpp"
     
           sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
              "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
