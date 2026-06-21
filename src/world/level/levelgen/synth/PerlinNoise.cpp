@@ -87,6 +87,26 @@ float* PerlinNoise::getRegion( float* sr, int x, int z, int xSize, int zSize, fl
 	return getRegion(sr, (float)x, 10.0f, (float)z, xSize, 1, zSize, xScale, 1, zScale);
 }
 
+float* PerlinNoise::getRegion(float* buffer, double x, double y, double z,
+                               int xSize, int ySize, int zSize,
+                               double xScale, double yScale, double zScale) {
+    const int size = xSize * ySize * zSize;
+    if (buffer == 0) buffer = new float[size];
+    for (int i = 0; i < size; i++) buffer[i] = 0;
+
+    double pow = 1.0;
+    for (int0; i < levels; i++) {
+        // ★ 坐标缩放全用 double，只在最后一刻转 float 传给 add
+        noiseLevels[i]->add(buffer,
+            (float)x, (float)y, (float)z,
+            xSize, ySize, zSize,
+            (float)(xScale * pow), (float)(yScale * pow), (float)(zScale * pow),
+            (float)pow);
+        pow /= 2.0;
+    }
+    return buffer;
+}
+
 int PerlinNoise::hashCode() {
     int x = 4711;
     for (int i = 0; i < levels; ++i)
