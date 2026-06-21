@@ -56,7 +56,6 @@ public:
     virtual bool isSuperFast();
     virtual void showKeyboard();
     virtual void hideKeyboard();
-	virtual void isPowerVR();
 private:
     
     std::string _basePath;
