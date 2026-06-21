@@ -84,7 +84,7 @@ private:
     Level* level;
     bool spawnMobs;
 
-    float* buffer;
+    double* buffer;
 float sandBuffer[16*16];
 float gravelBuffer[16*16];
 float depthBuffer[16*16];
