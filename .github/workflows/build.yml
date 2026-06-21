@@ -270,6 +270,7 @@ jobs:
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             OTHER_CPLUSPLUSFLAGS="-I $GITHUB_WORKSPACE/src -I $GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I ${BOOST_INCLUDE} -I ${OPENAL_INCLUDE} -Wno-c++11-narrowing" \
             OTHER_CFLAGS="-I $GITHUB_WORKSPACE/src"
+            -verbose
             
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
