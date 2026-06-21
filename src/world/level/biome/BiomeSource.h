@@ -17,9 +17,9 @@ public:
     BiomeSource(Level* level);
     virtual ~BiomeSource();
 
-    double* temperatures;
-    double* downfalls;
-    double* noises;
+    float* temperatures;
+    float* downfalls;
+    float* noises;
 
     double m_offsetX = 0.0;
     double m_offsetZ = 0.0;
