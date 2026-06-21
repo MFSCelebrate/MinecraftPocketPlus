@@ -247,18 +247,21 @@ jobs:
     
       - name: Build
         run: |
-         cd project/iosproj
-         touch minecraftpe/minecraftpe-Prefix.pch
-         xcodebuild -scheme minecraftpe \
-          -derivedDataPath build \
-          -destination 'generic/platform=iOS' \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          -sdk iphoneos \
-          IPHONEOS_DEPLOYMENT_TARGET=16.0 \
-          ONLY_ACTIVE_ARCH=YES \
-          HEADER_SEARCH_PATHS='$(PROJECT_DIR)/../../../src.ipa Payload
-         rm -rf Payload
+          cd project/iosproj
+          touch minecraftpe/minecraftpe-Prefix.pch
+          xcodebuild -scheme minecraftpe \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -sdk iphoneos \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            ONLY_ACTIVE_ARCH=YES \
+            HEADER_SEARCH_PATHS="$(PROJECT_DIR)/../../../src"
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
+          zip -r minecraftpe.ipa Payload
+          rm -rf Payload
     
       - name: Upload artifact
         uses: actions/upload-artifact@v4
