@@ -238,14 +238,14 @@ jobs:
           cd project/iosproj
     
           git checkout -- minecraftpe.xcodeproj/project.pbxproj
+    
+          # ★ 只做纯替换，绝对不删行
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
             -e 's/ARCHS = .*/ARCHS = arm64;/g' \
-            -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 12.0;/g' \
-            -e '/IASKP.*Specifier.*View.*\.xib/d' \
-            -e '/IASK.*ViewCell\.xib/d' \
-            minecraftpe.xcodeproj/project.pbxproj
-            
+            -e 's/IPHONEOS_DEPLOYMENT_TARGET = 4\.3/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' \
+          minecraftpe.xcodeproj/project.pbxproj
+    
           touch minecraftpe/minecraftpe-Prefix.pch
     
           sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
