@@ -27,6 +27,8 @@ public:
     float getValue(double x, double y, double z) const;
     float getValue(double x, double y) const;          // 2D double 版本
 
+    // 新增一行声明
+    static int extractIndex(double coord, float offset);
     void add(float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow);
 
     int hashCode();
