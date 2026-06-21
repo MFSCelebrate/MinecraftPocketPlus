@@ -118,6 +118,8 @@ typedef std::vector<std::string> StringVector;
 class Options
 {
 public:
+    float sound;
+    float music;
     static bool debugGl;
 
     Options(Minecraft* minecraft, const std::string& workingDirectory = "") 
