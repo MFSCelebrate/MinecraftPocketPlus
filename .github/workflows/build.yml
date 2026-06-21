@@ -232,32 +232,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Patch Xcode project for modern SDK
-        run: |
-          cd project/iosproj
-          # 把 SDKROOT 改成最新的 iOS SDK
-          sed -i '' 's/iphoneos6\.0/iphoneos/g' minecraftpe.xcodeproj/project.pbxproj
-          # 把 ARCHS 改成 arm64
-          sed -i '' 's/ARCHS = .*/ARCHS = arm64;/g' minecraftpe.xcodeproj/project.pbxproj
-          # 加 deployment target（如果缺的话）
-          grep -q IPHONEOS_DEPLOYMENT_TARGET minecraftpe.xcodeproj/project.pbxproj || \
-            sed -i '' 's/GCC_PREPROCESSOR_DEFINITIONS/IPHONEOS_DEPLOYMENT_TARGET = 16.0; GCC_PREPROCESSOR_DEFINITIONS/' minecraftpe.xcodeproj/project.pbxproj
-
     
-      - name: Build
+      - name: Patch + Build
         run: |
           cd project/iosproj
           touch minecraftpe/minecraftpe-Prefix.pch
-          xcodebuild -scheme minecraftpe \
+
+          sed -i '' \
+            -e 's/iphoneos6\.0/iphoneos/g' \
+            -e 's/ARCHS = .*/ARCHS = arm64;/g' \
+            -e '/GCC_PREPROCESSOR_DEFINITIONS/{ 
+                  i\
+                    IPHONEOS_DEPLOYMENT_TARGET = 16.0;\
+                    HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/../../../src $(PROJECT_DIR)/../../../lib_projects/raknet/jni/RaknetSources";
+                }' \
+            minecraftpe.xcodeproj/project.pbxproj
+
+            xcodebuild -scheme minecraftpe \
             -derivedDataPath build \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             -sdk iphoneos \
-            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
-            ONLY_ACTIVE_ARCH=YES \
-            HEADER_SEARCH_PATHS="$(PROJECT_DIR)/../../../src"
+            ONLY_ACTIVE_ARCH=YES
+
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
