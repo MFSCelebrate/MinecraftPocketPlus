@@ -136,11 +136,11 @@ void TheEndLevelSource::generateDensityCells(int64_t chunkX, int64_t chunkZ, dou
     double ssy = BS_Y  * m_worldScaleY;
     double ssz = BS_XZ * m_worldScaleZ;
 
-    double* n1 = pNoise1.getRegion(nullptr, originX, originY, originZ,
+    float* n1 = pNoise1.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
-    double* n2 = pNoise2.getRegion(nullptr, originX, originY, originZ,
+    float* n2 = pNoise2.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, sx, sy, sz);
-    double* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
+    float* n3 = pNoise3.getRegion(nullptr, originX, originY, originZ,
         DENSITY_X, DENSITY_Y, DENSITY_Z, ssx, ssy, ssz);
 
     for (int xC = 0; xC < DENSITY_X; xC++) {
