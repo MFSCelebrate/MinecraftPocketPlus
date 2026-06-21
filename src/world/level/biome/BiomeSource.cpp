@@ -42,9 +42,9 @@ BiomeSource::BiomeSource(Level* level)
     noiseMap      = new PerlinSimplexNoise(&rndNoise, 2);
 
     biomes = new Biome*[16 * 16];
-    temperatures = new double[16 * 16];
-    downfalls    = new double[16 * 16];
-    noises       = new double[16 * 16];
+    temperatures = new float[16 * 16];
+downfalls    = new float[16 * 16];
+noises       = new float[16 * 16];
 }
 
 BiomeSource::~BiomeSource()
