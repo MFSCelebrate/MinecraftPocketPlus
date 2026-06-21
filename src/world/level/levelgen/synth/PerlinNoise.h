@@ -34,7 +34,7 @@ public:
     float* getRegion(float *buffer, double x, double y, double z,
                  int xSize, int ySize, int zSize,
                  float xScale, float yScale, float zScale);
-    float* getRegion(float* sr, int x, int z, int xSize, int zSize, float xScale, float zScale, float pow);
+    float* getRegion(float* sr, double x, double z, int xSize, int zSize, float xScale, float zScale, float pow);
 
     int hashCode();
 
