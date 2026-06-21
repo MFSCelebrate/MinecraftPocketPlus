@@ -236,28 +236,32 @@ jobs:
       - name: Patch + Build
         run: |
           cd project/iosproj
-
+    
           git checkout -- minecraftpe.xcodeproj/project.pbxproj
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
             -e 's/ARCHS = .*/ARCHS = arm64;/g' \
+            -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 12.0;/g' \
+            -e '/IASKP.*Specifier.*View.*\.xib/d' \
+            -e '/IASK.*ViewCell\.xib/d' \
             minecraftpe.xcodeproj/project.pbxproj
-
+            
           touch minecraftpe/minecraftpe-Prefix.pch
-
+    
           sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
-             "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
-
+            "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
+    
           xcodebuild -scheme minecraftpe \
-           -derivedDataPath build \
-           -destination 'generic/platform=iOS' \
-           CODE_SIGN_IDENTITY="" \
-           CODE_SIGNING_REQUIRED=NO \
-           -sdk iphoneos \
-           ONLY_ACTIVE_ARCH=YES \
-           OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources" \
-           OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
-
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -sdk iphoneos \
+            ONLY_ACTIVE_ARCH=YES \
+            IPHONEOS_DEPLOYMENT_TARGET=12.0 \
+            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources" \
+            OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
+    
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
