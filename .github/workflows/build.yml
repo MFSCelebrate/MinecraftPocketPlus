@@ -245,18 +245,18 @@ jobs:
 
           touch minecraftpe/minecraftpe-Prefix.pch
 
-          # ★ 修 gles.h 里错误的 .height → .h
           sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
-            "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
+             "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
 
-          xcodebuild -scheme minecraftpe          -derivedDataPath build \
-            -destination 'generic/platform/iOS' \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            -sdk iphoneos \
-            ONLY_ACTIVE_ARCH=YES \
-            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources" \
-            OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
+          xcodebuild -scheme minecraftpe \
+           -derivedDataPath build \
+           -destination 'generic/platform=iOS' \
+           CODE_SIGN_IDENTITY="" \
+           CODE_SIGNING_REQUIRED=NO \
+           -sdk iphoneos \
+           ONLY_ACTIVE_ARCH=YES \
+           OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources" \
+           OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
 
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
