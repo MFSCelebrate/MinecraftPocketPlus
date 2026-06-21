@@ -592,24 +592,9 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
     double yf = (double)noiseY;
     double zf = (double)noiseZ;
 
-    int p = 0;
-    for (int xx = 0; xx < xSize; xx++) {
-        for (int zz = 0; zz < zSize; zz++) {
-            for (int yy = 0; yy < ySize; yy++) {
-                double coordX = (noiseX + xx) * (sx / 80.0);
-                double coordY = (noiseY + yy) * (sy / 160.0);
-                double coordZ = (noiseZ + zz) * (sz / 80.0);
-                pnr[p] = perlinNoise1.getValue(coordX, coordY, coordZ);
-
-                double coordX2 = (noiseX + xx) * sx;
-                double coordY2 = (noiseY + yy) * sy;
-                double coordZ2 = (noiseZ + zz) * sz;
-                ar[p]  = lperlinNoise1.getValue(coordX2, coordY2, coordZ2);
-                br[p]  = lperlinNoise2.getValue(coordX2, coordY2, coordZ2);
-                p++;
-            }
-        }
-	}
+    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, sx / 80.0, sy / 160.0, sz / 80.0);
+    ar  = lperlinNoise1.getRegion(ar,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
+    br  = lperlinNoise2.getRegion(br,  xf, yf, zf, xSize, ySize, zSize, sx, sy, sz);
 	
     int p = 0;
     int pp = 0;
