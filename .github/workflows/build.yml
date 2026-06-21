@@ -236,23 +236,26 @@ jobs:
       - name: Patch + Build
         run: |
           cd project/iosproj
-          touch minecraftpe/minecraftpe-Prefix.pch
 
-          # ★ 三合一：现代 SDK + arm64 + 头文件路径
+          # ★ 恢复 pbxproj 到干净状态 + 只做 SDK/ARCHS 修复
+          git checkout -- minecraftpe.xcodeproj/project.pbxproj
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
             -e 's/ARCHS = .*/ARCHS = arm64;/g' \
-            -e '/GCC_PREPROCESSOR_DEFINITIONS/a\
-                        HEADER_SEARCH_PATHS = "$(inherited) $(PROJECT_DIR)/../../../src $(PROJECT_DIR)/../../../lib_projects/raknet/jni/RaknetSources";' \
-             minecraftpe.xcodeproj/project.pbxproj
+            minecraftpe.xcodeproj/project.pbxproj
 
-          xcodebuild -scheme minecraftpe \
+           touch minecraftpe/minecraftpe-Prefix.pch
+
+           # ★ 用 -I 直接传给编译器，不碰 pbxproj
+           xcodebuild -scheme minecraftpe \
              -derivedDataPath build \
              -destination 'generic/platform=iOS' \
              CODE_SIGN_IDENTITY="" \
              CODE_SIGNING_REQUIRED=NO \
              -sdk iphoneos \
-             ONLY_ACTIVE_ARCH=YES
+             ONLY_ACTIVE_ARCH=YES \
+             OTHER_CPLUSPLUSFLAGS='-I$(PROJECT_DIR)/../../../src -I$(PROJECT_DIR)/../../../lib_projects/raknet/jni/RaknetSources' \
+             OTHER_CFLAGS='-I$(PROJECT_DIR)/../../../src'
 
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
