@@ -52,7 +52,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         for (int j = 0; j < 32; ++j)
             waterDepths[i][j] = 0;
 
-    buffer = new double[MAX_BUFFER_SIZE];
+    buffer = new float[MAX_BUFFER_SIZE];
 
     if (Minecraft::instance) {
     std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
@@ -553,7 +553,7 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     level->isGeneratingTerrain = false;
 }
 
-double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
+double* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
         double sx = 684.412 * farlandsScale * m_worldScaleX;
