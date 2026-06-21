@@ -240,8 +240,9 @@ jobs:
           git checkout -- minecraftpe.xcodeproj/project.pbxproj
     
           # ★ 先装 boost 并立刻捕获路径
-          brew install boost
+          brew install boost openal-soft
           BOOST_INCLUDE=$(brew --prefix boost)/include
+          OPENAL_INCLUDE=$(brew --prefix openal-soft)/include
     
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
@@ -265,7 +266,7 @@ jobs:
             -sdk iphoneos \
             ONLY_ACTIVE_ARCH=YES \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            OTHER_CPLUSPLUSFLAGS="-I $GITHUB_WORKSPACE/src -I $GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I ${BOOST_INCLUDE}" \
+            OTHER_CPLUSPLUSFLAGS="-I $GITHUB_WORKSPACE/src -I $GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I ${BOOST_INCLUDE} -I ${OPENAL_INCLUDE}" \
             OTHER_CFLAGS="-I $GITHUB_WORKSPACE/src"
             
           mkdir -p Payload
