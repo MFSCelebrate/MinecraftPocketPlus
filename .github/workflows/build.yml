@@ -237,25 +237,26 @@ jobs:
         run: |
           cd project/iosproj
 
-          # ★ 恢复 pbxproj 到干净状态 + 只做 SDK/ARCHS 修复
           git checkout -- minecraftpe.xcodeproj/project.pbxproj
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
             -e 's/ARCHS = .*/ARCHS = arm64;/g' \
             minecraftpe.xcodeproj/project.pbxproj
 
-           touch minecraftpe/minecraftpe-Prefix.pch
+          touch minecraftpe/minecraftpe-Prefix.pch
 
-           # ★ 用 -I 直接传给编译器，不碰 pbxproj
-           xcodebuild -scheme minecraftpe \
-             -derivedDataPath build \
-             -destination 'generic/platform=iOS' \
-             CODE_SIGN_IDENTITY="" \
-             CODE_SIGNING_REQUIRED=NO \
-             -sdk iphoneos \
-             ONLY_ACTIVE_ARCH=YES \
-             OTHER_CPLUSPLUSFLAGS='-I$(PROJECT_DIR)/../../../src -I$(PROJECT_DIR)/../../../lib_projects/raknet/jni/RaknetSources' \
-             OTHER_CFLAGS='-I$(PROJECT_DIR)/../../../src'
+          # ★ 修 gles.h 里错误的 .height → .h
+          sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
+            "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
+
+          xcodebuild -scheme minecraftpe          -derivedDataPath build \
+            -destination 'generic/platform/iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -sdk iphoneos \
+            ONLY_ACTIVE_ARCH=YES \
+            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources" \
+            OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
 
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
