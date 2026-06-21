@@ -265,9 +265,9 @@ jobs:
             -sdk iphoneos \
             ONLY_ACTIVE_ARCH=YES \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/srcrak${BOOST_INCLUDE}" \
-            OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
-
+            OTHER_CPLUSPLUSFLAGS="-I $GITHUB_WORKSPACE/src -I $GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I ${BOOST_INCLUDE}" \
+            OTHER_CFLAGS="-I $GITHUB_WORKSPACE/src"
+            
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
