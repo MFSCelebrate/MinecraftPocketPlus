@@ -95,7 +95,7 @@ float* PerlinNoise::getRegion(float* buffer, double x, double y, double z,
     for (int i = 0; i < size; i++) buffer[i] = 0;
 
     double pow = 1.0;
-    for (int0; i < levels; i++) {
+    for (int i = 0; i < levels; i++) {
         // ★ 坐标缩放全用 double，只在最后一刻转 float 传给 add
         noiseLevels[i]->add(buffer,
             (float)x, (float)y, (float)z,
