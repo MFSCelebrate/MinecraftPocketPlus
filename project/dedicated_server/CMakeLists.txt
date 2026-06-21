@@ -213,6 +213,10 @@ target_link_libraries(mcpe_server
     ${Boost_LIBRARIES}
 )
 
+if(WIN32 OR MINGW OR CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    target_link_libraries(mcpe_server ws2_32)
+endif()
+
 # ---- 头文件搜索路径 ----
 target_include_directories(mcpe_server PUBLIC
     "../../src/"
