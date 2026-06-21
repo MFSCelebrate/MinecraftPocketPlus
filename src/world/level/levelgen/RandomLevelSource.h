@@ -21,7 +21,8 @@ public:
     static const float SNOW_CUTOFF;
     static const float SNOW_SCALE;
     static const int CHUNK_HEIGHT = 8;
-    static const int CHUNK_WIDTH = 4;
+    static const int CHUNK_WIDTH = 4; 
+    bool m_disableFringeLands;
 
     // 噪声查询接口（全部 double 精度）
     inline double getLPerlinNoise1(double x, double y, double z) { return lperlinNoise1.getValue(x, y, z); }
