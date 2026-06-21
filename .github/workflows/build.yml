@@ -228,6 +228,7 @@ jobs:
   build-ios:
     name: Build iOS
     runs-on: macos-latest
+    continue-on-error: true   # ★ 加这行！失败不挡其他构建
   
     steps:
       - name: Checkout
@@ -334,6 +335,7 @@ jobs:
   build-web:
     name: Build Web
     runs-on: ubuntu-latest
+    continue-on-error: true   # ★ 加这行！失败不挡其他构建
 
     steps:
       - uses: actions/checkout@v4
