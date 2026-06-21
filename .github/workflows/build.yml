@@ -225,6 +225,125 @@ jobs:
           name: minecraftpe-apk-${{ matrix.abi }}
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
+  build-ios:
+  # credit to pengubow from deepfriedwaffles repo
+    name: Build iOS
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Build
+        run: |
+          cd project/iosproj
+          xcodebuild -scheme minecraftpe -derivedDataPath build -destination 'generic/platform=iOS' CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          mkdir -p Payload
+          cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
+          zip -r minecraftpe.ipa Payload
+          rm -rf Payload
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: minecraftpe-ios
+          path: project/iosproj/minecraftpe.ipa
+          
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup caches
+        uses: ./.github/actions/setup-cache
+        with:
+          host: linux
+          target: linux
+
+      - name: Create Build Environment
+        # Some projects don't allow in-source building, so create a separate build directory
+        # We'll use this as our working directory for all subsequent commands
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Setup Environment
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install gcc-multilib
+          sudo apt-get install -y --no-install-recommends build-essential libgl-dev libwayland-dev xorg-dev libxkbcommon-dev
+      
+      - name: Configure CMake
+        # Use a bash shell so we can use the same syntax for environment variable
+        # access regardless of the host operating system
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        shell: bash
+        run: |
+          cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
+          cmake --build . --config $BUILD_TYPE --target MinecraftPE-server --parallel
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpe-linux
+          path: |
+            ${{github.workspace}}/build/MinecraftPE
+            ${{github.workspace}}/build/MinecraftPE-server
+
+  build-web:
+    name: Build Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup caches
+        uses: ./.github/actions/setup-cache
+        with:
+          host: linux
+          target: linux
+    
+      - name: Setup Ninja
+        uses: ./.github/actions/setup-ninja
+        with:
+          host: linux
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 5.0.3
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Create Build Environment
+        # Some projects don't allow in-source building, so create a separate build directory
+        # We'll use this as our working directory for all subsequent commands
+        run: cmake -E make_directory ${{github.workspace}}/build
+
+      - name: Configure CMake
+        # Use a bash shell so we can use the same syntax for environment variable
+        # access regardless of the host operating system
+        shell: bash
+        working-directory: ${{github.workspace}}/build
+        run: cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_TOOLCHAIN_FILE="$GITHUB_WORKSPACE/emsdk-cache/emsdk-main/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
+
+      - name: Build
+        working-directory: ${{github.workspace}}/build
+        run: cmake --build . --config $BUILD_TYPE --target MinecraftPE --parallel
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpe-web
+          path: |
+            ${{github.workspace}}/build/MinecraftPE.js
+            ${{github.workspace}}/build/MinecraftPE.wasm
+            ${{github.workspace}}/build/MinecraftPE.data
+
   build-windows-dedicated-server:
     name: Build Dedicated Server (Windows)
     runs-on: ubuntu-latest
