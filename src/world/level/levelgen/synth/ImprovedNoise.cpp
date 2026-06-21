@@ -85,6 +85,14 @@ float ImprovedNoise::noise( float _x, float _y, float _z ) const {
                                  grad(p[BB + 1], x - 1, y - 1, z - 1))));
 }
 
+int ImprovedNoise::extractIndex(double coord, float offset) {
+    double xd = coord + (double)offset;
+    float  xf_val = (float)xd;      // float 截断 → int 溢出保留
+    int    xf = (int)xf_val;
+    if (xf_val < (float)xf) xf--;
+    return xf & 255;
+}
+
 const float ImprovedNoise::lerp( float t, float a, float b ) const {
     // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
     if (Minecraft::instance && Minecraft::instance->options.getBooleanValue(OPTIONS_PROGRESSIVE_FARLANDS)) {
@@ -124,46 +132,33 @@ float ImprovedNoise::getValue(double x, double y) const {
 }
 
 float ImprovedNoise::getValue(double x, double y, double z) const {
-    // 使用与 add_double 相同的 double 坐标处理，避免 int 截断
-    double xd = x + xo;
-    double yd = y + yo;
-    double zd = z + zo;
+    double xd = x + (double)xo;
+    double yd = y + (double)yo;
+    double zd = z + (double)zo;
 
-    int X = ((int64_t)floor(xd)) & 255, Y = ((int64_t)floor(yd)) & 255, Z = ((int64_t)floor(zd)) & 255;
-    xd -= floor(xd);
-    yd -= floor(yd);
-    zd -= floor(zd);
+    // ★ 用extractIndex：int溢出保留边境之墙，X/Y/Z取值和noise()完全一致
+    int X = extractIndex(x, xo);
+    int Y = extractIndex(y, yo);
+    int Z = extractIndex(z, zo //部分double计算，不再走float的 x-=xf
+    xd -= std::floor(xd);
+    yd -= std::floor(yd);
+    zd -= std::floor(zd);
 
-    // 保持原有边界 clamp（如果开启了 POSTPONED_FRINGE）
-    bool doClamp = false;
-    if (Minecraft::instance) {
-        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
-    }
-    if (doClamp) {
-        if (x < 0.0) x = 0.0;
-        if (x > 1.0) x = 1.0;
-        if (y < 0.0) y = 0.0;
-        if (y > 1.0) y = 1.0;
-        if (z < 0.0) z = 0.0;
-        if (z > 1.0) z = 1.0;
-    }
-    // … 这里省略 clamp 代码，可直接调用原先的 noise 逻辑但改为 double 参数
-    // 为简便，直接调用 grad 和 lerp，它们已经是 float 操作，坐标部分已用 double 避免溢出
-    float u = xd * xd * xd * (xd * (xd * 6 - 15) + 10);
-    float v = yd * yd * yd * (yd * (yd * 6 - 15) + 10);
-    float w = zd * zd * zd * (zd * (zd * 6 - 15) + 10);
+    float u = (float)(xd * xd * xd * (xd * (xd * 6.0 - 15.0) + 10.0));
+    float v = (float)(yd * yd * yd * (yd * (yd * 6.0 - 15.0) + 10.0));
+    float w = (float)(zd * zd * zd * (zd * (zd * 6.0 - 15.0) + 10.0));
 
     int A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
         B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
 
     return lerp(w, lerp(v, lerp(u, grad(p[AA], (float)xd, (float)yd, (float)zd),
-                                   grad(p[BA], (float)(xd - 1), (float)yd, (float)zd)),
-                           lerp(u, grad(p[AB], (float)xd, (float)(yd - 1), (float)zd),
-                                   grad(p[BB], (float)(xd - 1), (float)(yd - 1), (float)zd))),
-                   lerp(v, lerp(u, grad(p[AA + 1], (float)xd, (float)yd, (float)(zd - 1)),
-                                   grad(p[BA + 1], (float)(xd - 1), (float)yd, (float)(zd - 1))),
-                           lerp(u, grad(p[AB + 1], (float)xd, (float)(yd - 1), (float)(zd - 1)),
-                                   grad(p[BB + 1], (float)(xd - 1), (float)(yd - 1), (float)(zd - 1)))));
+                                grad(p[BA], (float)(xd - 1.0), (float)yd, (float)zd)),
+                        lerp(u, grad(p[AB], (float)xd, (float)(yd - 1.0), (float)zd),
+                                grad(p[BB], (float)(xd - 1.0), (float)(yd - 1.0), (float)zd))),
+                lerp(v, lerp(u, grad(p[AA + 1], (float)xd, (float)yd, (float)(zd - 1.0)),
+                                grad(p[BA + 1], (float)(xd - 1.0), (float)yd, (float)(zd - 1.0))),
+                        lerp(u, grad(p[AB + 1], (float)xd, (float)(float)(zd - 1.0)),
+                                grad(p[BB + 1], (float)(xd - 1.0), (float)(yd - 1.0), (float)(zd - 1.0)))));
 }
 
 // 以下是使用 32 位 int 坐标的 add 函数（原始行为）
