@@ -64,7 +64,7 @@ double getWorldScaleZ()  const { return m_worldScaleZ; }
     int waterDepths[16+16][16+16];
 
 private:
-    double* getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize);
+    float* getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize);
     void prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures);
     void buildSurfaces(double xOffs, double zOffs, unsigned char* blocks, Biome** biomes);
     void calcWaterDepths(ChunkSource* parent, int64_t xt, int64_t zt);
