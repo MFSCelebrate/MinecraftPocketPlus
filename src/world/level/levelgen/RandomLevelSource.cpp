@@ -104,7 +104,7 @@ RandomLevelSource::~RandomLevelSource()
     delete[] fis;
 }
 
-void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, double* temperatures)
+void RandomLevelSource::prepareHeights(double xOffs, double zOffs, unsigned char* blocks, void* biomes, float* temperatures)
 {
     int waterHeight = customSeaLevel + 1;
     if (waterHeight < 0) waterHeight = 0;
