@@ -226,25 +226,42 @@ jobs:
           path: ${{ github.workspace }}/build-apk/minecraftpe-*-debug.apk
 
   build-ios:
-  # credit to pengubow from deepfriedwaffles repo
     name: Build iOS
     runs-on: macos-latest
-    
+  
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
+
+      - name: Patch Xcode project for modern SDK
+        run: |
+          cd project/iosproj
+          # 把 SDKROOT 改成最新的 iOS SDK
+          sed -i '' 's/iphoneos6\.0/iphoneos/g' minecraftpe.xcodeproj/project.pbxproj
+          # 把 ARCHS 改成 arm64
+          sed -i '' 's/ARCHS = .*/ARCHS = arm64;/g' minecraftpe.xcodeproj/project.pbxproj
+          # 加 deployment target（如果缺的话）
+          grep -q IPHONEOS_DEPLOYMENT_TARGET minecraftpe.xcodeproj/project.pbxproj || \
+            sed -i '' 's/GCC_PREPROCESSOR_DEFINITIONS/IPHONEOS_DEPLOYMENT_TARGET = 16.0; GCC_PREPROCESSOR_DEFINITIONS/' minecraftpe.xcodeproj/project.pbxproj
 
       - name: Build
         run: |
           cd project/iosproj
-          xcodebuild -scheme minecraftpe -derivedDataPath build -destination 'generic/platform=iOS' CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+          xcodebuild -scheme minecraftpe \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -sdk iphoneos \
+            IPHONEOS_DEPLOYMENT_TARGET=16.0 \
+            ONLY_ACTIVE_ARCH=YES
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
           rm -rf Payload
 
       - name: Upload artifact
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: minecraftpe-ios
           path: project/iosproj/minecraftpe.ipa
