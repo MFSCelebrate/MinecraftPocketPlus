@@ -247,6 +247,8 @@ jobs:
       - name: Build
         run: |
           cd project/iosproj
+          # ★ 创建缺失的 Prefix.pch
+          touch minecraftpe/minecraftpe-Prefix.pch
           xcodebuild -scheme minecraftpe \
             -derivedDataPath build \
             -destination 'generic/platform=iOS' \
@@ -259,7 +261,7 @@ jobs:
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
           rm -rf Payload
-
+    
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
