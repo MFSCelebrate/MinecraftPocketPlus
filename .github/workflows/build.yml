@@ -239,17 +239,23 @@ jobs:
     
           git checkout -- minecraftpe.xcodeproj/project.pbxproj
     
-          # ★ 只做纯替换，绝对不删行
+          # ★ 先装 boost 并立刻捕获路径
+          brew install boost
+          BOOST_INCLUDE=$(brew --prefix boost)/include
+    
           sed -i '' \
             -e 's/iphoneos6\.0/iphoneos/g' \
             -e 's/ARCHS = .*/ARCHS = arm64;/g' \
             -e 's/IPHONEOS_DEPLOYMENT_TARGET = 4\.3/IPHONEOS_DEPLOYMENT_TARGET = 12.0/g' \
-          minecraftpe.xcodeproj/project.pbxproj
+            minecraftpe.xcodeproj/project.pbxproj
     
           touch minecraftpe/minecraftpe-Prefix.pch
     
           sed -i '' 's/gl\.height/gl.h/g; s/glext\.height/glext.h/g' \
-            "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
+             "$GITHUB_WORKSPACE/src/client/renderer/gles.h"
+    
+          sed -i '' '/virtual void isPowerVR();/d' \
+             "$GITHUB_WORKSPACE/src/AppPlatform_iOS.h"
     
           xcodebuild -scheme minecraftpe \
             -derivedDataPath build \
@@ -259,9 +265,9 @@ jobs:
             -sdk iphoneos \
             ONLY_ACTIVE_ARCH=YES \
             IPHONEOS_DEPLOYMENT_TARGET=12.0 \
-            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/src -I$GITHUB_WORKSPACE/lib_projects/raknet/jni/RaknetSources -I$(brew --prefix boost)/include" \
+            OTHER_CPLUSPLUSFLAGS="-I$GITHUB_WORKSPACE/srcrak${BOOST_INCLUDE}" \
             OTHER_CFLAGS="-I$GITHUB_WORKSPACE/src"
-    
+
           mkdir -p Payload
           cp -R build/Build/Products/Debug-iphoneos/minecraftpe.app Payload/
           zip -r minecraftpe.ipa Payload
