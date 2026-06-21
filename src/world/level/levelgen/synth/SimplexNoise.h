@@ -5,19 +5,20 @@
 #include "Synth.h"
 #include "../../../../util/Random.h"
 
-class SimplexNoise : public Synth {
-    static constexpr float SQRT3  = 1.7320508075688772;
-    static constexpr float F2     = 0.5 * (SQRT3 - 1.0);       // 0.3660254  skew
-    static constexpr float G2     = (3.0 - SQRT3) / 6.0;       // 0.2113249  unskew
-    static constexpr float G2x2   = 2.0 * G2;                  // 0.4226498
-
-    // 复用 ImprovedNoise 的 16 个梯度向量（相同的 table）
-    static constexpr int GRADIENT[16][3] = {
+namespace {
+    const int SIMPLEX_GRADIENT[16][3] = {
         { 1, 1, 0}, {-1, 1, 0}, { 1,-1, 0}, {-1,-1, 0},
         { 1, 0, 1}, {-1, 0, 1}, { 1, 0,-1}, {-1, 0,-1},
         { 0, 1, 1}, { 0,-1, 1}, { 0, 1,-1}, { 0,-1,-1},
         { 1, 1, 0}, { 0,-1, 1}, {-1, 1, 0}, { 0,-1,-1}
     };
+}
+
+class SimplexNoise : public Synth {
+    static constexpr float SQRT3  = 1.7320508075688772;
+    static constexpr float F2     = 0.5 * (SQRT3 - 1.0);       // 0.3660254  skew
+    static constexpr float G2     = (3.0 - SQRT3) / 6.0;       // 0.2113249  unskew
+    static constexpr float G2x2   = 2.0 * G2;                  // 0.4226498
 
 public:
     SimplexNoise(Random* random) {
@@ -90,7 +91,7 @@ private:
         double t = 0.5 - x * x - z * z;
         if (t < 0.0) return 0.0;
         t *= t;  // t²
-        return t * t * (GRADIENT[gi][0] * x + GRADIENT[gi][1] * z);
+        return t * t * (SIMPLEX_GRADIENT[gi][0] * x + SIMPLEX_GRADIENT[gi][1] * z);
     }
 };
 
