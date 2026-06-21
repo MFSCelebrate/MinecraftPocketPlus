@@ -17,8 +17,8 @@
 
 	#define GL_QUADS 0x0007
     #if defined(__APPLE__)
-        #import <OpenGLES/ES1/gl.height>
-        #import <OpenGLES/ES1/glext.height>
+        #import <OpenGLES/ES1/gl.h>
+        #import <OpenGLES/ES1/glext.h>
     #elif defined(ANDROID) || defined(__EMSCRIPTEN__)
         #include <GLES/gl.h>
         #include <GLES/glext.h>
