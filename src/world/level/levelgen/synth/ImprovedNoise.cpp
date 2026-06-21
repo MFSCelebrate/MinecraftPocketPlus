@@ -167,7 +167,7 @@ float ImprovedNoise::getValue(double x, double y, double z) const {
 }
 
 // 以下是使用 32 位 int 坐标的 add 函数（原始行为）
-static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
+static void add_int(ImprovedNoise* self, float* buffer, double _x, double _y, double _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
 {
     bool doClamp = false;
     if (Minecraft::instance) {
@@ -180,7 +180,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
         int pp = 0;
         float scale = 1.0f / pow;
         for (int xx = 0; xx < xSize; xx++) {
-            float x = (_x + xx) * xs + self->xo;
+            double x = (_x + xx) * xs + self->xo;
             int xf = (int) x;
             if (x < xf) xf--;
             int X = xf & 255;
@@ -192,7 +192,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
             float u = x * x * x * (x * (x * 6 - 15) + 10);
 
             for (int zz = 0; zz < zSize; zz++) {
-                float z = (_z + zz) * zs + self->zo;
+                double z = (_z + zz) * zs + self->zo;
                 int zf = (int) z;
                 if (z < zf) zf--;
                 int Z = zf & 255;
@@ -224,7 +224,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
     float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
 
     for (int xx = 0; xx < xSize; xx++) {
-        float x = (_x + xx) * xs + self->xo;
+        double x = (_x + xx) * xs + self->xo;
         int xf = (int) x;
         if (x < xf) xf--;
         int X = xf & 255;
@@ -236,7 +236,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
         float u = x * x * x * (x * (x * 6 - 15) + 10);
 
         for (int zz = 0; zz < zSize; zz++) {
-            float z = (_z + zz) * zs + self->zo;
+            double z = (_z + zz) * zs + self->zo;
             int zf = (int) z;
             if (z < zf) zf--;
             int Z = zf & 255;
@@ -248,7 +248,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
             float w = z * z * z * (z * (z * 6 - 15) + 10);
 
             for (int yy = 0; yy < ySize; yy++) {
-                float y = (_y + yy) * ys + self->yo;
+                double y = (_y + yy) * ys + self->yo;
                 int yf = (int) y;
                 if (y < yf) yf--;
                 int Y = yf & 255;
@@ -284,7 +284,7 @@ static void add_int(ImprovedNoise* self, float* buffer, float _x, float _y, floa
 }
 
 // 使用 64 位 int64_t 坐标的 add 函数（无 32 位溢出，模拟无限世界）
-static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
+static void add_int64(ImprovedNoise* self, float* buffer, double _x, double _y, double _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
 {
     bool doClamp = false;
     if (Minecraft::instance) {
@@ -297,7 +297,7 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
         int pp = 0;
         float scale = 1.0f / pow;
         for (int xx = 0; xx < xSize; xx++) {
-            float x = (_x + xx) * xs + self->xo;
+            double x = (_x + xx) * xs + self->xo;
             int64_t xf = (int64_t)x;
             if (x < (float)xf) xf--;
             int X = (int)(xf & 255);
@@ -309,7 +309,7 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
             float u = x * x * x * (x * (x * 6 - 15) + 10);
 
             for (int zz = 0; zz < zSize; zz++) {
-                float z = (_z + zz) * zs + self->zo;
+                double z = (_z + zz) * zs + self->zo;
                 int64_t zf = (int64_t)z;
                 if (z < (float)zf) zf--;
                 int Z = (int)(zf & 255);
@@ -341,7 +341,7 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
     float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
 
     for (int xx = 0; xx < xSize; xx++) {
-        float x = (_x + xx) * xs + self->xo;
+        double x = (_x + xx) * xs + self->xo;
         int64_t xf = (int64_t)x;
         if (x < (float)xf) xf--;
         int X = (int)(xf & 255);
@@ -353,7 +353,7 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
         float u = x * x * x * (x * (x * 6 - 15) + 10);
 
         for (int zz = 0; zz < zSize; zz++) {
-            float z = (_z + zz) * zs + self->zo;
+            double z = (_z + zz) * zs + self->zo;
             int64_t zf = (int64_t)z;
             if (z < (float)zf) zf--;
             int Z = (int)(zf & 255);
@@ -365,7 +365,7 @@ static void add_int64(ImprovedNoise* self, float* buffer, float _x, float _y, fl
             float w = z * z * z * (z * (z * 6 - 15) + 10);
 
             for (int yy = 0; yy < ySize; yy++) {
-                float y = (_y + yy) * ys + self->yo;
+                double y = (_y + yy) * ys + self->yo;
                 int64_t yf = (int64_t)y;
                 if (y < (float)yf) yf--;
                 int Y = (int)(yf & 255);
@@ -518,13 +518,14 @@ static void add_double(ImprovedNoise* self, float* buffer, float _x, float _y, f
 }
 
 // 原 add 函数：根据选项调用 32 位、64 位或 double 版本
-void ImprovedNoise::add( float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow )
-{
+void ImprovedNoise::add(float *buffer, double _x, double _y, double _z,
+                        int xSize, int ySize, int zSize,
+                        float xs, float ys, float zs, float pow) {
     bool use64Bit = false;
     bool useDouble = false;
     if (Minecraft::instance) {
         use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
-        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS); // 需要添加此选项
+        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
     }
     if (useDouble) {
         add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
