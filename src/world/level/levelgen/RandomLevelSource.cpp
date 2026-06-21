@@ -79,6 +79,10 @@ if (Minecraft::instance) {
     m_disableSkygrid = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLE_SKYGRID);
 }
 
+if (Minecraft::instance) {
+    m_disableFringeLands = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLED_FRINGE_LANDS);
+}
+
     // BiomeSource 传入时用 worldCoordToDouble()
     if (level) {
         BiomeSource* biomeSource = level->getBiomeSource();
@@ -559,10 +563,12 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
     level->isGeneratingTerrain = false;
 }
 
+// ====== src/world/level/levelgen/RandomLevelSource.cpp ======
+
 float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
-        double sx = 684.412 * farlandsScale * m_worldScaleX;
+    double sx = 684.412 * farlandsScale * m_worldScaleX;
     double sy = 684.412 * farlandsScale * m_worldScaleY;
     double sz = 684.412 * farlandsScale * m_worldScaleZ;
 
@@ -575,45 +581,25 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
     float* downfalls = level->getBiomeSource()->downfalls;
 
     double noiseX = x / 4.0;
-        double noiseY = (y + m_worldOffsetY) / 8.0;
+    double noiseY = (y + m_worldOffsetY) / 8.0;
     double noiseZ = z / 4.0;
 
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-        sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
+    // sr/dr 2D噪声保留 getRegion（坐标范围小，不易溢出）
+    sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
                               1.121 * m_worldScaleX,
                               1.121 * m_worldScaleZ, 0.5);
-        dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
+    dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
                               200.0 * m_worldScaleX,
                               200.0 * m_worldScaleZ, 0.5);
-	
-    double xf = (double)noiseX;
-    double yf = (double)noiseY;
-    double zf = (double)noiseZ;
 
-    int p = 0;
-    for (int xx = 0; xx < xSize; xx++) {
-        for (int zz = 0; zz < zSize; zz++) {
-            for (int yy = 0; yy < ySize; yy++) {
-                double coordX = (noiseX + xx) * (sx / 80.0);
-                double coordY = (noiseY + yy) * (sy / 160.0);
-                double coordZ = (noiseZ + zz) * (sz / 80.0);
-                pnr[p] = perlinNoise1.getValue(coordX, coordY, coordZ);
-
-                double coordX2 = (noiseX + xx) * sx;
-                double coordY2 = (noiseY + yy) * sy;
-                double coordZ2 = (noiseZ + zz) * sz;
-                ar[p]  = lperlinNoise1.getValue(coordX2, coordY2, coordZ2);
-                br[p]  = lperlinNoise2.getValue(coordX2, coordY2, coordZ2);
-                p++;
-            }
-        }
-	}
-	
     int p = 0;
     int pp = 0;
     int wScale = 16 / xSize;
+    float lastValidVal = 0.0f;  // ★ 追踪最后一个正常噪声值
+
     for (int xx = 0; xx < xSize; xx++) {
         int xp = xx * wScale + wScale / 2;
         for (int zz = 0; zz < zSize; zz++) {
@@ -645,21 +631,43 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
             depth = depth * ySize / 16.0;
             double yCenter = ySize / 2.0 + depth * 4;
             pp++;
+
             for (int yy = 0; yy < ySize; yy++) {
+                // ★ 逐点 double 计算噪声（不走 getRegion/add_int）
+                double coordX  = (noiseX + xx) * (sx / 80.0);
+                double coordY  = (noiseY + yy) * (sy / 160.0);
+                double coordZ  = (noiseZ + zz) * (sz / 80.0);
+                float  pnrVal = perlinNoise1.getValue(coordX, coordY, coordZ);
+
+                double coordX2 = (noiseX + xx) * sx;
+                double coordY2 = (noiseY + yy) * sy;
+                double coordZ2 = (noiseZ + zz) * sz;
+                float  arVal   = lperlinNoise1.getValue(coordX2, coordY2, coordZ2);
+                float  brVal   = lperlinNoise2.getValue(coordX2, coordY2, coordZ2);
+
+                // 混合高低噪声 + 地表修饰
                 double val = 0;
                 double yOffs = (yy - yCenter) * 12 / scale;
                 if (yOffs < 0) yOffs *= 4;
-                double bb = ar[p] / 512.0;
-                double cc = br[p] / 512.0;
-                double v = (pnr[p] / 10.0 + 1) / 2.0;
-                if (v < 0) val = bb;
-                else if (v > 1) val = cc;
-                else val = bb + (cc - bb) * v;
+                double bb = arVal / 512.0;
+                double cc = brVal / 512.0;
+                double v = (pnrVal / 10.0 + 1) / 2.0;
+                if (v < 0)       val = bb;
+                else if (v > 1)  val = cc;
+                else             val = bb + (cc - bb) * v;
                 val -= yOffs;
                 if (yy > ySize - 4) {
                     double slide = (yy - (ySize - 4)) / (4.0 - 1.0);
                     val = val * (1 - slide) + -10 * slide;
                 }
+
+                // ★ 边缘之地掐断：inf/NaN → 回退到上一个正常值
+                if (m_disableFringeLands && (std::isnan(val) || std::isinf(val))) {
+                    val = lastValidVal;
+                } else {
+                    lastValidVal = val;
+                }
+
                 buffer[p] = val;
                 p++;
             }
