@@ -1,7 +1,7 @@
 #pragma once 
 #include <sstream>
 #include <type_traits>
-#include <../util/Mth.h>
+#include <util/Mth.h>
 /*
 template<typename T>
 struct is_option_type : std::false_type {};
