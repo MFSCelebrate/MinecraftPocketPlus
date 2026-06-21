@@ -52,7 +52,7 @@ RandomLevelSource::RandomLevelSource(Level* level, long seed, int version, bool 
         for (int j = 0; j < 32; ++j)
             waterDepths[i][j] = 0;
 
-    buffer = new float[MAX_BUFFER_SIZE];
+    buffer = new double[MAX_BUFFER_SIZE];
 
     if (Minecraft::instance) {
     std::string scaleXStr = Minecraft::instance->options.getStringValue(OPTIONS_WORLD_SCALE_X);
@@ -565,7 +565,9 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
 
 // ====== src/world/level/levelgen/RandomLevelSource.cpp ======
 
-float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
+// ====== RandomLevelSource.cpp : getHeights() ======
+
+double* RandomLevelSource::getHeights(double* buffer, double x, int y, double z, int xSize, int ySize, int zSize)
 {
     float farlandsScale = 1.0f;
     double sx = 684.412 * farlandsScale * m_worldScaleX;
@@ -584,10 +586,14 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
     double noiseY = (y + m_worldOffsetY) / 8.0;
     double noiseZ = z / 4.0;
 
+    float xf = (float)noiseX;
+    float yf = (float)noiseY;
+    float zf = (float)noiseZ;
+
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-    // sr/dr 2D噪声保留 getRegion（坐标范围小，不易溢出）
+    // sr/dr 2D 噪声保留 getRegion（坐标小，不易溢出）
     sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
                               1.121 * m_worldScaleX,
                               1.121 * m_worldScaleZ, 0.5);
@@ -595,10 +601,15 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
                               200.0 * m_worldScaleX,
                               200.0 * m_worldScaleZ, 0.5);
 
+    // ★ 恢复三条噪声走 getRegion — add_int → 12.5M 出旧边境之墙
+    pnr = perlinNoise1.getRegion(pnr, xf, yf, zf, xSize, ySize, zSize, (float)(sx / 80.0), (float)(sy / 160.0), (float)(sz / 80.0));
+    ar  = lperlinNoise1.getRegion(ar,  xf, yf, zf, xSize, ySize, zSize, (float)sx, (float)sy, (float)sz);
+    br  = lperlinNoise2.getRegion(br,  xf, yf, zf, xSize, ySize, zSize, (float)sx, (float)sy, (float)sz);
+
     int p = 0;
     int pp = 0;
     int wScale = 16 / xSize;
-    float lastValidVal = 0.0f;  // ★ 追踪最后一个正常噪声值
+    double lastValidVal = 0.0;  // ★ double 追踪器
 
     for (int xx = 0; xx < xSize; xx++) {
         int xp = xx * wScale + wScale / 2;
@@ -610,65 +621,51 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
             dd = dd * dd;
             dd = dd * dd;
             dd = 1 - dd;
-            float scale = ((sr[pp] + 256.0) / 512.0);
+            float scale = ((sr[pp] + 256.0f) / 512.0f);
             scale *= dd;
             if (scale > 1) scale = 1;
-            float depth = (dr[pp] / 8000.0);
-            if (depth < 0) depth = -depth * 0.3;
-            depth = depth * 3.0 - 2.0;
+            float depth = (dr[pp] / 8000.0f);
+            if (depth < 0) depth = -depth * 0.3f;
+            depth = depth * 3.0f - 2.0f;
             if (depth < 0) {
-                depth = depth / 2;
-                if (depth < -1) depth = -1;
-                depth = depth / 1.4;
-                depth /= 2;
+                depth = depth / 2.0f;
+                if (depth < -1.0f) depth = -1.0f;
+                depth = depth / 1.4f;
+                depth /= 2.0f;
                 scale = 0;
             } else {
                 if (depth > 1) depth = 1;
-                depth = depth / 8;
+                depth = depth / 8.0f;
             }
             if (scale < 0) scale = 0;
-            scale = (scale) + 0.5;
-            depth = depth * ySize / 16.0;
+            scale = (scale) + 0.5f;
+            depth = depth * ySize / 16.0f;
             double yCenter = ySize / 2.0 + depth * 4;
             pp++;
 
             for (int yy = 0; yy < ySize; yy++) {
-                // ★ 逐点 double 计算噪声（不走 getRegion/add_int）
-                double coordX  = (noiseX + xx) * (sx / 80.0);
-                double coordY  = (noiseY + yy) * (sy / 160.0);
-                double coordZ  = (noiseZ + zz) * (sz / 80.0);
-                float  pnrVal = perlinNoise1.getValue(coordX, coordY, coordZ);
-
-                double coordX2 = (noiseX + xx) * sx;
-                double coordY2 = (noiseY + yy) * sy;
-                double coordZ2 = (noiseZ + zz) * sz;
-                float  arVal   = lperlinNoise1.getValue(coordX2, coordY2, coordZ2);
-                float  brVal   = lperlinNoise2.getValue(coordX2, coordY2, coordZ2);
-
-                // 混合高低噪声 + 地表修饰
                 double val = 0;
                 double yOffs = (yy - yCenter) * 12 / scale;
                 if (yOffs < 0) yOffs *= 4;
-                double bb = arVal / 512.0;
-                double cc = brVal / 512.0;
-                double v = (pnrVal / 10.0 + 1) / 2.0;
-                if (v < 0)       val = bb;
-                else if (v > 1)  val = cc;
-                else             val = bb + (cc - bb) * v;
+                double bb = ar[p] / 512.0;
+                double cc = br[p] / 512.0;
+                double v = (pnr[p] / 10.0 + 1) / 2.0;
+                if (v < 0) val = bb;
+                else if (v > 1) val = cc;
+                else val = bb + (cc - bb) * v;
                 val -= yOffs;
                 if (yy > ySize - 4) {
                     double slide = (yy - (ySize - 4)) / (4.0 - 1.0);
                     val = val * (1 - slide) + -10 * slide;
                 }
 
-                // ★ 边缘之地掐断：inf/NaN → 回退到上一个正常值
                 if (m_disableFringeLands && (std::isnan(val) || std::isinf(val))) {
                     val = lastValidVal;
                 } else {
                     lastValidVal = val;
                 }
 
-                buffer[p] = val;
+                buffer[p] = val;  // ★ double buffer，不量化
                 p++;
             }
         }
