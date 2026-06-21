@@ -63,7 +63,7 @@ float PerlinNoise::getValue(double x, double y, double z) const {
     return value;
 }
 
-float *PerlinNoise::getRegion(float *buffer, double x, double y, double z,
+float* PerlinNoise::getRegion(float *buffer, double x, double y, double z,
                               int xSize, int ySize, int zSize,
                               float xScale, float yScale, float zScale) {
     const int size = xSize * ySize * zSize;
