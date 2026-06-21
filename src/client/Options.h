@@ -123,7 +123,10 @@ public:
     static bool debugGl;
 
     Options(Minecraft* minecraft, const std::string& workingDirectory = "") 
-	: minecraft(minecraft) {
+	: minecraft(minecraft),
+      sound(1.0f),    // ★ 默认音量 1.0
+      music(1.0f)     // ★ 默认音量 1.0
+    {
         // elements werent initialized so i was getting a garbage pointer and a crash
         m_options.fill(nullptr);
         initTable();
