@@ -194,11 +194,12 @@ for (int x = 0; x < 16; x++) {
         double coordX = (xOffs / 4.0 + x) * sx;
         double coordZ = (zOffs / 4.0 + z) * sz;
         
-        sandBuffer[x + z * 16]   = perlinNoise2.getValueDouble(coordX, 0.0, coordZ);
-        gravelBuffer[x + z * 16] = perlinNoise2.getValueDouble(coordX, 109.01340, coordZ);
-        depthBuffer[x + z * 16]  = perlinNoise3.getValueDouble(coordX * 2.0, 0.0, coordZ * 2.0);
+        sandBuffer[x + z * 16]   = perlinNoise2.getValue(coordX, 0.0, coordZ);
+        gravelBuffer[x + z * 16] = perlinNoise2.getValue(coordX, 109.01340, coordZ);
+        depthBuffer[x + z * 16]  = perlinNoise3.getValue(coordX * 2.0, 0.0, coordZ * 2.0);
     }
 }
+	
     for (int x = 0; x < 16; x++) {
         for (int z = 0; z < 16; z++) {
             double temp = 1.0;
