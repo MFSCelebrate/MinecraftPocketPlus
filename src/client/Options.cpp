@@ -96,6 +96,8 @@ OptionBool firstLaunch("firstLaunch", true);
 OptionString worldScaleY("world_scale_y", "1.0");
 OptionString worldOffsetY("world_offset_y", "0");
 static OptionBool endGenerator("end_generator", false);
+static OptionBool disabledFringeLands("disabled_fringe_lands", false);
+
 
 OptionString lastIp("lastip");
 
@@ -204,6 +206,7 @@ void Options::initTable() {
     m_options[OPTIONS_WORLD_OFFSET_Y] = &worldOffsetY;
 	m_options[OPTIONS_END_GENERATOR] = &endGenerator;
 	m_options[OPTIONS_END_CIRCLES] = &endCircles;
+	m_options[OPTIONS_DISABLED_FRINGE_LANDS] = &disabledFringeLands;
 }
 
 void Options::set(OptionId key, const std::string& value) {
