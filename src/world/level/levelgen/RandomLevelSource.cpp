@@ -655,16 +655,15 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
 
 LevelChunk* RandomLevelSource::create(int64_t x, int64_t z)
 {
-    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
-    ChunkMap::iterator it = chunkMap.find(hashedPos);
-    if (it != chunkMap.end())
-        return it->second;
+	auto key = std::make_pair(x, z);                     // 替换原来的 hash 计算
+    ChunkMap::iterator it = chunkMap.find(key);
+    if (it != chunkMap.end()) return it->second;
 
     random.setSeed((long)(x * 341872712l + z * 132899541l));
 
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
 LevelChunk* levelChunk = new LevelChunk(level, blocks, (int)x, (int)z);  // 🔧 补这行
-chunkMap.insert(std::make_pair(hashedPos, levelChunk));
+chunkMap.insert(std::make_pair(key, levelChunk));    // 插入时用 pair
 
         double worldBlockX = x * 16.0 + m_worldOffsetX;
     double worldBlockZ = z * 16.0 + m_worldOffsetZ;
