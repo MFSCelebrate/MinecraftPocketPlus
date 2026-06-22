@@ -17,7 +17,7 @@ options.disable_skygrid=Disable Skygrid
 options.world_scale_y=World Scale Y
 options.world_offset_y=World Offset Y
 options.endCircles=Enabled End Circles (MCJava 1.14+)
-options.disabledFringeLands=Disabled Fringe Lands (Experimental)
+options.disabled_fringe_lands=Disabled Fringe Lands (Experimental)
 
 language.name=English
 language.region=US
