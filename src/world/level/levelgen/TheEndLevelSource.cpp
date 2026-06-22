@@ -299,23 +299,23 @@ void TheEndLevelSource::generateEndSpikes() {
 // 文件：src/world/level/levelgen/TheEndLevelSource.cpp → create()
 
 LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
+    auto key = std::make_pair(x, z);
+
+    // ✅ 第一步：先查缓存，如果存在直接返回（绝不泄漏）
+    auto it = chunkMap.find(key);
+    if (it != chunkMap.end()) return it->second;
+
+    // ✅ 第二步：确认不存在，再分配内存
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, x, z);
 
-    auto key = std::make_pair(x, z);
-    auto it = chunkMap.find(key);
-    if (it != chunkMap.end()) return it->second;
-    
-    chunkMap.insert(std::make_pair(key, levelChunk));
+    // ✅ 第三步：立刻插入缓存（防止递归时重复创建）
+    chunkMap.emplace(key, levelChunk);
 
+    // ✅ 第四步：填充地形数据（此时即使内部调用 getChunk 也能命中缓存）
     prepareHeights(x, z, blocks);
-
-    // 🛡️ 末地不需要光照更新 — 全部设为最高亮度 15
-    // DataLayer 每字节存两个 4-bit nibble，0xFF = 两个 15
     memset(levelChunk->skyLight.data, 0xFF, LevelChunk::ChunkBlockCount / 2);
-    // blockLight 已经是 0（构造时 setAll(0)），末地无发光方块，不需改
     generateEndSpikes();
-
     levelChunk->recalcHeightmapOnly();
 
     return levelChunk;
@@ -325,7 +325,7 @@ LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
     auto key = std::make_pair(x, z);
     auto it = chunkMap.find(key);
     if (it != chunkMap.end()) return it->second;
-    return create(x, z);  // ← create 已 insert，直接返回
+    return create(x, z);  // create 内部会处理插入
 }
 
 bool TheEndLevelSource::hasChunk(int64_t x, int64_t z) {
