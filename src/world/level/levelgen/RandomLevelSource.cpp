@@ -193,9 +193,10 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
         double coordX = (xOffs / 4.0 + x) * sx;
         double coordZ = (zOffs / 4.0 + z) * sz;
         
-        sandBuffer[x + z * 16]   = perlinNoise2.getValue(coordX, 0.0, coordZ);
-        gravelBuffer[x + z * 16] = perlinNoise2.getValue(coordX, 109.01340, coordZ);
-        depthBuffer[x + z * 16]  = perlinNoise3.getValue(coordX * 2.0, 0.0, coordZ * 2.0);
+        // RandomLevelSource.cpp 第 220 行附近
+sandBuffer[x + z * 16] = perlinNoise2.getValueDouble(coordX, 0.0, coordZ);
+gravelBuffer[x + z * 16] = perlinNoise2.getValueDouble(coordX, 109.01340, coordZ);
+depthBuffer[x + z * 16] = perlinNoise3.getValueDouble(coordX * 2.0, 0.0, coordZ * 2.0);
     }
 	}
     for (int x = 0; x < 16; x++) {
@@ -406,8 +407,9 @@ void RandomLevelSource::postProcess(ChunkSource* parent, int64_t xt, int64_t zt)
         feature.place(level, &random, x, y, z);
     }
 
-    const float ss = 0.5f;
-    int oFor = (int) ((forestNoise.getValue(xo * ss, zo * ss) / 8 + random.nextFloat() * 4 + 4) / 3);
+    // postProcess 中（约第 480 行）
+float ss = 0.5f;
+int oFor = (int)((forestNoise.getValueDouble(xo * ss, zo * ss) / 8 + random.nextFloat() * 4 + 4) / 3);
     int forests = 0;//1; (java: 0)
     if (random.nextInt(10) == 0) forests += 1;
 
@@ -581,12 +583,9 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
     int intNoiseX = (int)noiseX;
     int intNoiseZ = (int)noiseZ;
 
-        sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
-                              1.121 * m_worldScaleX,
-                              1.121 * m_worldScaleZ, 0.5);
-        dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
-                              200.0 * m_worldScaleX,
-                              200.0 * m_worldScaleZ, 0.5);
+        // getHeights 中（约第 360 行）
+sr = scaleNoise.getValueDouble(noiseX, noiseZ);  // 实际调用 getRegion，不冲突
+dr = depthNoise.getValueDouble(noiseX, noiseZ);
 	
     double xf = (double)noiseX;
     double yf = (double)noiseY;
