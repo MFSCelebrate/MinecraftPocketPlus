@@ -302,8 +302,11 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
     unsigned char* blocks = new unsigned char[LevelChunk::ChunkBlockCount];
     LevelChunk* levelChunk = new LevelChunk(level, blocks, x, z);
 
-    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
-    chunkMap.insert(std::make_pair(hashedPos, levelChunk));
+    auto key = std::make_pair(x, z);
+    auto it = chunkMap.find(key);
+    if (it != chunkMap.end()) return it->second;
+    
+    chunkMap.insert(std::make_pair(key, levelChunk));
 
     prepareHeights(x, z, blocks);
 
@@ -319,8 +322,8 @@ LevelChunk* TheEndLevelSource::create(int64_t x, int64_t z) {
 }
 
 LevelChunk* TheEndLevelSource::getChunk(int64_t x, int64_t z) {
-    int64_t hashedPos = (x << 32) | (z & 0xffffffff);
-    auto it = chunkMap.find(hashedPos);
+    auto key = std::make_pair(x, z);
+    auto it = chunkMap.find(key);
     if (it != chunkMap.end()) return it->second;
     return create(x, z);  // ← create 已 insert，直接返回
 }
