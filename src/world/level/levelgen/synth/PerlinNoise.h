@@ -30,6 +30,8 @@ public:
         return static_cast<const PerlinNoise*>(this)->getValue(x, y, z);
 	}
 
+float getValue(double x, double y) const;
+
 	//float[] getRegion(float[] buffer, float x, float y, float z, int xSize, int ySize, int zSize, float xScale, float yScale, float zScale) {
     float* getRegion(float *buffer, double x, double y, double z,
                  int xSize, int ySize, int zSize,
