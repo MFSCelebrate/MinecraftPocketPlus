@@ -270,6 +270,7 @@ optionPanes[3]->addOptionItem(OPTIONS_FANCY_GRAPHICS, minecraft)
 		.addOptionItem(OPTIONS_TELEPORT, minecraft)
 		.addOptionItem(OPTIONS_DISABLE_SKYGRID, minecraft)
 	    .addOptionItem(OPTIONS_END_CIRCLES, minecraft);  // 🛡️ 新增
+	optionPanes[5]->addOptionItem(OPTIONS_DISABLED_FRINGE_LANDS, minecraft);  // Tweaks 分类下
 
 	// 收集所有 TextOption 到 textBoxes，以便基类 lostFocus 自动保存
 }
