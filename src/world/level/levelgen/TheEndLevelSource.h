@@ -10,16 +10,17 @@
 class Level;
 class LevelChunk;
 
-
-
-struct PairHash {
+struct ChunkKeyHash {
     size_t operator()(const std::pair<int64_t, int64_t>& p) const {
+        // 用 XOR 打散，绝对唯一
         return std::hash<int64_t>()(p.first) ^ (std::hash<int64_t>()(p.second) << 1);
     }
 };
 
-// 替换 chunkMap 类型
-std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, PairHash> chunkMap;
+// 把原来这行：
+// std::map<int64_t, LevelChunk*> chunkMap;
+// 替换成：
+std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, ChunkKeyHash> chunkMap;
 
 class TheEndLevelSource : public ChunkSource {
 public:
