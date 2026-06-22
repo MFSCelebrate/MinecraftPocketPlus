@@ -168,7 +168,7 @@ float ImprovedNoise::getValue(double x, double y, double z) const {
 
 // 以下是使用 32 位 int 坐标的 add 函数（原始行为）
 static void add_int(ImprovedNoise* self, float* buffer,
-                    float _x, float _y, float _z,
+                    double _x, double _y, double _z,
                     int xSize, int ySize, int zSize,
                     float xs, float ys, float zs, float pow) {
     bool doClamp = false;
@@ -385,7 +385,7 @@ static void add_int(ImprovedNoise* self, float* buffer,
     }
 }
 static void add_int64(ImprovedNoise* self, float* buffer,
-                      float _x, float _y, float _z,
+                      double _x, double _y, double _z,
                       int xSize, int ySize, int zSize,
                       float xs, float ys, float zs, float pow) {
     bool doClamp = false;
@@ -602,7 +602,7 @@ static void add_int64(ImprovedNoise* self, float* buffer,
 }
 
 // 使用 double 坐标的 add 函数（避免整数溢出，利用 double 的大范围）
-static void add_double(ImprovedNoise* self, float* buffer, float _x, float _y, float _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
+static void add_double(ImprovedNoise* self, float* buffer, double _x, double _y, double _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
 {
     bool doClamp = false;
     if (Minecraft::instance) {
