@@ -20,7 +20,7 @@ struct ChunkKeyHash {
 // 把原来这行：
 // std::map<int64_t, LevelChunk*> chunkMap;
 // 替换成：
-std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, ChunkKeyHash> chunkMap;
+
 
 class TheEndLevelSource : public ChunkSource {
 public:
@@ -59,6 +59,7 @@ double debugIslandHeightValue(int64_t chunkX, int64_t chunkZ) {
 private:
     void prepareHeights(int64_t chunkX, int64_t chunkZ, unsigned char* blocks);
     void generateDensityCells(int64_t chunkX, int64_t chunkZ, double* density);
+    std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, ChunkKeyHash> chunkMap;
 
     double m_worldOffsetX = 0.0;
     double m_worldOffsetY = 0.0;
