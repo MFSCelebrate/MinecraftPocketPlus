@@ -187,11 +187,6 @@ void RandomLevelSource::buildSurfaces(double xOffs, double zOffs, unsigned char*
     double sz = 684.412 * m_worldScaleZ;
     double xf = xOffs / 4.0;
     double zf = zOffs / 4.0;
-
-    for (int x = 0; x < 16; x++) {
-    for (int z = 0; z < 16; z++) {
-        double coordX = (xOffs / 4.0 + x) * sx;
-        double coordZ = (zOffs / 4.0 + z) * sz;
         
         // RandomLevelSource.cpp 第 220 行附近
 for (int x = 0; x < 16; x++) {
