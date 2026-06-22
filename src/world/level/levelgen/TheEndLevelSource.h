@@ -42,7 +42,6 @@ bool isEndSource() const override { return true; }
 
     double sampleDensityAt(double worldX, double worldY, double worldZ);
     double getIslandHeightValue(int64_t chunkX, int64_t chunkZ, int xC, int zC);
-    std::map<int64_t, LevelChunk*> chunkMap;
     // 🛡️ 调试面板用 — 包装私有 getIslandHeightValue
 double debugIslandHeightValue(int64_t chunkX, int64_t chunkZ) {
     return getIslandHeightValue(chunkX, chunkZ, 1, 1);
