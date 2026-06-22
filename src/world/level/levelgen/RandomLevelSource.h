@@ -13,7 +13,8 @@ class Biome;
 class Level;
 class LevelChunk;
 
-typedef std::map<int64_t, LevelChunk*> ChunkMap;
+// 改为
+typedef std::map<std::pair<int64_t, int64_t>, LevelChunk*> ChunkMap;
 
 class RandomLevelSource : public ChunkSource
 {
