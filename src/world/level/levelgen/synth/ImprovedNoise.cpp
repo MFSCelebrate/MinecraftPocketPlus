@@ -1,172 +1,292 @@
 #include "ImprovedNoise.h"
 #include "../../../../util/Random.h"
 #include "../../../../client/Minecraft.h"
-#include <cstdint>
 #include <cmath>
+#include <cstdint>
 
-ImprovedNoise::ImprovedNoise()
-{
+ImprovedNoise::ImprovedNoise() {
     Random random(1);
     init(&random);
 }
 
-ImprovedNoise::ImprovedNoise( Random* random )
-{
+ImprovedNoise::ImprovedNoise(Random* random) {
     init(random);
 }
 
-void ImprovedNoise::init( Random* random )
-{
+void ImprovedNoise::init(Random* random) {
     xo = random->nextFloat() * 256.f;
     yo = random->nextFloat() * 256.f;
     zo = random->nextFloat() * 256.f;
     for (int i = 0; i < 256; i++) {
         p[i] = i;
     }
-
     for (int i = 0; i < 256; i++) {
         int j = random->nextInt(256 - i) + i;
         int tmp = p[i];
         p[i] = p[j];
         p[j] = tmp;
-
         p[i + 256] = p[i];
     }
 }
 
-float ImprovedNoise::noise( float _x, float _y, float _z ) const {
-    float x = _x + xo;
-    float y = _y + yo;
-    float z = _z + zo;
-
-    int xf = (int) x;
-    int yf = (int) y;
-    int zf = (int) z;
-
-    if (x < xf) xf--;
-    if (y < yf) yf--;
-    if (z < zf) zf--;
-
-    int X = xf & 255,
-        Y = yf & 255,
-        Z = zf & 255;
-
-    x -= xf;
-    y -= yf;
-    z -= zf;
-
-    bool doClamp = false;
-    if (Minecraft::instance) {
-        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
-    }
-    if (doClamp) {
-        if (x < 0.0f) x = 0.0f;
-        if (x > 1.0f) x = 1.0f;
-        if (y < 0.0f) y = 0.0f;
-        if (y > 1.0f) y = 1.0f;
-        if (z < 0.0f) z = 0.0f;
-        if (z > 1.0f) z = 1.0f;
-    }
-
-    float u = x * x * x * (x * (x * 6 - 15) + 10);
-    float v = y * y * y * (y * (y * 6 - 15) + 10);
-    float w = z * z * z * (z * (z * 6 - 15) + 10);
-
-    int A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
-        B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
-
-    return lerp(w, lerp(v, lerp(u, grad(p[AA], x, y, z),
-                                 grad(p[BA], x - 1, y, z)),
-                         lerp(u, grad(p[AB], x, y - 1, z),
-                                 grad(p[BB], x - 1, y - 1, z))),
-                 lerp(v, lerp(u, grad(p[AA + 1], x, y, z - 1),
-                                 grad(p[BA + 1], x - 1, y, z - 1)),
-                         lerp(u, grad(p[AB + 1], x, y - 1, z - 1),
-                                 grad(p[BB + 1], x - 1, y - 1, z - 1))));
-}
-
-const float ImprovedNoise::lerp( float t, float a, float b ) const {
-    // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
+// ===== Float 版本 =====
+float ImprovedNoise::lerp(float t, float a, float b) const {
+        // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
     if (Minecraft::instance && Minecraft::instance->options.getBooleanValue(OPTIONS_PROGRESSIVE_FARLANDS)) {
         return a;
     }
     return a + t * (b - a);
 }
 
-const float ImprovedNoise::grad2( int hash, float x, float z ) const {
+float ImprovedNoise::grad2(int hash, float x, float z) const {
     int h = hash & 15;
-    float u = (1-((h&8)>>3))*x,
-          v = h < 4 ? 0 : h == 12 || h == 14 ? x : z;
+    float u = (1 - ((h & 8) >> 3)) * x;
+    float v = h < 4 ? 0 : (h == 12 || h == 14 ? x : z);
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
-const float ImprovedNoise::grad( int hash, float x, float y, float z ) const {
+float ImprovedNoise::grad(int hash, float x, float y, float z) const {
     int h = hash & 15;
-    float u = h < 8 ? x : y,
-          v = h < 4 ? y : h == 12 || h == 14 ? x : z;
+    float u = h < 8 ? x : y;
+    float v = h < 4 ? y : (h == 12 || h == 14 ? x : z);
     return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
 }
 
+// ===== Double 版本（用于禁用边缘之地） =====
+double ImprovedNoise::lerp(double t, double a, double b) const {
+        // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
+    if (Minecraft::instance && Minecraft::instance->options.getBooleanValue(OPTIONS_PROGRESSIVE_FARLANDS)) {
+        return a;
+    }
+    return a + t * (b - a);
+}
+
+double ImprovedNoise::grad2(int hash, double x, double z) const {
+    int h = hash & 15;
+    double u = (1 - ((h & 8) >> 3)) * x;
+    double v = h < 4 ? 0 : (h == 12 || h == 14 ? x : z);
+    return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+}
+
+double ImprovedNoise::grad(int hash, double x, double y, double z) const {
+    int h = hash & 15;
+    double u = h < 8 ? x : y;
+    double v = h < 4 ? y : (h == 12 || h == 14 ? x : z);
+    return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
+}
+
+// ===== noise(float) =====
+float ImprovedNoise::noise(float _x, float _y, float _z) const {
+    bool disableFringe = false;
+    bool doClamp = false;
+    if (Minecraft::instance) {
+        disableFringe = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLED_FRINGE_LANDS);
+        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+
+    // 提升为 double 以便后续计算
+    double x = (double)_x + xo;
+    double y = (double)_y + yo;
+    double z = (double)_z + zo;
+
+    // 整数溢出（保留）
+    int xfi = (int)x;
+    if (x < (double)xfi) xfi--;
+    int X = xfi & 255;
+    double dx = x - (double)xfi;
+
+    int yfi = (int)y;
+    if (y < (double)yfi) yfi--;
+    int Y = yfi & 255;
+    double dy = y - (double)yfi;
+
+    int zfi = (int)z;
+    if (z < (double)zfi) zfi--;
+    int Z = zfi & 255;
+    double dz = z - (double)zfi;
+
+    // 原有的 doClamp 钳位（由 OPTIONS_POSTPONED_FRINGE 控制）
+    if (doClamp) {
+        if (dx < 0.0) dx = 0.0;
+        if (dx > 1.0) dx = 1.0;
+        if (dy < 0.0) dy = 0.0;
+        if (dy > 1.0) dy = 1.0;
+        if (dz < 0.0) dz = 0.0;
+        if (dz > 1.0) dz = 1.0;
+    }
+
+    // 根据 disableFringe 选择计算路径
+    int A = p[X] + Y;
+    int AA = p[A] + Z;
+    int AB = p[A + 1] + Z;
+    int B = p[X + 1] + Y;
+    int BA = p[B] + Z;
+    int BB = p[B + 1] + Z;
+
+    double val;
+    if (disableFringe) {
+        // 完全 double 路径
+        double u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+        double v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
+        double w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+
+        val = lerp(w,
+            lerp(v,
+                lerp(u, grad(p[AA], dx, dy, dz), grad(p[BA], dx - 1.0, dy, dz)),
+                lerp(u, grad(p[AB], dx, dy - 1.0, dz), grad(p[BB], dx - 1.0, dy - 1.0, dz))
+            ),
+            lerp(v,
+                lerp(u, grad(p[AA + 1], dx, dy, dz - 1.0), grad(p[BA + 1], dx - 1.0, dy, dz - 1.0)),
+                lerp(u, grad(p[AB + 1], dx, dy - 1.0, dz - 1.0), grad(p[BB + 1], dx - 1.0, dy - 1.0, dz - 1.0))
+            )
+        );
+    } else {
+        // 原版 float 路径（保留精度丢失）
+        float dxf = (float)dx;
+        float dyf = (float)dy;
+        float dzf = (float)dz;
+        float u = dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10);
+        float v = dyf * dyf * dyf * (dyf * (dyf * 6 - 15) + 10);
+        float w = dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10);
+
+        float valf = lerp(w,
+            lerp(v,
+                lerp(u, grad(p[AA], dxf, dyf, dzf), grad(p[BA], dxf - 1, dyf, dzf)),
+                lerp(u, grad(p[AB], dxf, dyf - 1, dzf), grad(p[BB], dxf - 1, dyf - 1, dzf))
+            ),
+            lerp(v,
+                lerp(u, grad(p[AA + 1], dxf, dyf, dzf - 1), grad(p[BA + 1], dxf - 1, dyf, dzf - 1)),
+                lerp(u, grad(p[AB + 1], dxf, dyf - 1, dzf - 1), grad(p[BB + 1], dxf - 1, dyf - 1, dzf - 1))
+            )
+        );
+        val = (double)valf;
+    }
+    return (float)val;
+}
+
+// ===== getValue(float, float) =====
 float ImprovedNoise::getValue(float x, float y) {
-    return static_cast<const ImprovedNoise*>(this)->getValue(x, y);
+    return getValue(x, y, 0.0f);
 }
 
-float ImprovedNoise::getValue( float x, float y ) const {
-    return noise(x, y, 0);
+float ImprovedNoise::getValue(float x, float y) const {
+    return getValue(x, y, 0.0f);
 }
 
-float ImprovedNoise::getValue( float x, float y, float z ) const {
+float ImprovedNoise::getValue(float x, float y, float z) const {
     return noise(x, y, z);
 }
 
-float ImprovedNoise::getValue(double x, double y) const {
+// ===== getValue(double, double) =====
+double ImprovedNoise::getValue(double x, double y) const {
     return getValue(x, y, 0.0);
 }
 
-float ImprovedNoise::getValue(double x, double y, double z) const {
-    // 使用与 add_double 相同的 double 坐标处理，避免 int 截断
+// ===== getValue(double, double, double) =====
+double ImprovedNoise::getValue(double x, double y, double z) const {
+    bool disableFringe = false;
+    bool doClamp = false;
+    if (Minecraft::instance) {
+        disableFringe = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLED_FRINGE_LANDS);
+        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+
+    // 直接使用 double 坐标
     double xd = x + xo;
     double yd = y + yo;
     double zd = z + zo;
 
-    int X = ((int64_t)floor(xd)) & 255, Y = ((int64_t)floor(yd)) & 255, Z = ((int64_t)floor(zd)) & 255;
-    xd -= floor(xd);
-    yd -= floor(yd);
-    zd -= floor(zd);
+    int xfi = (int)xd;
+    if (xd < (double)xfi) xfi--;
+    int X = xfi & 255;
+    double dx = xd - (double)xfi;
 
-    // 保持原有边界 clamp（如果开启了 POSTPONED_FRINGE）
-    bool doClamp = false;
-    if (Minecraft::instance) {
-        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
-    }
+    int yfi = (int)yd;
+    if (yd < (double)yfi) yfi--;
+    int Y = yfi & 255;
+    double dy = yd - (double)yfi;
+
+    int zfi = (int)zd;
+    if (zd < (double)zfi) zfi--;
+    int Z = zfi & 255;
+    double dz = zd - (double)zfi;
+
     if (doClamp) {
-        if (x < 0.0) x = 0.0;
-        if (x > 1.0) x = 1.0;
-        if (y < 0.0) y = 0.0;
-        if (y > 1.0) y = 1.0;
-        if (z < 0.0) z = 0.0;
-        if (z > 1.0) z = 1.0;
+        if (dx < 0.0) dx = 0.0;
+        if (dx > 1.0) dx = 1.0;
+        if (dy < 0.0) dy = 0.0;
+        if (dy > 1.0) dy = 1.0;
+        if (dz < 0.0) dz = 0.0;
+        if (dz > 1.0) dz = 1.0;
     }
-    // … 这里省略 clamp 代码，可直接调用原先的 noise 逻辑但改为 double 参数
-    // 为简便，直接调用 grad 和 lerp，它们已经是 float 操作，坐标部分已用 double 避免溢出
-    float u = xd * xd * xd * (xd * (xd * 6 - 15) + 10);
-    float v = yd * yd * yd * (yd * (yd * 6 - 15) + 10);
-    float w = zd * zd * zd * (zd * (zd * 6 - 15) + 10);
 
-    int A = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z,
-        B = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+    int A = p[X] + Y;
+    int AA = p[A] + Z;
+    int AB = p[A + 1] + Z;
+    int B = p[X + 1] + Y;
+    int BA = p[B] + Z;
+    int BB = p[B + 1] + Z;
 
-    return lerp(w, lerp(v, lerp(u, grad(p[AA], (float)xd, (float)yd, (float)zd),
-                                   grad(p[BA], (float)(xd - 1), (float)yd, (float)zd)),
-                           lerp(u, grad(p[AB], (float)xd, (float)(yd - 1), (float)zd),
-                                   grad(p[BB], (float)(xd - 1), (float)(yd - 1), (float)zd))),
-                   lerp(v, lerp(u, grad(p[AA + 1], (float)xd, (float)yd, (float)(zd - 1)),
-                                   grad(p[BA + 1], (float)(xd - 1), (float)yd, (float)(zd - 1))),
-                           lerp(u, grad(p[AB + 1], (float)xd, (float)(yd - 1), (float)(zd - 1)),
-                                   grad(p[BB + 1], (float)(xd - 1), (float)(yd - 1), (float)(zd - 1)))));
+    double val;
+    if (disableFringe) {
+        double u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+        double v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
+        double w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+
+        val = lerp(w,
+            lerp(v,
+                lerp(u, grad(p[AA], dx, dy, dz), grad(p[BA], dx - 1.0, dy, dz)),
+                lerp(u, grad(p[AB], dx, dy - 1.0, dz), grad(p[BB], dx - 1.0, dy - 1.0, dz))
+            ),
+            lerp(v,
+                lerp(u, grad(p[AA + 1], dx, dy, dz - 1.0), grad(p[BA + 1], dx - 1.0, dy, dz - 1.0)),
+                lerp(u, grad(p[AB + 1], dx, dy - 1.0, dz - 1.0), grad(p[BB + 1], dx - 1.0, dy - 1.0, dz - 1.0))
+            )
+        );
+    } else {
+        float dxf = (float)dx;
+        float dyf = (float)dy;
+        float dzf = (float)dz;
+        float u = dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10);
+        float v = dyf * dyf * dyf * (dyf * (dyf * 6 - 15) + 10);
+        float w = dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10);
+
+        float valf = lerp(w,
+            lerp(v,
+                lerp(u, grad(p[AA], dxf, dyf, dzf), grad(p[BA], dxf - 1, dyf, dzf)),
+                lerp(u, grad(p[AB], dxf, dyf - 1, dzf), grad(p[BB], dxf - 1, dyf - 1, dzf))
+            ),
+            lerp(v,
+                lerp(u, grad(p[AA + 1], dxf, dyf, dzf - 1), grad(p[BA + 1], dxf - 1, dyf, dzf - 1)),
+                lerp(u, grad(p[AB + 1], dxf, dyf - 1, dzf - 1), grad(p[BB + 1], dxf - 1, dyf - 1, dzf - 1))
+            )
+        );
+        val = (double)valf;
+    }
+    return val;
 }
 
-// 以下是使用 32 位 int 坐标的 add 函数（原始行为）
+// ===== add 入口 =====
+void ImprovedNoise::add(float* buffer, double _x, double _y, double _z,
+                         int xSize, int ySize, int zSize,
+                         float xs, float ys, float zs, float pow) {
+    bool use64Bit = false;
+    bool useDouble = false;
+    if (Minecraft::instance) {
+        use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
+        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
+    }
+    if (useDouble) {
+        // add_double 本身就是 double 计算，无需改动
+        add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    } else if (use64Bit) {
+        add_int64(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    } else {
+        add_int(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    }
+}
+
+// ===== add_int（完整实现） =====
 static void add_int(ImprovedNoise* self, float* buffer,
                     double _x, double _y, double _z,
                     int xSize, int ySize, int zSize,
@@ -184,206 +304,196 @@ static void add_int(ImprovedNoise* self, float* buffer,
         int pp = 0;
         float scale = 1.0f / pow;
         for (int xx = 0; xx < xSize; xx++) {
-            // 坐标计算 —— 根据 disableFringe 决定使用 float 还是 double
-            float x_float, u;
-            int X;
-            if (disableFringe) {
-                double x = (_x + xx) * (double)xs + self->xo;
-                int xf = (int)x;
-                if (x < (double)xf) xf--;
-                X = xf & 255;
-                double dx = x - (double)xf;
-                if (doClamp) {
-                    if (dx < 0.0) dx = 0.0;
-                    if (dx > 1.0) dx = 1.0;
-                }
-                x_float = (float)dx;
-                u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
-            } else {
-                float x = (_x + xx) * xs + self->xo;
-                int xf = (int)x;
-                if (x < (float)xf) xf--;
-                X = xf & 255;
-                float dx = x - (float)xf;
-                if (doClamp) {
-                    if (dx < 0.0f) dx = 0.0f;
-                    if (dx > 1.0f) dx = 1.0f;
-                }
-                x_float = dx;
-                u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
-            }
-
-            for (int zz = 0; zz < zSize; zz++) {
-                float z_float, w;
-                int Z;
-                if (disableFringe) {
-                    double z = (_z + zz) * (double)zs + self->zo;
-                    int zf = (int)z;
-                    if (z < (double)zf) zf--;
-                    Z = zf & 255;
-                    double dz = z - (double)zf;
-                    if (doClamp) {
-                        if (dz < 0.0) dz = 0.0;
-                        if (dz > 1.0) dz = 1.0;
-                    }
-                    z_float = (float)dz;
-                    w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
-                } else {
-                    float z = (_z + zz) * zs + self->zo;
-                    int zf = (int)z;
-                    if (z < (float)zf) zf--;
-                    Z = zf & 255;
-                    float dz = z - (float)zf;
-                    if (doClamp) {
-                        if (dz < 0.0f) dz = 0.0f;
-                        if (dz > 1.0f) dz = 1.0f;
-                    }
-                    z_float = dz;
-                    w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
-                }
-
-                A = self->p[X] + 0;
-                AA = self->p[A] + Z;
-                B = self->p[X + 1] + 0;
-                BA = self->p[B] + Z;
-                vv0 = self->lerp(u,
-                    self->grad2(self->p[AA], x_float, z_float),
-                    self->grad(self->p[BA], x_float - 1, 0, z_float));
-                vv2 = self->lerp(u,
-                    self->grad(self->p[AA + 1], x_float, 0, z_float - 1),
-                    self->grad(self->p[BA + 1], x_float - 1, 0, z_float - 1));
-
-                buffer[pp++] += self->lerp(w, vv0, vv2) * scale;
-            }
-        }
-        return;
-    }
-
-    // === 3D 分支 ===
-    int pp = 0;
-    float scale = 1.0f / pow;
-    int yOld = -1;
-    int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
-    float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
-
-    for (int xx = 0; xx < xSize; xx++) {
-        float x_float, u;
-        int X;
-        if (disableFringe) {
             double x = (_x + xx) * (double)xs + self->xo;
             int xf = (int)x;
             if (x < (double)xf) xf--;
-            X = xf & 255;
+            int X = xf & 255;
             double dx = x - (double)xf;
             if (doClamp) {
                 if (dx < 0.0) dx = 0.0;
                 if (dx > 1.0) dx = 1.0;
             }
-            x_float = (float)dx;
-            u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
-        } else {
-            float x = (_x + xx) * xs + self->xo;
-            int xf = (int)x;
-            if (x < (float)xf) xf--;
-            X = xf & 255;
-            float dx = x - (float)xf;
-            if (doClamp) {
-                if (dx < 0.0f) dx = 0.0f;
-                if (dx > 1.0f) dx = 1.0f;
-            }
-            x_float = dx;
-            u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
-        }
 
-        for (int zz = 0; zz < zSize; zz++) {
-            float z_float, w;
-            int Z;
+            double u;
             if (disableFringe) {
+                u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+            } else {
+                float dxf = (float)dx;
+                u = (double)(dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10));
+            }
+
+            for (int zz = 0; zz < zSize; zz++) {
                 double z = (_z + zz) * (double)zs + self->zo;
                 int zf = (int)z;
                 if (z < (double)zf) zf--;
-                Z = zf & 255;
+                int Z = zf & 255;
                 double dz = z - (double)zf;
                 if (doClamp) {
                     if (dz < 0.0) dz = 0.0;
                     if (dz > 1.0) dz = 1.0;
                 }
-                z_float = (float)dz;
-                w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
-            } else {
-                float z = (_z + zz) * zs + self->zo;
-                int zf = (int)z;
-                if (z < (float)zf) zf--;
-                Z = zf & 255;
-                float dz = z - (float)zf;
-                if (doClamp) {
-                    if (dz < 0.0f) dz = 0.0f;
-                    if (dz > 1.0f) dz = 1.0f;
+
+                double w;
+                double dx_adj, dz_adj;
+                if (disableFringe) {
+                    w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+                    A = self->p[X] + 0;
+                    AA = self->p[A] + Z;
+                    B = self->p[X + 1] + 0;
+                    BA = self->p[B] + Z;
+                    double vv0_d = self->lerp(u,
+                        self->grad2(self->p[AA], dx, dz),
+                        self->grad(self->p[BA], dx - 1.0, 0.0, dz));
+                    double vv2_d = self->lerp(u,
+                        self->grad(self->p[AA + 1], dx, 0.0, dz - 1.0),
+                        self->grad(self->p[BA + 1], dx - 1.0, 0.0, dz - 1.0));
+                    double val = self->lerp(w, vv0_d, vv2_d);
+                    buffer[pp++] += (float)(val * scale);
+                } else {
+                    float dxf = (float)dx;
+                    float dzf = (float)dz;
+                    w = (double)(dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10));
+                    A = self->p[X] + 0;
+                    AA = self->p[A] + Z;
+                    B = self->p[X + 1] + 0;
+                    BA = self->p[B] + Z;
+                    float vv0_f = self->lerp((float)u,
+                        self->grad2(self->p[AA], dxf, dzf),
+                        self->grad(self->p[BA], dxf - 1, 0, dzf));
+                    float vv2_f = self->lerp((float)u,
+                        self->grad(self->p[AA + 1], dxf, 0, dzf - 1),
+                        self->grad(self->p[BA + 1], dxf - 1, 0, dzf - 1));
+                    float valf = self->lerp((float)w, vv0_f, vv2_f);
+                    buffer[pp++] += valf * scale;
                 }
-                z_float = dz;
+            }
+        }
+        return;
+    }
+
+    // 3D 分支
+    int pp = 0;
+    float scale = 1.0f / pow;
+    int yOld = -1;
+    int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
+    double vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
+
+    for (int xx = 0; xx < xSize; xx++) {
+        double x = (_x + xx) * (double)xs + self->xo;
+        int xf = (int)x;
+        if (x < (double)xf) xf--;
+        int X = xf & 255;
+        double dx = x - (double)xf;
+        if (doClamp) {
+            if (dx < 0.0) dx = 0.0;
+            if (dx > 1.0) dx = 1.0;
+        }
+
+        double u;
+        if (disableFringe) {
+            u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+        } else {
+            float dxf = (float)dx;
+            u = (double)(dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10));
+        }
+
+        for (int zz = 0; zz < zSize; zz++) {
+            double z = (_z + zz) * (double)zs + self->zo;
+            int zf = (int)z;
+            if (z < (double)zf) zf--;
+            int Z = zf & 255;
+            double dz = z - (double)zf;
+            if (doClamp) {
+                if (dz < 0.0) dz = 0.0;
+                if (dz > 1.0) dz = 1.0;
+            }
+
+            double w;
+            if (disableFringe) {
                 w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+            } else {
+                float dzf = (float)dz;
+                w = (double)(dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10));
             }
 
             for (int yy = 0; yy < ySize; yy++) {
-                float y_float, v;
-                int Y;
+                double y = (_y + yy) * (double)ys + self->yo;
+                int yf = (int)y;
+                if (y < (double)yf) yf--;
+                int Y = yf & 255;
+                double dy = y - (double)yf;
+                if (doClamp) {
+                    if (dy < 0.0) dy = 0.0;
+                    if (dy > 1.0) dy = 1.0;
+                }
+
+                double v;
+                double dx_adj, dy_adj, dz_adj;
                 if (disableFringe) {
-                    double y = (_y + yy) * (double)ys + self->yo;
-                    int yf = (int)y;
-                    if (y < (double)yf) yf--;
-                    Y = yf & 255;
-                    double dy = y - (double)yf;
-                    if (doClamp) {
-                        if (dy < 0.0) dy = 0.0;
-                        if (dy > 1.0) dy = 1.0;
-                    }
-                    y_float = (float)dy;
-                    v = (float)(dy * dy * dy * (dy * (dy * 6 - 15) + 10));
-                } else {
-                    float y = (_y + yy) * ys + self->yo;
-                    int yf = (int)y;
-                    if (y < (float)yf) yf--;
-                    Y = yf & 255;
-                    float dy = y - (float)yf;
-                    if (doClamp) {
-                        if (dy < 0.0f) dy = 0.0f;
-                        if (dy > 1.0f) dy = 1.0f;
-                    }
-                    y_float = dy;
                     v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
+                    if (yy == 0 || Y != yOld) {
+                        yOld = Y;
+                        A = self->p[X] + Y;
+                        AA = self->p[A] + Z;
+                        AB = self->p[A + 1] + Z;
+                        B = self->p[X + 1] + Y;
+                        BA = self->p[B] + Z;
+                        BB = self->p[B + 1] + Z;
+                        vv0 = self->lerp(u,
+                            self->grad(self->p[AA], dx, dy, dz),
+                            self->grad(self->p[BA], dx - 1.0, dy, dz));
+                        vv1 = self->lerp(u,
+                            self->grad(self->p[AB], dx, dy - 1.0, dz),
+                            self->grad(self->p[BB], dx - 1.0, dy - 1.0, dz));
+                        vv2 = self->lerp(u,
+                            self->grad(self->p[AA + 1], dx, dy, dz - 1.0),
+                            self->grad(self->p[BA + 1], dx - 1.0, dy, dz - 1.0));
+                        vv3 = self->lerp(u,
+                            self->grad(self->p[AB + 1], dx, dy - 1.0, dz - 1.0),
+                            self->grad(self->p[BB + 1], dx - 1.0, dy - 1.0, dz - 1.0));
+                    }
+                    double v0 = self->lerp(v, vv0, vv1);
+                    double v1 = self->lerp(v, vv2, vv3);
+                    double val = self->lerp(w, v0, v1);
+                    buffer[pp++] += (float)(val * scale);
+                } else {
+                    float dxf = (float)dx;
+                    float dyf = (float)dy;
+                    float dzf = (float)dz;
+                    v = (double)(dyf * dyf * dyf * (dyf * (dyf * 6 - 15) + 10));
+                    if (yy == 0 || Y != yOld) {
+                        yOld = Y;
+                        A = self->p[X] + Y;
+                        AA = self->p[A] + Z;
+                        AB = self->p[A + 1] + Z;
+                        B = self->p[X + 1] + Y;
+                        BA = self->p[B] + Z;
+                        BB = self->p[B + 1] + Z;
+                        float uf = (float)u;
+                        vv0 = self->lerp(uf,
+                            self->grad(self->p[AA], dxf, dyf, dzf),
+                            self->grad(self->p[BA], dxf - 1, dyf, dzf));
+                        vv1 = self->lerp(uf,
+                            self->grad(self->p[AB], dxf, dyf - 1, dzf),
+                            self->grad(self->p[BB], dxf - 1, dyf - 1, dzf));
+                        vv2 = self->lerp(uf,
+                            self->grad(self->p[AA + 1], dxf, dyf, dzf - 1),
+                            self->grad(self->p[BA + 1], dxf - 1, dyf, dzf - 1));
+                        vv3 = self->lerp(uf,
+                            self->grad(self->p[AB + 1], dxf, dyf - 1, dzf - 1),
+                            self->grad(self->p[BB + 1], dxf - 1, dyf - 1, dzf - 1));
+                    }
+                    float v0f = self->lerp((float)v, (float)vv0, (float)vv1);
+                    float v1f = self->lerp((float)v, (float)vv2, (float)vv3);
+                    float valf = self->lerp((float)w, v0f, v1f);
+                    buffer[pp++] += valf * scale;
                 }
-
-                if (yy == 0 || Y != yOld) {
-                    yOld = Y;
-                    A = self->p[X] + Y;
-                    AA = self->p[A] + Z;
-                    AB = self->p[A + 1] + Z;
-                    B = self->p[X + 1] + Y;
-                    BA = self->p[B] + Z;
-                    BB = self->p[B + 1] + Z;
-                    vv0 = self->lerp(u,
-                        self->grad(self->p[AA], x_float, y_float, z_float),
-                        self->grad(self->p[BA], x_float - 1, y_float, z_float));
-                    vv1 = self->lerp(u,
-                        self->grad(self->p[AB], x_float, y_float - 1, z_float),
-                        self->grad(self->p[BB], x_float - 1, y_float - 1, z_float));
-                    vv2 = self->lerp(u,
-                        self->grad(self->p[AA + 1], x_float, y_float, z_float - 1),
-                        self->grad(self->p[BA + 1], x_float - 1, y_float, z_float - 1));
-                    vv3 = self->lerp(u,
-                        self->grad(self->p[AB + 1], x_float, y_float - 1, z_float - 1),
-                        self->grad(self->p[BB + 1], x_float - 1, y_float - 1, z_float - 1));
-                }
-
-                float v0 = self->lerp(v, vv0, vv1);
-                float v1 = self->lerp(v, vv2, vv3);
-                float val = self->lerp(w, v0, v1);
-
-                buffer[pp++] += val * scale;
             }
         }
     }
 }
+
+// ===== add_int64（仅展示差异，逻辑与 add_int 类似） =====
 static void add_int64(ImprovedNoise* self, float* buffer,
                       double _x, double _y, double _z,
                       int xSize, int ySize, int zSize,
@@ -395,179 +505,300 @@ static void add_int64(ImprovedNoise* self, float* buffer,
         disableFringe = Minecraft::instance->options.getBooleanValue(OPTIONS_DISABLED_FRINGE_LANDS);
     }
 
+    // ====== 2D 分支 ======
     if (ySize == 1) {
         int A = 0, AA = 0, B = 0, BA = 0;
         float vv0 = 0, vv2 = 0;
         int pp = 0;
         float scale = 1.0f / pow;
         for (int xx = 0; xx < xSize; xx++) {
-            float x_float, u;
-            int X;
+            double x = (_x + xx) * (double)xs + self->xo;
+            int64_t xf = (int64_t)x;                     // 64位溢出保留！
+            if (x < (double)xf) xf--;
+            int X = (int)(xf & 255);
+            double dx = x - (double)xf;
+            if (doClamp) {
+                if (dx < 0.0) dx = 0.0;
+                if (dx > 1.0) dx = 1.0;
+            }
+
+            double u;
             if (disableFringe) {
-                double x = (_x + xx) * (double)xs + self->xo;
-                int64_t xf = (int64_t)x;
-                if (x < (double)xf) xf--;
-                X = (int)(xf & 255);
-                double dx = x - (double)xf;
-                if (doClamp) {
-                    if (dx < 0.0) dx = 0.0;
-                    if (dx > 1.0) dx = 1.0;
-                }
-                x_float = (float)dx;
-                u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
-            } else {
-                float x = (_x + xx) * xs + self->xo;
-                int64_t xf = (int64_t)x;
-                if (x < (float)xf) xf--;
-                X = (int)(xf & 255);
-                float dx = x - (float)xf;
-                if (doClamp) {
-                    if (dx < 0.0f) dx = 0.0f;
-                    if (dx > 1.0f) dx = 1.0f;
-                }
-                x_float = dx;
                 u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+            } else {
+                float dxf = (float)dx;
+                u = (double)(dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10));
             }
 
             for (int zz = 0; zz < zSize; zz++) {
-                float z_float, w;
-                int Z;
-                if (disableFringe) {
-                    double z = (_z + zz) * (double)zs + self->zo;
-                    int64_t zf = (int64_t)z;
-                    if (z < (double)zf) zf--;
-                    Z = (int)(zf & 255);
-                    double dz = z - (double)zf;
-                    if (doClamp) {
-                        if (dz < 0.0) dz = 0.0;
-                        if (dz > 1.0) dz = 1.0;
-                    }
-                    z_float = (float)dz;
-                    w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
-                } else {
-                    float z = (_z + zz) * zs + self->zo;
-                    int64_t zf = (int64_t)z;
-                    if (z < (float)zf) zf--;
-                    Z = (int)(zf & 255);
-                    float dz = z - (float)zf;
-                    if (doClamp) {
-                        if (dz < 0.0f) dz = 0.0f;
-                        if (dz > 1.0f) dz = 1.0f;
-                    }
-                    z_float = dz;
-                    w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+                double z = (_z + zz) * (double)zs + self->zo;
+                int64_t zf = (int64_t)z;
+                if (z < (double)zf) zf--;
+                int Z = (int)(zf & 255);
+                double dz = z - (double)zf;
+                if (doClamp) {
+                    if (dz < 0.0) dz = 0.0;
+                    if (dz > 1.0) dz = 1.0;
                 }
+
+                double w;
+                if (disableFringe) {
+                    w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+                    A = self->p[X] + 0;
+                    AA = self->p[A] + Z;
+                    B = self->p[X + 1] + 0;
+                    BA = self->p[B] + Z;
+                    double vv0_d = self->lerp(u,
+                        self->grad2(self->p[AA], dx, dz),
+                        self->grad(self->p[BA], dx - 1.0, 0.0, dz));
+                    double vv2_d = self->lerp(u,
+                        self->grad(self->p[AA + 1], dx, 0.0, dz - 1.0),
+                        self->grad(self->p[BA + 1], dx - 1.0, 0.0, dz - 1.0));
+                    double val = self->lerp(w, vv0_d, vv2_d);
+                    buffer[pp++] += (float)(val * scale);
+                } else {
+                    float dxf = (float)dx;
+                    float dzf = (float)dz;
+                    w = (double)(dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10));
+                    A = self->p[X] + 0;
+                    AA = self->p[A] + Z;
+                    B = self->p[X + 1] + 0;
+                    BA = self->p[B] + Z;
+                    float vv0_f = self->lerp((float)u,
+                        self->grad2(self->p[AA], dxf, dzf),
+                        self->grad(self->p[BA], dxf - 1, 0, dzf));
+                    float vv2_f = self->lerp((float)u,
+                        self->grad(self->p[AA + 1], dxf, 0, dzf - 1),
+                        self->grad(self->p[BA + 1], dxf - 1, 0, dzf - 1));
+                    float valf = self->lerp((float)w, vv0_f, vv2_f);
+                    buffer[pp++] += valf * scale;
+                }
+            }
+        }
+        return;
+    }
+
+    // ====== 3D 分支 ======
+    int pp = 0;
+    float scale = 1.0f / pow;
+    int yOld = -1;
+    int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
+    double vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
+
+    for (int xx = 0; xx < xSize; xx++) {
+        double x = (_x + xx) * (double)xs + self->xo;
+        int64_t xf = (int64_t)x;
+        if (x < (double)xf) xf--;
+        int X = (int)(xf & 255);
+        double dx = x - (double)xf;
+        if (doClamp) {
+            if (dx < 0.0) dx = 0.0;
+            if (dx > 1.0) dx = 1.0;
+        }
+
+        double u;
+        if (disableFringe) {
+            u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+        } else {
+            float dxf = (float)dx;
+            u = (double)(dxf * dxf * dxf * (dxf * (dxf * 6 - 15) + 10));
+        }
+
+        for (int zz = 0; zz < zSize; zz++) {
+            double z = (_z + zz) * (double)zs + self->zo;
+            int64_t zf = (int64_t)z;
+            if (z < (double)zf) zf--;
+            int Z = (int)(zf & 255);
+            double dz = z - (double)zf;
+            if (doClamp) {
+                if (dz < 0.0) dz = 0.0;
+                if (dz > 1.0) dz = 1.0;
+            }
+
+            double w;
+            if (disableFringe) {
+                w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+            } else {
+                float dzf = (float)dz;
+                w = (double)(dzf * dzf * dzf * (dzf * (dzf * 6 - 15) + 10));
+            }
+
+            for (int yy = 0; yy < ySize; yy++) {
+                double y = (_y + yy) * (double)ys + self->yo;
+                int64_t yf = (int64_t)y;
+                if (y < (double)yf) yf--;
+                int Y = (int)(yf & 255);
+                double dy = y - (double)yf;
+                if (doClamp) {
+                    if (dy < 0.0) dy = 0.0;
+                    if (dy > 1.0) dy = 1.0;
+                }
+
+                double v;
+                if (disableFringe) {
+                    v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
+                    if (yy == 0 || Y != yOld) {
+                        yOld = Y;
+                        A = self->p[X] + Y;
+                        AA = self->p[A] + Z;
+                        AB = self->p[A + 1] + Z;
+                        B = self->p[X + 1] + Y;
+                        BA = self->p[B] + Z;
+                        BB = self->p[B + 1] + Z;
+                        vv0 = self->lerp(u,
+                            self->grad(self->p[AA], dx, dy, dz),
+                            self->grad(self->p[BA], dx - 1.0, dy, dz));
+                        vv1 = self->lerp(u,
+                            self->grad(self->p[AB], dx, dy - 1.0, dz),
+                            self->grad(self->p[BB], dx - 1.0, dy - 1.0, dz));
+                        vv2 = self->lerp(u,
+                            self->grad(self->p[AA + 1], dx, dy, dz - 1.0),
+                            self->grad(self->p[BA + 1], dx - 1.0, dy, dz - 1.0));
+                        vv3 = self->lerp(u,
+                            self->grad(self->p[AB + 1], dx, dy - 1.0, dz - 1.0),
+                            self->grad(self->p[BB + 1], dx - 1.0, dy - 1.0, dz - 1.0));
+                    }
+                    double v0 = self->lerp(v, vv0, vv1);
+                    double v1 = self->lerp(v, vv2, vv3);
+                    double val = self->lerp(w, v0, v1);
+                    buffer[pp++] += (float)(val * scale);
+                } else {
+                    float dxf = (float)dx;
+                    float dyf = (float)dy;
+                    float dzf = (float)dz;
+                    v = (double)(dyf * dyf * dyf * (dyf * (dyf * 6 - 15) + 10));
+                    if (yy == 0 || Y != yOld) {
+                        yOld = Y;
+                        A = self->p[X] + Y;
+                        AA = self->p[A] + Z;
+                        AB = self->p[A + 1] + Z;
+                        B = self->p[X + 1] + Y;
+                        BA = self->p[B] + Z;
+                        BB = self->p[B + 1] + Z;
+                        float uf = (float)u;
+                        vv0 = self->lerp(uf,
+                            self->grad(self->p[AA], dxf, dyf, dzf),
+                            self->grad(self->p[BA], dxf - 1, dyf, dzf));
+                        vv1 = self->lerp(uf,
+                            self->grad(self->p[AB], dxf, dyf - 1, dzf),
+                            self->grad(self->p[BB], dxf - 1, dyf - 1, dzf));
+                        vv2 = self->lerp(uf,
+                            self->grad(self->p[AA + 1], dxf, dyf, dzf - 1),
+                            self->grad(self->p[BA + 1], dxf - 1, dyf, dzf - 1));
+                        vv3 = self->lerp(uf,
+                            self->grad(self->p[AB + 1], dxf, dyf - 1, dzf - 1),
+                            self->grad(self->p[BB + 1], dxf - 1, dyf - 1, dzf - 1));
+                    }
+                    float v0f = self->lerp((float)v, (float)vv0, (float)vv1);
+                    float v1f = self->lerp((float)v, (float)vv2, (float)vv3);
+                    float valf = self->lerp((float)w, v0f, v1f);
+                    buffer[pp++] += valf * scale;
+                }
+            }
+        }
+    }
+}
+// ===== add_double（原本就是 double，无需修改） =====
+static void add_double(ImprovedNoise* self, float* buffer,
+                       double _x, double _y, double _z,
+                       int xSize, int ySize, int zSize,
+                       float xs, float ys, float zs, float pow) {
+    // 原版 add_double 实现，内部已使用 double 计算，无需改动
+    // 但需要确保变量声明匹配 double
+    bool doClamp = false;
+    if (Minecraft::instance) {
+        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
+    }
+
+    if (ySize == 1) {
+        int A = 0, AA = 0, B = 0, BA = 0;
+        double vv0 = 0, vv2 = 0;
+        int pp = 0;
+        double scale = 1.0 / pow;
+        for (int xx = 0; xx < xSize; xx++) {
+            double x = (_x + xx) * xs + self->xo;
+            double xf = floor(x);
+            if (x < xf) xf -= 1.0;
+            int X = ((int64_t)xf) & 255;
+            double dx = x - xf;
+            if (doClamp) {
+                if (dx < 0.0) dx = 0.0;
+                if (dx > 1.0) dx = 1.0;
+            }
+            double u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+
+            for (int zz = 0; zz < zSize; zz++) {
+                double z = (_z + zz) * zs + self->zo;
+                double zf = floor(z);
+                if (z < zf) zf -= 1.0;
+                int Z = ((int64_t)zf) & 255;
+                double dz = z - zf;
+                if (doClamp) {
+                    if (dz < 0.0) dz = 0.0;
+                    if (dz > 1.0) dz = 1.0;
+                }
+                double w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
 
                 A = self->p[X] + 0;
                 AA = self->p[A] + Z;
                 B = self->p[X + 1] + 0;
                 BA = self->p[B] + Z;
                 vv0 = self->lerp(u,
-                    self->grad2(self->p[AA], x_float, z_float),
-                    self->grad(self->p[BA], x_float - 1, 0, z_float));
+                    self->grad2(self->p[AA], dx, dz),
+                    self->grad(self->p[BA], dx - 1.0, 0.0, dz));
                 vv2 = self->lerp(u,
-                    self->grad(self->p[AA + 1], x_float, 0, z_float - 1),
-                    self->grad(self->p[BA + 1], x_float - 1, 0, z_float - 1));
+                    self->grad(self->p[AA + 1], dx, 0.0, dz - 1.0),
+                    self->grad(self->p[BA + 1], dx - 1.0, 0.0, dz - 1.0));
 
-                buffer[pp++] += self->lerp(w, vv0, vv2) * scale;
+                double val = self->lerp(w, vv0, vv2);
+                buffer[pp++] += (float)(val * scale);
             }
         }
         return;
     }
 
-    // === 3D 分支 ===
+    // 3D 分支
     int pp = 0;
-    float scale = 1.0f / pow;
+    double scale = 1.0 / pow;
     int yOld = -1;
     int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
-    float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
+    double vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
 
     for (int xx = 0; xx < xSize; xx++) {
-        float x_float, u;
-        int X;
-        if (disableFringe) {
-            double x = (_x + xx) * (double)xs + self->xo;
-            int64_t xf = (int64_t)x;
-            if (x < (double)xf) xf--;
-            X = (int)(xf & 255);
-            double dx = x - (double)xf;
-            if (doClamp) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
-            }
-            x_float = (float)dx;
-            u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
-        } else {
-            float x = (_x + xx) * xs + self->xo;
-            int64_t xf = (int64_t)x;
-            if (x < (float)xf) xf--;
-            X = (int)(xf & 255);
-            float dx = x - (float)xf;
-            if (doClamp) {
-                if (dx < 0.0f) dx = 0.0f;
-                if (dx > 1.0f) dx = 1.0f;
-            }
-            x_float = dx;
-            u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
+        double x = (_x + xx) * xs + self->xo;
+        double xf = floor(x);
+        if (x < xf) xf -= 1.0;
+        int X = ((int64_t)xf) & 255;
+        double dx = x - xf;
+        if (doClamp) {
+            if (dx < 0.0) dx = 0.0;
+            if (dx > 1.0) dx = 1.0;
         }
+        double u = dx * dx * dx * (dx * (dx * 6 - 15) + 10);
 
         for (int zz = 0; zz < zSize; zz++) {
-            float z_float, w;
-            int Z;
-            if (disableFringe) {
-                double z = (_z + zz) * (double)zs + self->zo;
-                int64_t zf = (int64_t)z;
-                if (z < (double)zf) zf--;
-                Z = (int)(zf & 255);
-                double dz = z - (double)zf;
-                if (doClamp) {
-                    if (dz < 0.0) dz = 0.0;
-                    if (dz > 1.0) dz = 1.0;
-                }
-                z_float = (float)dz;
-                w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
-            } else {
-                float z = (_z + zz) * zs + self->zo;
-                int64_t zf = (int64_t)z;
-                if (z < (float)zf) zf--;
-                Z = (int)(zf & 255);
-                float dz = z - (float)zf;
-                if (doClamp) {
-                    if (dz < 0.0f) dz = 0.0f;
-                    if (dz > 1.0f) dz = 1.0f;
-                }
-                z_float = dz;
-                w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
+            double z = (_z + zz) * zs + self->zo;
+            double zf = floor(z);
+            if (z < zf) zf -= 1.0;
+            int Z = ((int64_t)zf) & 255;
+            double dz = z - zf;
+            if (doClamp) {
+                if (dz < 0.0) dz = 0.0;
+                if (dz > 1.0) dz = 1.0;
             }
+            double w = dz * dz * dz * (dz * (dz * 6 - 15) + 10);
 
             for (int yy = 0; yy < ySize; yy++) {
-                float y_float, v;
-                int Y;
-                if (disableFringe) {
-                    double y = (_y + yy) * (double)ys + self->yo;
-                    int64_t yf = (int64_t)y;
-                    if (y < (double)yf) yf--;
-                    Y = (int)(yf & 255);
-                    double dy = y - (double)yf;
-                    if (doClamp) {
-                        if (dy < 0.0) dy = 0.0;
-                        if (dy > 1.0) dy = 1.0;
-                    }
-                    y_float = (float)dy;
-                    v = (float)(dy * dy * dy * (dy * (dy * 6 - 15) + 10));
-                } else {
-                    float y = (_y + yy) * ys + self->yo;
-                    int64_t yf = (int64_t)y;
-                    if (y < (float)yf) yf--;
-                    Y = (int)(yf & 255);
-                    float dy = y - (float)yf;
-                    if (doClamp) {
-                        if (dy < 0.0f) dy = 0.0f;
-                        if (dy > 1.0f) dy = 1.0f;
-                    }
-                    y_float = dy;
-                    v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
+                double y = (_y + yy) * ys + self->yo;
+                double yf = floor(y);
+                if (y < yf) yf -= 1.0;
+                int Y = ((int64_t)yf) & 255;
+                double dy = y - yf;
+                if (doClamp) {
+                    if (dy < 0.0) dy = 0.0;
+                    if (dy > 1.0) dy = 1.0;
                 }
+                double v = dy * dy * dy * (dy * (dy * 6 - 15) + 10);
 
                 if (yy == 0 || Y != yOld) {
                     yOld = Y;
@@ -578,165 +809,27 @@ static void add_int64(ImprovedNoise* self, float* buffer,
                     BA = self->p[B] + Z;
                     BB = self->p[B + 1] + Z;
                     vv0 = self->lerp(u,
-                        self->grad(self->p[AA], x_float, y_float, z_float),
-                        self->grad(self->p[BA], x_float - 1, y_float, z_float));
+                        self->grad(self->p[AA], dx, dy, dz),
+                        self->grad(self->p[BA], dx - 1.0, dy, dz));
                     vv1 = self->lerp(u,
-                        self->grad(self->p[AB], x_float, y_float - 1, z_float),
-                        self->grad(self->p[BB], x_float - 1, y_float - 1, z_float));
+                        self->grad(self->p[AB], dx, dy - 1.0, dz),
+                        self->grad(self->p[BB], dx - 1.0, dy - 1.0, dz));
                     vv2 = self->lerp(u,
-                        self->grad(self->p[AA + 1], x_float, y_float, z_float - 1),
-                        self->grad(self->p[BA + 1], x_float - 1, y_float, z_float - 1));
+                        self->grad(self->p[AA + 1], dx, dy, dz - 1.0),
+                        self->grad(self->p[BA + 1], dx - 1.0, dy, dz - 1.0));
                     vv3 = self->lerp(u,
-                        self->grad(self->p[AB + 1], x_float, y_float - 1, z_float - 1),
-                        self->grad(self->p[BB + 1], x_float - 1, y_float - 1, z_float - 1));
+                        self->grad(self->p[AB + 1], dx, dy - 1.0, dz - 1.0),
+                        self->grad(self->p[BB + 1], dx - 1.0, dy - 1.0, dz - 1.0));
                 }
 
-                float v0 = self->lerp(v, vv0, vv1);
-                float v1 = self->lerp(v, vv2, vv3);
-                float val = self->lerp(w, v0, v1);
-
-                buffer[pp++] += val * scale;
+                double v0 = self->lerp(v, vv0, vv1);
+                double v1 = self->lerp(v, vv2, vv3);
+                double val = self->lerp(w, v0, v1);
+                buffer[pp++] += (float)(val * scale);
             }
         }
     }
 }
-
-// 使用 double 坐标的 add 函数（避免整数溢出，利用 double 的大范围）
-static void add_double(ImprovedNoise* self, float* buffer, double _x, double _y, double _z, int xSize, int ySize, int zSize, float xs, float ys, float zs, float pow)
-{
-    bool doClamp = false;
-    if (Minecraft::instance) {
-        doClamp = Minecraft::instance->options.getBooleanValue(OPTIONS_POSTPONED_FRINGE);
-    }
-
-    if (ySize == 1) {
-        int A = 0, AA = 0, B = 0, BA = 0;
-        float vv0 = 0, vv2 = 0;
-        int pp = 0;
-        float scale = 1.0f / pow;
-        for (int xx = 0; xx < xSize; xx++) {
-            double x = (_x + xx) * xs + self->xo;
-            double xf = floor(x);
-            if (x < xf) xf -= 1.0;
-            int X = ((int64_t)xf) & 255;
-            double x_frac = x - xf;
-            if (doClamp) {
-                if (x_frac < 0.0) x_frac = 0.0;
-                if (x_frac > 1.0) x_frac = 1.0;
-            }
-            float u = (float)(x_frac * x_frac * x_frac * (x_frac * (x_frac * 6 - 15) + 10));
-
-            for (int zz = 0; zz < zSize; zz++) {
-                double z = (_z + zz) * zs + self->zo;
-                double zf = floor(z);
-                if (z < zf) zf -= 1.0;
-                int Z = ((int64_t)zf) & 255;
-                double z_frac = z - zf;
-                if (doClamp) {
-                    if (z_frac < 0.0) z_frac = 0.0;
-                    if (z_frac > 1.0) z_frac = 1.0;
-                }
-                float w = (float)(z_frac * z_frac * z_frac * (z_frac * (z_frac * 6 - 15) + 10));
-
-                A = self->p[X] + 0;
-                AA = self->p[A] + Z;
-                B = self->p[X + 1] + 0;
-                BA = self->p[B] + Z;
-                vv0 = self->lerp(u, self->grad2(self->p[AA], (float)x_frac, (float)z_frac), self->grad(self->p[BA], (float)(x_frac - 1), 0, (float)z_frac));
-                vv2 = self->lerp(u, self->grad(self->p[AA + 1], (float)x_frac, 0, (float)(z_frac - 1)), self->grad(self->p[BA + 1], (float)(x_frac - 1), 0, (float)(z_frac - 1)));
-
-                float val = self->lerp(w, vv0, vv2);
-                buffer[pp++] += val * scale;
-            }
-        }
-        return;
-    }
-
-    int pp = 0;
-    float scale = 1 / pow;
-    int yOld = -1;
-    int A = 0, AA = 0, AB = 0, B = 0, BA = 0, BB = 0;
-    float vv0 = 0, vv1 = 0, vv2 = 0, vv3 = 0;
-
-    for (int xx = 0; xx < xSize; xx++) {
-        double x = (_x + xx) * xs + self->xo;
-        double xf = floor(x);
-        if (x < xf) xf -= 1.0;
-        int X = ((int64_t)xf) & 255;
-        double x_frac = x - xf;
-        if (doClamp) {
-            if (x_frac < 0.0) x_frac = 0.0;
-            if (x_frac > 1.0) x_frac = 1.0;
-        }
-        float u = (float)(x_frac * x_frac * x_frac * (x_frac * (x_frac * 6 - 15) + 10));
-
-        for (int zz = 0; zz < zSize; zz++) {
-            double z = (_z + zz) * zs + self->zo;
-            double zf = floor(z);
-            if (z < zf) zf -= 1.0;
-            int Z = ((int64_t)zf) & 255;
-            double z_frac = z - zf;
-            if (doClamp) {
-                if (z_frac < 0.0) z_frac = 0.0;
-                if (z_frac > 1.0) z_frac = 1.0;
-            }
-            float w = (float)(z_frac * z_frac * z_frac * (z_frac * (z_frac * 6 - 15) + 10));
-
-            for (int yy = 0; yy < ySize; yy++) {
-                double y = (_y + yy) * ys + self->yo;
-                double yf = floor(y);
-                if (y < yf) yf -= 1.0;
-                int Y = ((int64_t)yf) & 255;
-                double y_frac = y - yf;
-                if (doClamp) {
-                    if (y_frac < 0.0) y_frac = 0.0;
-                    if (y_frac > 1.0) y_frac = 1.0;
-                }
-                float v = (float)(y_frac * y_frac * y_frac * (y_frac * (y_frac * 6 - 15) + 10));
-
-                if (yy == 0 || Y != yOld) {
-                    yOld = Y;
-                    A = self->p[X] + Y;
-                    AA = self->p[A] + Z;
-                    AB = self->p[A + 1] + Z;
-                    B = self->p[X + 1] + Y;
-                    BA = self->p[B] + Z;
-                    BB = self->p[B + 1] + Z;
-                    vv0 = self->lerp(u, self->grad(self->p[AA], (float)x_frac, (float)y_frac, (float)z_frac), self->grad(self->p[BA], (float)(x_frac - 1), (float)y_frac, (float)z_frac));
-                    vv1 = self->lerp(u, self->grad(self->p[AB], (float)x_frac, (float)(y_frac - 1), (float)z_frac), self->grad(self->p[BB], (float)(x_frac - 1), (float)(y_frac - 1), (float)z_frac));
-                    vv2 = self->lerp(u, self->grad(self->p[AA + 1], (float)x_frac, (float)y_frac, (float)(z_frac - 1)), self->grad(self->p[BA + 1], (float)(x_frac - 1), (float)y_frac, (float)(z_frac - 1)));
-                    vv3 = self->lerp(u, self->grad(self->p[AB + 1], (float)x_frac, (float)(y_frac - 1), (float)(z_frac - 1)), self->grad(self->p[BB + 1], (float)(x_frac - 1), (float)(y_frac - 1), (float)(z_frac - 1)));
-                }
-
-                float v0 = self->lerp(v, vv0, vv1);
-                float v1 = self->lerp(v, vv2, vv3);
-                float val = self->lerp(w, v0, v1);
-
-                buffer[pp++] += val * scale;
-            }
-        }
-    }
-}
-
-// 原 add 函数：根据选项调用 32 位、64 位或 double 版本
-void ImprovedNoise::add(float *buffer, double _x, double _y, double _z,
-                        int xSize, int ySize, int zSize,
-                        float xs, float ys, float zs, float pow) {
-    bool use64Bit = false;
-    bool useDouble = false;
-    if (Minecraft::instance) {
-        use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
-        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
-    }
-    if (useDouble) {
-        add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    } else if (use64Bit) {
-        add_int64(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    } else {
-        add_int(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    }
-}
-
 int ImprovedNoise::hashCode() {
     int x = 4711;
     for (int i = 0; i < 512; ++i)
