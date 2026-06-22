@@ -193,12 +193,9 @@ static void add_int(ImprovedNoise* self, float* buffer,
                 if (x < (double)xf) xf--;
                 X = xf & 255;
                 double dx = x - (double)xf;
-                if (disableFringe) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
-            } else if (doClamp) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
+                if (doClamp) {
+                    if (dx < 0.0) dx = 0.0;
+                    if (dx > 1.0) dx = 1.0;
                 }
                 x_float = (float)dx;
                 u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
@@ -225,12 +222,9 @@ static void add_int(ImprovedNoise* self, float* buffer,
                     if (z < (double)zf) zf--;
                     Z = zf & 255;
                     double dz = z - (double)zf;
-                    if (disableFringe) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
-            } else if (doClamp) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
+                    if (doClamp) {
+                        if (dz < 0.0) dz = 0.0;
+                        if (dz > 1.0) dz = 1.0;
                     }
                     z_float = (float)dz;
                     w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
@@ -281,10 +275,7 @@ static void add_int(ImprovedNoise* self, float* buffer,
             if (x < (double)xf) xf--;
             X = xf & 255;
             double dx = x - (double)xf;
-            if (disableFringe) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
-            } else if (doClamp) {
+            if (doClamp) {
                 if (dx < 0.0) dx = 0.0;
                 if (dx > 1.0) dx = 1.0;
             }
@@ -313,12 +304,9 @@ static void add_int(ImprovedNoise* self, float* buffer,
                 if (z < (double)zf) zf--;
                 Z = zf & 255;
                 double dz = z - (double)zf;
-                if (disableFringe) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
-            } else if (doClamp) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
+                if (doClamp) {
+                    if (dz < 0.0) dz = 0.0;
+                    if (dz > 1.0) dz = 1.0;
                 }
                 z_float = (float)dz;
                 w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
@@ -345,12 +333,9 @@ static void add_int(ImprovedNoise* self, float* buffer,
                     if (y < (double)yf) yf--;
                     Y = yf & 255;
                     double dy = y - (double)yf;
-                    if (disableFringe) {
-                if (dy < 0.0) dy = 0.0;
-                if (dy > 1.0) dy = 1.0;
-            } else if (doClamp) {
-                if (dy < 0.0) dy = 0.0;
-                if (dy > 1.0) dy = 1.0;
+                    if (doClamp) {
+                        if (dy < 0.0) dy = 0.0;
+                        if (dy > 1.0) dy = 1.0;
                     }
                     y_float = (float)dy;
                     v = (float)(dy * dy * dy * (dy * (dy * 6 - 15) + 10));
@@ -424,12 +409,9 @@ static void add_int64(ImprovedNoise* self, float* buffer,
                 if (x < (double)xf) xf--;
                 X = (int)(xf & 255);
                 double dx = x - (double)xf;
-                if (disableFringe) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
-            } else if (doClamp) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
+                if (doClamp) {
+                    if (dx < 0.0) dx = 0.0;
+                    if (dx > 1.0) dx = 1.0;
                 }
                 x_float = (float)dx;
                 u = (float)(dx * dx * dx * (dx * (dx * 6 - 15) + 10));
@@ -456,12 +438,9 @@ static void add_int64(ImprovedNoise* self, float* buffer,
                     if (z < (double)zf) zf--;
                     Z = (int)(zf & 255);
                     double dz = z - (double)zf;
-                    if (disableFringe) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
-            } else if (doClamp) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
+                    if (doClamp) {
+                        if (dz < 0.0) dz = 0.0;
+                        if (dz > 1.0) dz = 1.0;
                     }
                     z_float = (float)dz;
                     w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
@@ -512,10 +491,7 @@ static void add_int64(ImprovedNoise* self, float* buffer,
             if (x < (double)xf) xf--;
             X = (int)(xf & 255);
             double dx = x - (double)xf;
-            if (disableFringe) {
-                if (dx < 0.0) dx = 0.0;
-                if (dx > 1.0) dx = 1.0;
-            } else if (doClamp) {
+            if (doClamp) {
                 if (dx < 0.0) dx = 0.0;
                 if (dx > 1.0) dx = 1.0;
             }
@@ -544,12 +520,9 @@ static void add_int64(ImprovedNoise* self, float* buffer,
                 if (z < (double)zf) zf--;
                 Z = (int)(zf & 255);
                 double dz = z - (double)zf;
-                if (disableFringe) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
-            } else if (doClamp) {
-                if (dz < 0.0) dz = 0.0;
-                if (dz > 1.0) dz = 1.0;
+                if (doClamp) {
+                    if (dz < 0.0) dz = 0.0;
+                    if (dz > 1.0) dz = 1.0;
                 }
                 z_float = (float)dz;
                 w = (float)(dz * dz * dz * (dz * (dz * 6 - 15) + 10));
@@ -576,12 +549,9 @@ static void add_int64(ImprovedNoise* self, float* buffer,
                     if (y < (double)yf) yf--;
                     Y = (int)(yf & 255);
                     double dy = y - (double)yf;
-                    if (disableFringe) {
-                if (dy < 0.0) dy = 0.0;
-                if (dy > 1.0) dy = 1.0;
-            } else if (doClamp) {
-                if (dy < 0.0) dy = 0.0;
-                if (dy > 1.0) dy = 1.0;
+                    if (doClamp) {
+                        if (dy < 0.0) dy = 0.0;
+                        if (dy > 1.0) dy = 1.0;
                     }
                     y_float = (float)dy;
                     v = (float)(dy * dy * dy * (dy * (dy * 6 - 15) + 10));
