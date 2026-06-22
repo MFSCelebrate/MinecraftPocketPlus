@@ -53,12 +53,19 @@ float PerlinNoise::getValue( float x, float y, float z ) const {
 	return value;
 }
 
+// ===== double 重载（高精度表面噪声） =====
+float PerlinNoise::getValue(double x, double y) const {
+    return getValue(x, y, 0.0);
+}
+
 float PerlinNoise::getValue(double x, double y, double z) const {
-    float value = 0;
-    float pow = 1;
+    float value = 0.0f;
+    float pow = 1.0f;
     for (int i = 0; i < levels; i++) {
+        // ⚠️ 关键：x * pow 是 double，将匹配 ImprovedNoise::getValue(double, double, double)
+        // 从而进入我们之前改造的高精度双路径（受 disableFringe 控制）
         value += noiseLevels[i]->getValue(x * pow, y * pow, z * pow) / pow;
-        pow /= 2;
+        pow /= 2.0f;
     }
     return value;
 }
