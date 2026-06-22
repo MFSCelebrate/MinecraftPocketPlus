@@ -584,8 +584,12 @@ float* RandomLevelSource::getHeights(float* buffer, double x, int y, double z, i
     int intNoiseZ = (int)noiseZ;
 
         // getHeights 中（约第 360 行）
-sr = scaleNoise.getValueDouble(noiseX, noiseZ);  // 实际调用 getRegion，不冲突
-dr = depthNoise.getValueDouble(noiseX, noiseZ);
+sr = scaleNoise.getRegion(sr, intNoiseX, intNoiseZ, xSize, zSize,
+                          1.121 * m_worldScaleX,
+                          1.121 * m_worldScaleZ, 0.5);
+dr = depthNoise.getRegion(dr, intNoiseX, intNoiseZ, xSize, zSize,
+                          200.0 * m_worldScaleX,
+                          200.0 * m_worldScaleZ, 0.5);
 	
     double xf = (double)noiseX;
     double yf = (double)noiseY;
