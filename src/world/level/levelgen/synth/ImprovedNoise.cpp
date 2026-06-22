@@ -29,6 +29,8 @@ void ImprovedNoise::init(Random* random) {
     }
 }
 
+
+
 // ===== Float 版本 =====
 float ImprovedNoise::lerp(float t, float a, float b) const {
         // 如果开启了 Progressive Farlands 选项，则禁用插值，直接返回 a
@@ -264,26 +266,6 @@ double ImprovedNoise::getValue(double x, double y, double z) const {
         val = (double)valf;
     }
     return val;
-}
-
-// ===== add 入口 =====
-void ImprovedNoise::add(float* buffer, double _x, double _y, double _z,
-                         int xSize, int ySize, int zSize,
-                         float xs, float ys, float zs, float pow) {
-    bool use64Bit = false;
-    bool useDouble = false;
-    if (Minecraft::instance) {
-        use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
-        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
-    }
-    if (useDouble) {
-        // add_double 本身就是 double 计算，无需改动
-        add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    } else if (use64Bit) {
-        add_int64(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    } else {
-        add_int(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
-    }
 }
 
 // ===== add_int（完整实现） =====
@@ -830,9 +812,31 @@ static void add_double(ImprovedNoise* self, float* buffer,
         }
     }
 }
+
+// ===== add 入口 =====
+void ImprovedNoise::add(float* buffer, double _x, double _y, double _z,
+                         int xSize, int ySize, int zSize,
+                         float xs, float ys, float zs, float pow) {
+    bool use64Bit = false;
+    bool useDouble = false;
+    if (Minecraft::instance) {
+        use64Bit = Minecraft::instance->options.getBooleanValue(OPTIONS_SIXTYFOUR_FARLANDS);
+        useDouble = Minecraft::instance->options.getBooleanValue(OPTIONS_DOUBLE_FARLANDS);
+    }
+    if (useDouble) {
+        // add_double 本身就是 double 计算，无需改动
+        add_double(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    } else if (use64Bit) {
+        add_int64(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    } else {
+        add_int(this, buffer, _x, _y, _z, xSize, ySize, zSize, xs, ys, zs, pow);
+    }
+}
+
 int ImprovedNoise::hashCode() {
     int x = 4711;
     for (int i = 0; i < 512; ++i)
         x = x * 37 + p[i];
     return x;
 }
+
