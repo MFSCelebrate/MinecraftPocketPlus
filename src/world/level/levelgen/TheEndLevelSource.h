@@ -5,11 +5,21 @@
 #include "synth/PerlinNoise.h"
 #include "synth/SimplexNoise.h"  // ← 新增
 #include <map>  // 文件顶部
+#include <unordered_map>
 
 class Level;
 class LevelChunk;
 
-typedef std::map<std::pair<int64_t, int64_t>, LevelChunk*> chunkMap;
+
+
+struct PairHash {
+    size_t operator()(const std::pair<int64_t, int64_t>& p) const {
+        return std::hash<int64_t>()(p.first) ^ (std::hash<int64_t>()(p.second) << 1);
+    }
+};
+
+// 替换 chunkMap 类型
+std::unordered_map<std::pair<int64_t, int64_t>, LevelChunk*, PairHash> chunkMap;
 
 class TheEndLevelSource : public ChunkSource {
 public:
