@@ -9,6 +9,8 @@
 class Level;
 class LevelChunk;
 
+typedef std::map<std::pair<int64_t, int64_t>, LevelChunk*> chunkMap;
+
 class TheEndLevelSource : public ChunkSource {
 public:
     TheEndLevelSource(Level* level, long seed);
